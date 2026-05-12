@@ -1,8 +1,18 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, Table, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
 import enum
+
+# Many-to-many: which buyers are assigned to which rounds
+round_buyers = Table(
+    "round_buyers",
+    Base.metadata,
+    Column("round_id", Integer, ForeignKey("bid_rounds.id"), primary_key=True),
+    Column("buyer_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("invited_at", DateTime(timezone=True), server_default=func.now()),
+    Column("invite_status", String, default="pending"),  # pending | sent | uploaded | processing | ready | error
+)
 
 
 class RoundStatus(str, enum.Enum):
@@ -40,6 +50,7 @@ class BidRound(Base):
     master_file_path = Column(String, nullable=True)
     total_line_items = Column(Integer, default=0)
 
+    customer = Column(String, nullable=True)  # end-customer name for this bid
     created_by_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -47,3 +58,4 @@ class BidRound(Base):
     bid_files = relationship("BidFile", back_populates="bid_round")
     master_items = relationship("MasterItem", back_populates="bid_round")
     deals = relationship("Deal", back_populates="bid_round")
+    assigned_buyers = relationship("User", secondary="round_buyers", back_populates="assigned_rounds")

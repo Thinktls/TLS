@@ -9,6 +9,7 @@ interface Round {
   id: number;
   name: string;
   commodity: string;
+  customer: string | null;
   status: string;
   total_line_items: number;
   master_file_uploaded: boolean;
@@ -25,6 +26,31 @@ interface Summary {
   exception_breakdown: Record<string, number>;
 }
 
+interface AssignedBuyer {
+  id: number;
+  full_name: string;
+  email: string;
+  company_name: string;
+  invite_status: string;
+}
+
+interface AllBuyer {
+  id: number;
+  full_name: string;
+  email: string;
+  company_name: string;
+  is_active: boolean;
+}
+
+const statusColor: Record<string, string> = {
+  pending: "rgba(255,255,255,0.35)",
+  sent: "#60a5fa",
+  uploaded: "#34d399",
+  processing: "#fbbf24",
+  ready: "#a78bfa",
+  error: "#f87171",
+};
+
 const card: React.CSSProperties = {
   background: "rgba(255,255,255,0.03)",
   border: "1px solid rgba(255,255,255,0.08)",
@@ -37,38 +63,54 @@ export default function RoundDetail() {
   const { id } = useParams();
   const [round, setRound] = useState<Round | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [assignedBuyers, setAssignedBuyers] = useState<AssignedBuyer[]>([]);
+  const [allBuyers, setAllBuyers] = useState<AllBuyer[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState<"ok" | "err">("ok");
-  const [processing, setProcessing] = useState(false);
+  const [showBuyerPicker, setShowBuyerPicker] = useState(false);
+  const [selectedBuyerIds, setSelectedBuyerIds] = useState<Set<number>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
+  function flash(text: string, type: "ok" | "err" = "ok") {
+    setMsg(text);
+    setMsgType(type);
+    setTimeout(() => setMsg(""), 4000);
+  }
+
   async function load() {
-    const [r, s] = await Promise.all([
+    const [r, s, ab] = await Promise.all([
       api.get(`/rounds/${id}`).then((r) => r.data).catch(() => null),
       api.get(`/rounds/${id}/summary`).then((r) => r.data).catch(() => null),
+      api.get(`/rounds/${id}/buyers`).then((r) => r.data).catch(() => []),
     ]);
     setRound(r);
     setSummary(s);
+    setAssignedBuyers(ab);
+    setSelectedBuyerIds(new Set(ab.map((b: AssignedBuyer) => b.id)));
   }
 
   useEffect(() => { load(); }, [id]);
+
+  async function loadAllBuyers() {
+    const res = await api.get("/auth/buyers");
+    setAllBuyers(res.data);
+  }
 
   async function uploadMaster(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    setMsg("");
     const fd = new FormData();
     fd.append("file", file);
     try {
       const res = await api.post(`/rounds/${id}/master-file`, fd);
-      setMsg(`✓ Uploaded ${res.data.total.toLocaleString()} line items`);
-      setMsgType("ok");
+      flash(`✓ Uploaded ${res.data.total.toLocaleString()} line items`);
       load();
     } catch (err: any) {
-      setMsg(`Error: ${err.response?.data?.detail || "Upload failed"}`);
-      setMsgType("err");
+      flash(`Error: ${err.response?.data?.detail || "Upload failed"}`, "err");
     } finally {
       setUploading(false);
     }
@@ -77,12 +119,10 @@ export default function RoundDetail() {
   async function changeStatus(action: string) {
     try {
       await api.post(`/rounds/${id}/${action}`);
-      setMsg(`✓ Round ${action}ed`);
-      setMsgType("ok");
+      flash(`✓ Round ${action}ed`);
       load();
     } catch (err: any) {
-      setMsg(`Error: ${err.response?.data?.detail}`);
-      setMsgType("err");
+      flash(`Error: ${err.response?.data?.detail}`, "err");
     }
   }
 
@@ -90,15 +130,46 @@ export default function RoundDetail() {
     setProcessing(true);
     try {
       await api.post(`/rounds/${id}/process`);
-      setMsg("Processing started — refresh in a few seconds");
-      setMsgType("ok");
-      setTimeout(load, 4000);
+      flash("Processing started — refreshing in 5s");
+      setTimeout(load, 5000);
     } catch (err: any) {
-      setMsg(`Error: ${err.response?.data?.detail}`);
-      setMsgType("err");
+      flash(`Error: ${err.response?.data?.detail}`, "err");
     } finally {
       setProcessing(false);
     }
+  }
+
+  async function saveBuyerAssignment() {
+    try {
+      await api.post(`/rounds/${id}/buyers`, { buyer_ids: [...selectedBuyerIds] });
+      flash("✓ Buyers assigned");
+      setShowBuyerPicker(false);
+      load();
+    } catch (err: any) {
+      flash(`Error: ${err.response?.data?.detail || "Failed to assign buyers"}`, "err");
+    }
+  }
+
+  async function sendInvitations() {
+    setSending(true);
+    try {
+      const res = await api.post(`/rounds/${id}/send-invitations`);
+      flash(`✓ Invitations sent to ${res.data.sent} buyer(s)`);
+      load();
+    } catch (err: any) {
+      flash(`Error: ${err.response?.data?.detail || "Failed to send invitations"}`, "err");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function toggleBuyer(buyerId: number) {
+    setSelectedBuyerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(buyerId)) next.delete(buyerId);
+      else next.add(buyerId);
+      return next;
+    });
   }
 
   if (!round) return (
@@ -107,27 +178,24 @@ export default function RoundDetail() {
     </AdminLayout>
   );
 
+  const API_BASE = "http://localhost:8000/api";
+
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "820px" }}>
-        {/* Back + title */}
-        <Link href="/admin" style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-          ← Back
+      <div style={{ maxWidth: "860px" }}>
+        <Link href="/admin/rounds" style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
+          ← Bid Rounds
         </Link>
         <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: "10px 0 4px" }}>
           {round.name}
         </h2>
         <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", marginBottom: "28px" }}>
-          {round.commodity} &bull; Status: <span style={{ fontWeight: 500, textTransform: "capitalize" }}>{round.status}</span>
+          {round.commodity}{round.customer ? ` · ${round.customer}` : ""} · Status: <span style={{ fontWeight: 500, textTransform: "capitalize" }}>{round.status}</span>
         </p>
 
-        {/* Message banner */}
         {msg && (
           <div style={{
-            marginBottom: "16px",
-            padding: "11px 16px",
-            borderRadius: "10px",
-            fontSize: "0.83rem",
+            marginBottom: "16px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
             background: msgType === "ok" ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
             border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
             color: msgType === "ok" ? "#34d399" : "#f87171",
@@ -136,34 +204,130 @@ export default function RoundDetail() {
           </div>
         )}
 
-        {/* Master File */}
+        {/* ── Master File ─── */}
         <div style={card}>
           <h3 style={{ fontWeight: 600, color: "white", margin: "0 0 12px", fontSize: "0.95rem" }}>Master File</h3>
           {round.master_file_uploaded ? (
-            <p style={{ fontSize: "0.85rem", color: "#34d399" }}>
+            <p style={{ fontSize: "0.85rem", color: "#34d399", margin: "0 0 12px" }}>
               ✓ {round.total_line_items.toLocaleString()} line items loaded
             </p>
           ) : (
-            <p style={{ fontSize: "0.85rem", color: "#fbbf24" }}>No master file uploaded yet</p>
+            <p style={{ fontSize: "0.85rem", color: "#fbbf24", margin: "0 0 12px" }}>No master file uploaded yet</p>
           )}
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={uploadMaster} />
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="btn-ghost"
-            style={{ marginTop: "14px" }}
-          >
-            {uploading ? "Uploading..." : round.master_file_uploaded ? "Replace Master File" : "Upload Master File (.xlsx/.csv)"}
-          </button>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={uploadMaster} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading} className="btn-ghost">
+              {uploading ? "Uploading..." : round.master_file_uploaded ? "Replace Master File" : "Upload Master File (.xlsx/.csv)"}
+            </button>
+            {round.master_file_uploaded && (
+              <a
+                href={`${API_BASE}/rounds/${id}/generate-template`}
+                className="btn-brand"
+                style={{ textDecoration: "none" }}
+                target="_blank"
+                rel="noreferrer"
+              >
+                ↓ Download Bid Template
+              </a>
+            )}
+          </div>
         </div>
 
-        {/* Controls */}
+        {/* ── Assigned Buyers ─── */}
+        <div style={card}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <h3 style={{ fontWeight: 600, color: "white", margin: 0, fontSize: "0.95rem" }}>
+              Assigned Buyers ({assignedBuyers.length})
+            </h3>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => { setShowBuyerPicker(!showBuyerPicker); loadAllBuyers(); }}
+                className="btn-ghost"
+                style={{ fontSize: "0.78rem" }}
+              >
+                {showBuyerPicker ? "Cancel" : "Assign Buyers"}
+              </button>
+              {assignedBuyers.length > 0 && round.master_file_uploaded && (
+                <button onClick={sendInvitations} disabled={sending} className="btn-brand" style={{ fontSize: "0.78rem" }}>
+                  {sending ? "Sending..." : "Send Invitations"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {showBuyerPicker && (
+            <div style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(61,129,227,0.25)",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "16px",
+            }}>
+              <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)", margin: "0 0 12px" }}>
+                Select buyers to assign to this round:
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "240px", overflowY: "auto" }}>
+                {allBuyers.filter((b) => b.is_active).map((b) => (
+                  <label key={b.id} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "8px", borderRadius: "8px", background: selectedBuyerIds.has(b.id) ? "rgba(61,129,227,0.12)" : "transparent" }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedBuyerIds.has(b.id)}
+                      onChange={() => toggleBuyer(b.id)}
+                      style={{ accentColor: "#3D81E3" }}
+                    />
+                    <span style={{ fontSize: "0.83rem", color: "white" }}>{b.full_name}</span>
+                    <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)" }}>{b.company_name || b.email}</span>
+                  </label>
+                ))}
+              </div>
+              <button onClick={saveBuyerAssignment} className="btn-brand" style={{ marginTop: "12px", fontSize: "0.8rem" }}>
+                Save Assignment
+              </button>
+            </div>
+          )}
+
+          {assignedBuyers.length === 0 ? (
+            <p style={{ fontSize: "0.83rem", color: "rgba(255,255,255,0.3)" }}>
+              No buyers assigned yet. Click "Assign Buyers" to add buyers to this round.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {assignedBuyers.map((b) => (
+                <div key={b.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "10px 14px",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: "10px",
+                }}>
+                  <div>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "white" }}>{b.full_name}</span>
+                    <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", marginLeft: "10px" }}>{b.company_name || b.email}</span>
+                  </div>
+                  <span style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 600,
+                    padding: "2px 10px",
+                    borderRadius: "100px",
+                    background: "rgba(255,255,255,0.06)",
+                    color: statusColor[b.invite_status] || "white",
+                    textTransform: "capitalize",
+                  }}>
+                    {b.invite_status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Round Controls ─── */}
         <div style={card}>
           <h3 style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.95rem" }}>Round Controls</h3>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {round.status === "draft" && (
               <button onClick={() => changeStatus("open")} className="btn-brand" style={{ background: "#059669" }}>
-                Open Round (Invite Buyers)
+                Open Round
               </button>
             )}
             {round.status === "open" && (
@@ -179,7 +343,7 @@ export default function RoundDetail() {
           </div>
         </div>
 
-        {/* Summary stats */}
+        {/* ── Summary ─── */}
         {summary && (
           <div style={card}>
             <h3 style={{ fontWeight: 600, color: "white", margin: "0 0 20px", fontSize: "0.95rem" }}>Round Summary</h3>
@@ -190,15 +354,13 @@ export default function RoundDetail() {
                 ["Exceptions", summary.exceptions.toLocaleString()],
                 ["Winners", summary.winners.toLocaleString()],
                 ["Deals Created", summary.deals.toLocaleString()],
-                ["Total Deal Value", `$${summary.total_deal_value.toLocaleString()}`],
+                ["Deal Value", `$${summary.total_deal_value.toLocaleString()}`],
               ].map(([label, value]) => (
                 <div key={label} style={{
-                  padding: "16px",
-                  background: "rgba(255,255,255,0.04)",
-                  borderRadius: "12px",
-                  border: "1px solid rgba(255,255,255,0.05)",
+                  padding: "16px", background: "rgba(255,255,255,0.04)",
+                  borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)",
                 }}>
-                  <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+                  <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
                   <p style={{ fontSize: "1.4rem", fontWeight: 700, color: "white", margin: 0 }}>{value}</p>
                 </div>
               ))}
@@ -206,25 +368,22 @@ export default function RoundDetail() {
           </div>
         )}
 
-        {/* Exports */}
-        {round.status === "complete" && (
+        {/* ── Exports & Actions ─── */}
+        {(round.status === "complete" || round.status === "processing") && (
           <div style={card}>
             <h3 style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.95rem" }}>Exports & Actions</h3>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <a href={`http://localhost:8000/api/rounds/${id}/export/deals.xlsx`} className="btn-brand" style={{ background: "#059669", textDecoration: "none" }}>
-                Download Deals (.xlsx)
-              </a>
-              <a href={`http://localhost:8000/api/rounds/${id}/export/deals.csv`} className="btn-ghost" style={{ textDecoration: "none" }}>
-                Download (.csv)
-              </a>
-              <a href={`http://localhost:8000/api/rounds/${id}/export/comparison.xlsx`} className="btn-brand" style={{ textDecoration: "none" }}>
-                Full Comparison (.xlsx)
-              </a>
-              <Link href={`/admin/rounds/${id}/exceptions`} className="btn-brand" style={{ background: "#dc2626", textDecoration: "none" }}>
-                Review Exceptions
+              <Link href={`/admin/rounds/${id}/comparison`} className="btn-brand" style={{ textDecoration: "none" }}>
+                Bid Comparison Table
               </Link>
               <Link href={`/admin/rounds/${id}/deals`} className="btn-brand" style={{ background: "#7c3aed", textDecoration: "none" }}>
                 Approve Deals
+              </Link>
+              <Link href={`/admin/rounds/${id}/exceptions`} className="btn-brand" style={{ background: "#dc2626", textDecoration: "none" }}>
+                Review Exceptions
+              </Link>
+              <Link href={`/admin/rounds/${id}/export`} className="btn-ghost" style={{ textDecoration: "none" }}>
+                Export Center →
               </Link>
             </div>
           </div>

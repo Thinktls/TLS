@@ -16,13 +16,24 @@ class User(Base):
     company_name = Column(String, nullable=True)
 
     # Buyer-specific fields
-    fluff_percentage = Column(Float, default=3.5)  # per-buyer fluff override
+    fluff_percentage = Column(Float, default=3.5)
+    fluff_enabled = Column(Boolean, default=True)
     last_bid_at = Column(DateTime(timezone=True), nullable=True)
+    last_invited_date = Column(DateTime(timezone=True), nullable=True)
+    last_win_date = Column(DateTime(timezone=True), nullable=True)
     total_rounds_participated = Column(Integer, default=0)
-    buyer_score = Column(Float, default=0.0)  # gamification score
+    buyer_score = Column(Float, default=0.0)
+
+    # Scorer fields (recalculated after each deal approval)
+    win_rate = Column(Float, default=0.0)          # lines_won / lines_bid
+    total_lines_won = Column(Integer, default=0)
+    total_lines_bid = Column(Integer, default=0)
+    total_margin_contribution = Column(Float, default=0.0)  # sum(awarded_price - reserve_price)
+    score_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     bid_files = relationship("BidFile", back_populates="buyer")
     bid_lines = relationship("BidLine", back_populates="buyer")
+    assigned_rounds = relationship("BidRound", secondary="round_buyers", back_populates="assigned_buyers")

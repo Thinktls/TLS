@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,8 +8,17 @@ from app.api.routes.buyer import router as buyer_router
 from app.api.routes.exceptions import router as exceptions_router
 from app.api.routes.deals import router as deals_router
 from app.api.routes.nlquery import router as nlquery_router
+from app.services.scheduler import start_scheduler, stop_scheduler
 
-app = FastAPI(title="ThinkTLS Bid Desk API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="ThinkTLS Bid Desk API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

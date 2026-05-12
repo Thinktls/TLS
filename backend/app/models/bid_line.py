@@ -38,9 +38,14 @@ class BidLine(Base):
     real_winning_price = Column(Float, nullable=True)     # actual price stored in audit trail
     fluffed_loss_price = Column(Float, nullable=True)     # what losing buyer was told (real + fluff %)
 
+    # AI fuzzy matcher
+    ai_match_suggestion = Column(String, nullable=True)   # suggested part number from Claude
+    ai_match_confidence = Column(Float, nullable=True)    # 0-100 confidence score
+
     # Anomaly detection
     z_score = Column(Float, nullable=True)
     is_anomaly = Column(Boolean, default=False)
+    anomaly_reason = Column(String, nullable=True)  # z_score | price_too_high | price_too_low
 
     row_number = Column(Integer, nullable=True)  # original Excel row for traceability
     created_at = Column(DateTime(timezone=True), server_default=func.now())

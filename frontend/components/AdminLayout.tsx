@@ -4,10 +4,11 @@ import { usePathname } from "next/navigation";
 import { logout, getFullName } from "@/lib/auth";
 
 const nav = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/rounds", label: "Bid Rounds" },
-  { href: "/admin/buyers", label: "Buyers" },
-  { href: "/admin/query", label: "AI Query" },
+  { href: "/admin",          label: "Dashboard" },
+  { href: "/admin/rounds",   label: "Bid Rounds" },
+  { href: "/admin/buyers",   label: "Buyers" },
+  { href: "/admin/reports",  label: "Reports" },
+  { href: "/admin/query",    label: "AI Query" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -43,7 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Nav */}
         <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
           {nav.map((n) => {
-            const active = path === n.href;
+            const active = n.href === "/admin" ? path === "/admin" : path.startsWith(n.href);
             return (
               <Link
                 key={n.href}
