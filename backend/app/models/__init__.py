@@ -5,3 +5,4 @@ from app.models.bid_file import BidFile
 from app.models.bid_line import BidLine
 from app.models.deal import Deal
 from app.models.approval_override import ApprovalOverride
+from app.models.invite_token import InviteToken

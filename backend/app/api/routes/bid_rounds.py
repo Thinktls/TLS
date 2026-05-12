@@ -247,6 +247,7 @@ def process_round(round_id: int, background_tasks: BackgroundTasks, db: Session 
 def _run_processing(round_id: int):
     from app.db.session import SessionLocal
     from app.services.buyer_scorer import recalculate_buyer_scores
+    from app.services.ai_matcher import run_ai_matching
     db = SessionLocal()
     try:
         master_items = db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
@@ -258,6 +259,11 @@ def _run_processing(round_id: int):
         match_bid_lines(bid_lines, master_items)
         db.commit()
 
+        # Tier 3: AI matching for remaining exceptions
+        ai_summary = run_ai_matching(db, round_id)
+        import logging
+        logging.getLogger(__name__).info(f"Round {round_id} AI matching: {ai_summary}")
+
         select_winners(db, round_id)
         recalculate_buyer_scores(db, round_id)
 
@@ -265,6 +271,28 @@ def _run_processing(round_id: int):
         if r:
             r.status = "complete"
             db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/{round_id}/ai-match")
+def trigger_ai_match(round_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Re-run AI fuzzy matcher on all remaining unmatched/partial-match exceptions."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    background_tasks.add_task(_run_ai_match_only, round_id)
+    return {"message": "AI matching started in background"}
+
+
+def _run_ai_match_only(round_id: int):
+    from app.db.session import SessionLocal
+    from app.services.ai_matcher import run_ai_matching
+    db = SessionLocal()
+    try:
+        summary = run_ai_matching(db, round_id)
+        import logging
+        logging.getLogger(__name__).info(f"Manual AI match round {round_id}: {summary}")
     finally:
         db.close()
 

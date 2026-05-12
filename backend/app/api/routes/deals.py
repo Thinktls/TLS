@@ -14,6 +14,8 @@ from app.models.user import User
 from app.models.bid_line import BidLine
 from app.models.approval_override import ApprovalOverride
 from app.services.buyer_scorer import recalculate_buyer_scores
+from app.api.routes.notifications import create_notification
+from app.services.razor_client import push_deal_to_razor, push_round_to_razor, RazorPushError
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -158,15 +160,10 @@ def push_to_razor(deal_id: int, db: Session = Depends(get_db), _=Depends(require
     if deal.status != "approved":
         raise HTTPException(400, "Deal must be approved before pushing to Razor")
     try:
-        razor_deal_id = _call_razor_api(deal)
-        deal.razor_deal_id = razor_deal_id
-        deal.razor_push_status = "success"
-        deal.razor_pushed_at = datetime.now(timezone.utc)
-        deal.status = "pushed_to_razor"
+        razor_deal_id = push_deal_to_razor(db, deal)
         db.commit()
         return {"status": "pushed", "razor_deal_id": razor_deal_id}
-    except Exception as e:
-        deal.razor_push_status = "failed"
+    except RazorPushError as e:
         db.commit()
         return {
             "status": "razor_failed",
@@ -175,8 +172,11 @@ def push_to_razor(deal_id: int, db: Session = Depends(get_db), _=Depends(require
         }
 
 
-def _call_razor_api(deal: Deal) -> str:
-    raise NotImplementedError("Razor API integration pending — awaiting API documentation")
+@router.post("/rounds/{round_id}/push-razor-all")
+def push_round_razor(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Push all approved deals in a round to Razor ERP in bulk."""
+    result = push_round_to_razor(db, round_id)
+    return result
 
 
 def _deal_out(d: Deal, db: Session) -> dict:

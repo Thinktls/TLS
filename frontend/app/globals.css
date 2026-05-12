@@ -130,3 +130,76 @@ html, body {
 .dark-table tr:last-child td {
   border-bottom: none;
 }
+
+/* ── Mobile responsiveness ─────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Sidebar collapses to top bar */
+  .admin-layout-sidebar {
+    width: 100% !important;
+    flex-direction: row !important;
+    align-items: center;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+    padding: 12px 16px !important;
+  }
+
+  .admin-layout-sidebar nav {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 4px !important;
+    padding: 0 !important;
+  }
+
+  .admin-layout-sidebar nav a {
+    padding: 6px 10px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .admin-layout-main {
+    padding: 20px 16px !important;
+  }
+
+  /* Tables scroll horizontally on mobile */
+  .dark-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Stack grids on mobile */
+  .mobile-stack {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reduce card padding */
+  .mobile-compact {
+    padding: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-brand, .btn-ghost {
+    padding: 9px 14px;
+    font-size: 0.82rem;
+  }
+
+  .glass-input {
+    font-size: 0.85rem;
+    padding: 9px 12px;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.18);
+}

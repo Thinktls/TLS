@@ -1,11 +1,18 @@
 """
 Buyer-facing routes:
-  - GET  /buyer/rounds          — list open rounds available to bid on
-  - POST /buyer/rounds/{id}/bid — upload a bid file
-  - GET  /buyer/my-results      — view won/lost results with fluffed prices
-  - GET  /buyer/my-deals        — deals where this buyer won
+  - GET  /buyer/rounds                     — list open rounds assigned to this buyer
+  - POST /buyer/rounds/{id}/bid            — upload a bid file
+  - GET  /buyer/rounds/{id}/template       — download the bid template Excel
+  - GET  /buyer/my-results                 — view won/lost results with fluffed prices
+  - GET  /buyer/my-results/{round_id}      — results for a specific round
+  - GET  /buyer/my-deals                   — all won deals
+  - GET  /buyer/my-rounds                  — all rounds this buyer has been invited to
+  - GET  /buyer/rounds/{id}/award-sheet    — download personal award sheet
 """
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -16,15 +23,66 @@ from app.models.bid_line import BidLine
 from app.models.master_item import MasterItem
 from app.models.deal import Deal
 from app.services.file_parser import parse_buyer_file
-from datetime import datetime, timezone
+from app.services.export_service import export_buyer_award_sheet
+from app.api.routes.notifications import create_notification
 
 router = APIRouter(prefix="/buyer", tags=["buyer"])
 
 
 @router.get("/rounds")
 def list_open_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """Open rounds assigned to this buyer via round_buyers table."""
+    assigned = db.execute(
+        text("SELECT round_id FROM round_buyers WHERE buyer_id = :bid"), {"bid": buyer.id}
+    ).fetchall()
+    assigned_ids = {row.round_id for row in assigned}
+
     rounds = db.query(BidRound).filter(BidRound.status == "open").all()
-    return [{"id": r.id, "name": r.name, "commodity": r.commodity, "deadline": r.submission_deadline} for r in rounds]
+    # Show assigned rounds first, then any open rounds (fallback if assignment not done yet)
+    result = []
+    for r in rounds:
+        row = db.execute(
+            text("SELECT invite_status FROM round_buyers WHERE round_id=:rid AND buyer_id=:bid"),
+            {"rid": r.id, "bid": buyer.id},
+        ).fetchone()
+        result.append({
+            "id": r.id,
+            "name": r.name,
+            "commodity": r.commodity,
+            "customer": r.customer,
+            "deadline": r.submission_deadline,
+            "invite_status": row.invite_status if row else None,
+            "assigned": r.id in assigned_ids,
+        })
+    return result
+
+
+@router.get("/my-rounds")
+def my_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """All rounds this buyer has been invited to, across all statuses."""
+    rows = db.execute(
+        text("SELECT round_id, invite_status, invited_at FROM round_buyers WHERE buyer_id = :bid ORDER BY invited_at DESC"),
+        {"bid": buyer.id},
+    ).fetchall()
+
+    result = []
+    for row in rows:
+        r = db.query(BidRound).filter(BidRound.id == row.round_id).first()
+        if r:
+            lines = db.query(BidLine).filter(BidLine.bid_round_id == r.id, BidLine.buyer_id == buyer.id).count()
+            won = db.query(BidLine).filter(BidLine.bid_round_id == r.id, BidLine.buyer_id == buyer.id, BidLine.is_winner == True).count()
+            result.append({
+                "id": r.id,
+                "name": r.name,
+                "commodity": r.commodity,
+                "status": r.status,
+                "deadline": r.submission_deadline,
+                "invite_status": row.invite_status,
+                "invited_at": row.invited_at,
+                "lines_submitted": lines,
+                "lines_won": won,
+            })
+    return result
 
 
 @router.post("/rounds/{round_id}/bid")
@@ -82,6 +140,13 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     buyer.total_rounds_participated += 1
 
     db.commit()
+    create_notification(
+        db,
+        title=f"New bid received from {buyer.company_name or buyer.full_name}",
+        body=f"{len(rows)} lines submitted for round #{round_id}",
+        category="info",
+        link=f"/admin/rounds/{round_id}",
+    )
     return {"message": f"Submitted {len(rows)} line items", "bid_file_id": bid_file.id}
 
 
@@ -115,6 +180,69 @@ def my_results(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
             })
 
     return {"results": results, "won": len([r for r in results if r["outcome"] == "WON"]), "lost": len([r for r in results if r["outcome"] == "LOST"])}
+
+
+@router.get("/rounds/{round_id}/award-sheet")
+def download_my_award_sheet(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """Buyer downloads their own award sheet (wins + loss notices with fluffed prices)."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status not in ("complete",):
+        raise HTTPException(400, "Results not yet available for this round")
+
+    data = export_buyer_award_sheet(db, round_id, buyer.id)
+    filename = f"my_results_{r.name.replace(' ', '_')}_{round_id}.xlsx"
+    return StreamingResponse(
+        iter([data]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get("/rounds/{round_id}/template")
+def download_template(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """Buyer downloads the bid template for a round."""
+    from app.services.template_generator import generate_bid_template
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if not r.master_file_uploaded:
+        raise HTTPException(400, "Template not yet available — master file not uploaded")
+    data = generate_bid_template(db, round_id)
+    filename = f"bid_template_{r.name.replace(' ', '_')}.xlsx"
+    return StreamingResponse(
+        iter([data]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get("/my-results/{round_id}")
+def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    lines = (
+        db.query(BidLine)
+        .filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id, BidLine.match_status == "matched")
+        .all()
+    )
+    results = []
+    for l in lines:
+        master = db.query(MasterItem).filter(MasterItem.id == l.master_item_id).first()
+        entry = {
+            "part_number": master.part_number if master else l.raw_part_number,
+            "description": master.description if master else l.description,
+            "quantity": l.quantity,
+            "outcome": "WON" if l.is_winner else "LOST",
+            "your_price": l.unit_price,
+            "winning_price": l.unit_price if l.is_winner else l.fluffed_loss_price,
+        }
+        results.append(entry)
+    return {
+        "round_id": round_id,
+        "results": results,
+        "won": sum(1 for r in results if r["outcome"] == "WON"),
+        "lost": sum(1 for r in results if r["outcome"] == "LOST"),
+    }
 
 
 @router.get("/my-deals")

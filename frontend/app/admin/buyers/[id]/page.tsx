@@ -59,6 +59,15 @@ export default function BuyerProfilePage() {
     load();
   }
 
+  async function sendInvite() {
+    try {
+      await api.post(`/auth/buyers/${id}/send-invite`);
+      flash("✓ Invite email sent");
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to send invite", "err");
+    }
+  }
+
   if (loading) return (
     <AdminLayout>
       <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading...</div>
@@ -110,6 +119,9 @@ export default function BuyerProfilePage() {
             </span>
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
+            <button onClick={sendInvite} className="btn-brand" style={{ fontSize: "0.8rem" }}>
+              Resend Invite
+            </button>
             <button onClick={toggleActive} className="btn-ghost" style={{ fontSize: "0.8rem" }}>
               {profile.is_active ? "Disable" : "Enable"} Account
             </button>
