@@ -23,7 +23,7 @@ from app.services.template_generator import generate_bid_template
 from app.services.export_service import (
     export_deals_excel, export_deals_csv, export_bid_comparison_excel,
     export_buyer_award_sheet, export_all_award_sheets_zip,
-    export_razor_csv, export_margin_report,
+    export_razor_csv, export_margin_report, export_disposition_report,
 )
 from app.services.email_service import send_bid_invitation
 
@@ -152,6 +152,64 @@ def get_round_buyers(round_id: int, db: Session = Depends(get_db), _=Depends(req
                 "invited_at": row.invited_at,
             })
     return result
+
+
+@router.get("/{round_id}/participation")
+def get_round_participation(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Real-time buyer participation status for a round."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+
+    rows = db.execute(
+        text("SELECT buyer_id, invite_status, invited_at FROM round_buyers WHERE round_id = :rid"),
+        {"rid": round_id},
+    ).fetchall()
+
+    result = []
+    for row in rows:
+        buyer = db.query(User).filter(User.id == row.buyer_id).first()
+        if not buyer:
+            continue
+        bid_file = (
+            db.query(BidFile)
+            .filter(BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id)
+            .order_by(BidFile.uploaded_at.desc())
+            .first()
+        )
+        lines_submitted = (
+            db.query(BidLine)
+            .filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id)
+            .count()
+        ) if bid_file else 0
+
+        result.append({
+            "id": buyer.id,
+            "full_name": buyer.full_name,
+            "email": buyer.email,
+            "company_name": buyer.company_name,
+            "invite_status": row.invite_status,
+            "invited_at": row.invited_at.isoformat() if row.invited_at else None,
+            "uploaded_at": bid_file.uploaded_at.isoformat() if bid_file and bid_file.uploaded_at else None,
+            "lines_submitted": lines_submitted,
+            "file_name": bid_file.original_filename if bid_file else None,
+        })
+
+    total = len(result)
+    sent = sum(1 for r in result if r["invite_status"] in ("sent", "uploaded", "processing", "ready"))
+    uploaded = sum(1 for r in result if r["uploaded_at"])
+    pending = sum(1 for r in result if r["invite_status"] == "pending")
+
+    return {
+        "buyers": result,
+        "stats": {
+            "total": total,
+            "sent": sent,
+            "uploaded": uploaded,
+            "pending_invite": pending,
+            "no_response": sent - uploaded,
+        },
+    }
 
 
 @router.post("/{round_id}/buyers")
@@ -418,6 +476,141 @@ def export_margin(round_id: int, db: Session = Depends(get_db), _=Depends(requir
     return StreamingResponse(iter([data]), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f"attachment; filename=margin_report_round_{round_id}.xlsx"})
 
 
+@router.get("/{round_id}/export/disposition.xlsx")
+def export_disposition(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    data = export_disposition_report(db, round_id)
+    return StreamingResponse(iter([data]), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f"attachment; filename=disposition_report_round_{round_id}.xlsx"})
+
+
+@router.get("/{round_id}/analytics")
+def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """
+    Rich analytics breakdown for a single bid round.
+    Returns buyer performance, match quality, price distribution, anomalies, and timeline.
+    """
+    import statistics
+
+    bid_round = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not bid_round:
+        raise HTTPException(404, "Round not found")
+
+    masters = db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
+    all_lines = db.query(BidLine).filter(BidLine.bid_round_id == round_id).all()
+    all_deals = db.query(Deal).filter(Deal.bid_round_id == round_id).all()
+    bid_files = db.query(BidFile).filter(BidFile.bid_round_id == round_id).all()
+
+    matched = [l for l in all_lines if l.match_status == "matched"]
+    exceptions = [l for l in all_lines if l.match_status == "exception"]
+    winners = [l for l in all_lines if l.is_winner]
+    anomalies = [l for l in all_lines if l.is_anomaly]
+    approved_deals = [d for d in all_deals if d.status == "approved"]
+
+    # Coverage: master items that received at least one valid matched bid
+    master_ids_with_bids = {l.master_item_id for l in matched}
+    coverage_pct = round(len(master_ids_with_bids) / len(masters) * 100, 1) if masters else 0.0
+
+    # Match method breakdown
+    method_counts: dict[str, int] = {}
+    for l in matched:
+        m = l.match_method or "unknown"
+        method_counts[m] = method_counts.get(m, 0) + 1
+
+    # Exception type breakdown
+    exc_breakdown: dict[str, int] = {}
+    for l in exceptions:
+        t = l.exception_type or "unknown"
+        exc_breakdown[t] = exc_breakdown.get(t, 0) + 1
+
+    # Buyer performance table
+    participating_buyer_ids = {l.buyer_id for l in all_lines}
+    buyer_rows = []
+    for buyer_id in participating_buyer_ids:
+        buyer = db.query(User).filter(User.id == buyer_id).first()
+        if not buyer:
+            continue
+        buyer_lines = [l for l in matched if l.buyer_id == buyer_id]
+        buyer_won = [l for l in buyer_lines if l.is_winner]
+        buyer_deals = [d for d in approved_deals if d.winning_buyer_id == buyer_id]
+        total_value = round(sum(d.total_value for d in buyer_deals), 2)
+        bid_file = next((bf for bf in bid_files if bf.buyer_id == buyer_id), None)
+        buyer_rows.append({
+            "id": buyer_id,
+            "company_name": buyer.company_name or buyer.full_name,
+            "email": buyer.email,
+            "lines_bid": len(buyer_lines),
+            "lines_won": len(buyer_won),
+            "win_rate_pct": round(len(buyer_won) / len(buyer_lines) * 100, 1) if buyer_lines else 0.0,
+            "total_value_awarded": total_value,
+            "anomalies": len([l for l in buyer_lines if l.is_anomaly]),
+            "submitted_at": bid_file.uploaded_at.isoformat() if bid_file and bid_file.uploaded_at else None,
+        })
+    buyer_rows.sort(key=lambda x: x["total_value_awarded"], reverse=True)
+
+    # Price distribution per master item (for items with >= 2 bids)
+    price_dist = []
+    for master in masters:
+        item_lines = [l for l in matched if l.master_item_id == master.id and l.unit_price]
+        if len(item_lines) < 2:
+            continue
+        prices = [l.unit_price for l in item_lines]
+        winner_line = next((l for l in item_lines if l.is_winner), None)
+        price_dist.append({
+            "part_number": master.part_number,
+            "description": (master.description or "")[:60],
+            "bids": len(prices),
+            "min_price": min(prices),
+            "max_price": max(prices),
+            "median_price": round(statistics.median(prices), 4),
+            "mean_price": round(statistics.mean(prices), 4),
+            "spread_pct": round((max(prices) - min(prices)) / statistics.mean(prices) * 100, 1) if statistics.mean(prices) > 0 else 0.0,
+            "winning_price": winner_line.unit_price if winner_line else None,
+            "reserve_price": master.reserve_price,
+            "has_anomaly": any(l.is_anomaly for l in item_lines),
+        })
+    price_dist.sort(key=lambda x: x["spread_pct"], reverse=True)
+
+    # Submission timeline (bid files by upload time)
+    timeline = []
+    for bf in sorted(bid_files, key=lambda b: b.uploaded_at or datetime.min):
+        buyer = db.query(User).filter(User.id == bf.buyer_id).first()
+        timeline.append({
+            "buyer_name": buyer.company_name if buyer else "",
+            "filename": bf.filename,
+            "lines": bf.lines_parsed or 0,
+            "uploaded_at": bf.uploaded_at.isoformat() if bf.uploaded_at else None,
+            "status": bf.status,
+        })
+
+    return {
+        "round": {
+            "id": bid_round.id,
+            "name": bid_round.name,
+            "commodity": bid_round.commodity,
+            "status": bid_round.status,
+            "submission_deadline": bid_round.submission_deadline.isoformat() if bid_round.submission_deadline else None,
+        },
+        "overview": {
+            "total_master_items": len(masters),
+            "items_with_bids": len(master_ids_with_bids),
+            "coverage_pct": coverage_pct,
+            "total_bid_lines": len(all_lines),
+            "matched_lines": len(matched),
+            "exception_lines": len(exceptions),
+            "exception_rate_pct": round(len(exceptions) / len(all_lines) * 100, 1) if all_lines else 0.0,
+            "anomaly_count": len(anomalies),
+            "total_deals": len(all_deals),
+            "approved_deals": len(approved_deals),
+            "total_awarded_value": round(sum(d.total_value for d in approved_deals), 2),
+            "buyers_participated": len(participating_buyer_ids),
+        },
+        "match_methods": method_counts,
+        "exception_breakdown": exc_breakdown,
+        "buyer_performance": buyer_rows,
+        "price_distribution": price_dist[:30],  # top 30 widest spreads
+        "submission_timeline": timeline,
+    }
+
+
 @router.get("/report/summary")
 def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
     """
@@ -496,3 +689,30 @@ def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
             for r in sorted(all_rounds, key=lambda x: x.created_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:5]
         ],
     }
+
+
+@router.get("/report/monthly-deal-value")
+def report_monthly_deal_value(db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Monthly approved deal value for the last 12 months."""
+    from datetime import datetime, timedelta, timezone
+    from app.models.deal import Deal
+
+    now = datetime.now(timezone.utc)
+    months = []
+    for i in range(11, -1, -1):
+        first_day = (now.replace(day=1) - timedelta(days=i * 28)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if first_day.month == 12:
+            last_day = first_day.replace(year=first_day.year + 1, month=1, day=1)
+        else:
+            last_day = first_day.replace(month=first_day.month + 1, day=1)
+        total = (
+            db.query(Deal)
+            .filter(Deal.status == "approved", Deal.created_at >= first_day, Deal.created_at < last_day)
+            .all()
+        )
+        months.append({
+            "month": first_day.strftime("%b %Y"),
+            "value": round(sum(d.total_value for d in total), 2),
+            "count": len(total),
+        })
+    return months

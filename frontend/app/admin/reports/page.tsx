@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell,
+} from "recharts";
 
 interface KPIs {
   total_deal_value_30d: number;
@@ -38,6 +42,12 @@ interface ReportData {
   recent_rounds: RoundRow[];
 }
 
+interface MonthlyBar {
+  month: string;
+  value: number;
+  count: number;
+}
+
 const statusColor: Record<string, string> = {
   draft: "rgba(255,255,255,0.4)",
   open: "#34d399",
@@ -46,15 +56,44 @@ const statusColor: Record<string, string> = {
   complete: "#a78bfa",
 };
 
+function fmt(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: "#0d1826",
+      border: "1px solid rgba(61,129,227,0.3)",
+      borderRadius: "10px",
+      padding: "10px 14px",
+      fontSize: "0.8rem",
+    }}>
+      <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 4px" }}>{label}</p>
+      <p style={{ color: "#34d399", fontWeight: 700, margin: "0 0 2px" }}>
+        ${payload[0].value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+      </p>
+      <p style={{ color: "rgba(255,255,255,0.35)", margin: 0 }}>{payload[0].payload.count} deals</p>
+    </div>
+  );
+}
+
 export default function ReportsDashboard() {
   const [data, setData] = useState<ReportData | null>(null);
+  const [monthly, setMonthly] = useState<MonthlyBar[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/rounds/report/summary")
-      .then((r) => setData(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.get("/rounds/report/summary").then((r) => r.data).catch(() => null),
+      api.get("/rounds/report/monthly-deal-value").then((r) => r.data).catch(() => []),
+    ]).then(([summary, bars]) => {
+      setData(summary);
+      setMonthly(bars);
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
@@ -70,43 +109,20 @@ export default function ReportsDashboard() {
   );
 
   const { kpis, top_buyers, recent_rounds } = data;
+  const maxVal = Math.max(...monthly.map((m) => m.value), 1);
 
   const kpiCards = [
-    {
-      label: "Deal Value (30d)",
-      value: `$${kpis.total_deal_value_30d.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-      color: "#34d399",
-    },
-    {
-      label: "All-Time Deal Value",
-      value: `$${kpis.total_deal_value_all_time.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-      color: "white",
-    },
-    {
-      label: "Avg Margin %",
-      value: `${kpis.avg_margin_pct.toFixed(1)}%`,
-      color: kpis.avg_margin_pct > 10 ? "#34d399" : "#fbbf24",
-    },
-    {
-      label: "Active Buyers",
-      value: kpis.active_buyers,
-      color: "#a78bfa",
-    },
-    {
-      label: "Unbid Rate",
-      value: `${kpis.unbid_rate_pct.toFixed(1)}%`,
-      color: kpis.unbid_rate_pct > 20 ? "#f87171" : "#60a5fa",
-    },
-    {
-      label: "Total Rounds",
-      value: kpis.total_rounds,
-      color: "white",
-    },
+    { label: "Deal Value (30d)", value: `$${kpis.total_deal_value_30d.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#34d399" },
+    { label: "All-Time Deal Value", value: `$${kpis.total_deal_value_all_time.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "white" },
+    { label: "Avg Margin %", value: `${kpis.avg_margin_pct.toFixed(1)}%`, color: kpis.avg_margin_pct > 10 ? "#34d399" : "#fbbf24" },
+    { label: "Active Buyers", value: kpis.active_buyers, color: "#a78bfa" },
+    { label: "Unbid Rate", value: `${kpis.unbid_rate_pct.toFixed(1)}%`, color: kpis.unbid_rate_pct > 20 ? "#f87171" : "#60a5fa" },
+    { label: "Total Rounds", value: kpis.total_rounds, color: "white" },
   ];
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1000px" }}>
+      <div style={{ maxWidth: "1100px" }}>
         <div style={{ marginBottom: "32px" }}>
           <h2 style={{ fontSize: "1.6rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
             Reports
@@ -128,9 +144,52 @@ export default function ReportsDashboard() {
               <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {label}
               </p>
-              <p style={{ fontSize: "1.8rem", fontWeight: 700, color, margin: 0 }}>{value}</p>
+              <p style={{ fontSize: "1.8rem", fontWeight: 700, color: color as string, margin: 0 }}>{value}</p>
             </div>
           ))}
+        </div>
+
+        {/* Monthly Deal Value Bar Chart (recharts) */}
+        <div style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: "16px",
+          padding: "24px",
+          marginBottom: "24px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+            <p style={{ fontWeight: 600, color: "white", margin: 0, fontSize: "0.9rem" }}>
+              Monthly Deal Value
+            </p>
+            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>Last 12 months · approved deals only</p>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={monthly} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tickFormatter={fmt}
+                tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                width={56}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {monthly.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.value === maxVal ? "#3D81E3" : "rgba(61,129,227,0.45)"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
@@ -150,16 +209,17 @@ export default function ReportsDashboard() {
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {top_buyers.map((b, idx) => (
                   <Link key={b.id} href={`/admin/buyers/${b.id}`} style={{ textDecoration: "none" }}>
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "10px 12px",
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      borderRadius: "10px",
-                      transition: "all 0.15s",
-                    }}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px 12px",
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        borderRadius: "10px",
+                        transition: "all 0.15s",
+                      }}
                       onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)"; }}
                     >

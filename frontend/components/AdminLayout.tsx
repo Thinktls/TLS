@@ -6,11 +6,14 @@ import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 
 const nav = [
-  { href: "/admin",          label: "Dashboard" },
-  { href: "/admin/rounds",   label: "Bid Rounds" },
-  { href: "/admin/buyers",   label: "Buyers" },
-  { href: "/admin/reports",  label: "Reports" },
-  { href: "/admin/query",    label: "AI Query" },
+  { href: "/admin",                  label: "Dashboard" },
+  { href: "/admin/rounds",           label: "Bid Rounds" },
+  { href: "/admin/buyers",           label: "Buyers" },
+  { href: "/admin/buyers/compare",   label: "Buyer Compare" },
+  { href: "/admin/buyers/fluff",     label: "Fluff Settings" },
+  { href: "/admin/reports",          label: "Reports" },
+  { href: "/admin/query",            label: "AI Query" },
+  { href: "/admin/guide",            label: "Admin Guide" },
 ];
 
 interface NotifItem {

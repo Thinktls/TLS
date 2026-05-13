@@ -252,6 +252,78 @@ def export_razor_csv(db: Session, bid_round_id: int) -> bytes:
     return buf.getvalue().encode()
 
 
+# ── Inventory Disposition Report ─────────────────────────────────────────────
+
+def export_disposition_report(db: Session, bid_round_id: int) -> bytes:
+    """
+    Shows every master line item with disposition:
+    AWARDED (has approved deal), NO_BIDS (no valid bid lines), BELOW_RESERVE,
+    or PENDING (matched lines but no deal yet approved).
+    """
+    masters = db.query(MasterItem).filter(MasterItem.bid_round_id == bid_round_id).all()
+    rows = []
+    for m in masters:
+        deal = (
+            db.query(Deal)
+            .filter(Deal.bid_round_id == bid_round_id, Deal.master_item_id == m.id, Deal.status == "approved")
+            .first()
+        )
+        valid_lines = (
+            db.query(BidLine)
+            .filter(
+                BidLine.bid_round_id == bid_round_id,
+                BidLine.master_item_id == m.id,
+                BidLine.match_status == "matched",
+            )
+            .all()
+        )
+        below_reserve_lines = (
+            db.query(BidLine)
+            .filter(
+                BidLine.bid_round_id == bid_round_id,
+                BidLine.master_item_id == m.id,
+                BidLine.exception_type == "below_reserve",
+            )
+            .all()
+        )
+
+        if deal:
+            disposition = "AWARDED"
+            winner = db.query(User).filter(User.id == deal.winning_buyer_id).first()
+            awarded_to = winner.company_name if winner else ""
+            awarded_price = deal.winning_price
+        elif valid_lines:
+            disposition = "PENDING"
+            awarded_to = ""
+            awarded_price = None
+        elif below_reserve_lines:
+            disposition = "BELOW_RESERVE"
+            awarded_to = ""
+            awarded_price = None
+        else:
+            disposition = "NO_BIDS"
+            awarded_to = ""
+            awarded_price = None
+
+        rows.append({
+            "Part Number": m.part_number,
+            "Description": m.description,
+            "Quantity Requested": m.quantity_requested,
+            "Reserve Price": m.reserve_price,
+            "Bids Received": len(valid_lines),
+            "Disposition": disposition,
+            "Awarded To": awarded_to,
+            "Awarded Price": awarded_price,
+            "Total Award Value": round(awarded_price * (m.quantity_requested or 1), 4) if awarded_price else None,
+        })
+
+    df = pd.DataFrame(rows)
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Disposition")
+    return buf.getvalue()
+
+
 # ── Margin Report Excel ───────────────────────────────────────────────────────
 
 def export_margin_report(db: Session, bid_round_id: int) -> bytes:

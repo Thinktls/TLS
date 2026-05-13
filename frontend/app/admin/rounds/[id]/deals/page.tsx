@@ -24,8 +24,6 @@ interface Deal {
   notes: string | null;
 }
 
-interface Buyer { id: number; full_name: string; company_name: string; email: string; }
-
 interface OverrideModal {
   dealId: number;
   partNumber: string;
@@ -35,18 +33,23 @@ interface OverrideModal {
 }
 
 const statusBadge: Record<string, { background: string; color: string }> = {
-  pending_approval: { background: "rgba(251,191,36,0.15)",  color: "#fbbf24" },
-  approved:         { background: "rgba(52,211,153,0.15)",  color: "#34d399" },
-  rejected:         { background: "rgba(239,68,68,0.15)",   color: "#f87171" },
-  pushed_to_razor:  { background: "rgba(61,129,227,0.15)",  color: "#60a5fa" },
+  pending_approval: { background: "rgba(251,191,36,0.15)", color: "#fbbf24" },
+  approved:         { background: "rgba(52,211,153,0.15)", color: "#34d399" },
+  rejected:         { background: "rgba(239,68,68,0.15)",  color: "#f87171" },
+  pushed_to_razor:  { background: "rgba(61,129,227,0.15)", color: "#60a5fa" },
 };
 
-const EMPTY_MODAL: OverrideModal = { dealId: 0, partNumber: "", field: "", newValue: "", reason: "" };
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "0.78rem",
+  fontWeight: 500,
+  color: "rgba(255,255,255,0.5)",
+  marginBottom: "6px",
+};
 
 export default function DealsPage() {
   const { id } = useParams();
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<number | null>(null);
   const [approvingAll, setApprovingAll] = useState(false);
@@ -61,12 +64,8 @@ export default function DealsPage() {
   }
 
   async function load() {
-    const [d, b] = await Promise.all([
-      api.get(`/deals/rounds/${id}`).then((r) => r.data).catch(() => []),
-      api.get("/auth/buyers").then((r) => r.data).catch(() => []),
-    ]);
+    const d = await api.get(`/deals/rounds/${id}`).then((r) => r.data).catch(() => []);
     setDeals(d);
-    setBuyers(b);
     setLoading(false);
   }
 
@@ -131,12 +130,20 @@ export default function DealsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1100px" }}>
+      <div style={{ maxWidth: "1200px" }}>
         <Link href={`/admin/rounds/${id}`} style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
           ← Round Detail
         </Link>
 
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", margin: "10px 0 24px" }}>
+        {/* Header — stacks on mobile */}
+        <div style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "12px",
+          margin: "10px 0 24px",
+        }}>
           <div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
               Deal Approval
@@ -146,7 +153,12 @@ export default function DealsPage() {
             </p>
           </div>
           {pendingCount > 0 && (
-            <button onClick={approveAll} disabled={approvingAll} className="btn-brand" style={{ background: "#059669" }}>
+            <button
+              onClick={approveAll}
+              disabled={approvingAll}
+              className="btn-brand"
+              style={{ background: "#059669", minHeight: "44px", minWidth: "160px" }}
+            >
               {approvingAll ? "Approving..." : `Approve All (${pendingCount})`}
             </button>
           )}
@@ -163,13 +175,15 @@ export default function DealsPage() {
           </div>
         )}
 
+        {/* Scrollable table wrapper */}
         <div style={{
           background: "rgba(255,255,255,0.03)",
           border: "1px solid rgba(255,255,255,0.08)",
           borderRadius: "18px",
-          overflow: "hidden",
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
         }}>
-          <table className="dark-table">
+          <table className="dark-table" style={{ minWidth: "700px" }}>
             <thead>
               <tr>
                 <th>Part Number</th>
@@ -187,17 +201,17 @@ export default function DealsPage() {
                 const badge = statusBadge[d.status] || statusBadge.pending_approval;
                 return (
                   <tr key={d.id}>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.78rem" }}>{d.part_number}</td>
-                    <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td style={{ fontFamily: "monospace", fontSize: "0.78rem", whiteSpace: "nowrap" }}>{d.part_number}</td>
+                    <td style={{ maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {d.description}
                     </td>
-                    <td style={{ fontSize: "0.78rem" }}>
+                    <td style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>
                       <div style={{ fontWeight: 500, color: "white" }}>{d.winner_company || "—"}</div>
                       <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>{d.winner_email}</div>
                     </td>
                     <td style={{ textAlign: "right" }}>{d.quantity}</td>
-                    <td style={{ textAlign: "right", fontFamily: "monospace" }}>${d.winning_price.toFixed(2)}</td>
-                    <td style={{ textAlign: "right", fontWeight: 600, color: "white" }}>
+                    <td style={{ textAlign: "right", fontFamily: "monospace", whiteSpace: "nowrap" }}>${d.winning_price.toFixed(2)}</td>
+                    <td style={{ textAlign: "right", fontWeight: 600, color: "white", whiteSpace: "nowrap" }}>
                       ${d.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                     <td style={{ textAlign: "center" }}>
@@ -217,6 +231,7 @@ export default function DealsPage() {
                       </div>
                     </td>
                     <td style={{ textAlign: "center" }}>
+                      {/* Action buttons — finger-sized tap targets on mobile */}
                       <div style={{ display: "flex", gap: "5px", justifyContent: "center", flexWrap: "wrap" }}>
                         {d.status === "pending_approval" && (
                           <>
@@ -262,16 +277,24 @@ export default function DealsPage() {
           <div style={{
             position: "fixed", inset: 0, zIndex: 100,
             background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+            padding: "0 0 env(safe-area-inset-bottom, 0)",
           }}>
             <div style={{
               background: "#0d1826",
               border: "1px solid rgba(61,129,227,0.3)",
-              borderRadius: "20px",
-              padding: "32px",
+              borderRadius: "20px 20px 0 0",
+              padding: "24px",
               width: "100%",
-              maxWidth: "480px",
+              maxWidth: "560px",
+              maxHeight: "90vh",
+              overflowY: "auto",
             }}>
+              {/* Drag handle indicator */}
+              <div style={{
+                width: "40px", height: "4px", borderRadius: "2px",
+                background: "rgba(255,255,255,0.12)", margin: "0 auto 20px",
+              }} />
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "white", margin: "0 0 6px" }}>
                 Override Deal
               </h3>
@@ -313,10 +336,21 @@ export default function DealsPage() {
               />
 
               <div style={{ display: "flex", gap: "10px" }}>
-                <button onClick={submitOverride} disabled={submittingOverride} className="btn-brand">
+                <button
+                  onClick={submitOverride}
+                  disabled={submittingOverride}
+                  className="btn-brand"
+                  style={{ flex: 1, minHeight: "48px" }}
+                >
                   {submittingOverride ? "Saving..." : "Save Override"}
                 </button>
-                <button onClick={() => setOverride(null)} className="btn-ghost">Cancel</button>
+                <button
+                  onClick={() => setOverride(null)}
+                  className="btn-ghost"
+                  style={{ flex: 1, minHeight: "48px" }}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
@@ -325,14 +359,6 @@ export default function DealsPage() {
     </AdminLayout>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "0.78rem",
-  fontWeight: 500,
-  color: "rgba(255,255,255,0.5)",
-  marginBottom: "6px",
-};
 
 function ActionBtn({ label, bg, color, border, disabled, onClick }: {
   label: string; bg: string; color: string; border: string;
@@ -343,15 +369,17 @@ function ActionBtn({ label, bg, color, border, disabled, onClick }: {
       onClick={onClick}
       disabled={disabled}
       style={{
-        padding: "3px 10px",
+        padding: "6px 12px",
+        minHeight: "36px",
         background: bg,
         color,
         border: `1px solid ${border}`,
-        borderRadius: "6px",
+        borderRadius: "8px",
         fontSize: "0.72rem",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.5 : 1,
         whiteSpace: "nowrap",
+        touchAction: "manipulation",
       }}
     >
       {label}

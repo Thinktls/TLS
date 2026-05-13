@@ -19,7 +19,7 @@ def _make_admin(db):
         full_name="Exc Admin",
         role="admin",
         is_active=True,
-        is_approved=True,
+        
     )
     db.add(u)
     db.flush()
@@ -33,7 +33,7 @@ def _make_buyer(db):
         full_name="Exc Buyer",
         role="buyer",
         is_active=True,
-        is_approved=True,
+        
     )
     db.add(u)
     db.flush()
@@ -53,7 +53,7 @@ def _make_master(db, round_id):
         part_number="ABC-001",
         part_number_normalized="abc001",
         description="Test Laptop",
-        quantity_requested=10,
+        quantity=10,
     )
     db.add(m)
     db.flush()

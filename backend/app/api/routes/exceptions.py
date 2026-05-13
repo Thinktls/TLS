@@ -118,8 +118,7 @@ def search_master_items(
             "part_number": m.part_number,
             "part_number_normalized": m.part_number_normalized,
             "description": m.description,
-            "unit": m.unit,
-            "quantity_requested": m.quantity_requested,
+            "quantity": m.quantity,
         }
         for m in items
     ]

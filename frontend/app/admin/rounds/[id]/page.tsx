@@ -368,6 +368,30 @@ export default function RoundDetail() {
           </div>
         )}
 
+        {/* ── Participation Tracker (always visible when buyers assigned) ── */}
+        {assignedBuyers.length > 0 && (
+          <div style={card}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h3 style={{ fontWeight: 600, color: "white", margin: 0, fontSize: "0.95rem" }}>Buyer Participation</h3>
+              <Link href={`/admin/rounds/${id}/participation`} className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.78rem" }}>
+                Live Tracker →
+              </Link>
+            </div>
+            <div style={{ marginTop: "12px", display: "flex", gap: "20px", flexWrap: "wrap" }}>
+              {[
+                { label: "Invited", count: assignedBuyers.filter((b) => b.invite_status !== "pending").length, color: "#60a5fa" },
+                { label: "Uploaded", count: assignedBuyers.filter((b) => b.invite_status === "uploaded" || b.invite_status === "ready").length, color: "#34d399" },
+                { label: "Pending", count: assignedBuyers.filter((b) => b.invite_status === "pending").length, color: "rgba(255,255,255,0.3)" },
+              ].map(({ label, count, color }) => (
+                <div key={label}>
+                  <p style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color }}>{count}</p>
+                  <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.4)" }}>{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Exports & Actions ─── */}
         {(round.status === "complete" || round.status === "processing") && (
           <div style={card}>
@@ -381,6 +405,9 @@ export default function RoundDetail() {
               </Link>
               <Link href={`/admin/rounds/${id}/exceptions`} className="btn-brand" style={{ background: "#dc2626", textDecoration: "none" }}>
                 Review Exceptions
+              </Link>
+              <Link href={`/admin/rounds/${id}/analytics`} className="btn-brand" style={{ background: "#0d7c66", textDecoration: "none" }}>
+                Analytics →
               </Link>
               <Link href={`/admin/rounds/${id}/export`} className="btn-ghost" style={{ textDecoration: "none" }}>
                 Export Center →

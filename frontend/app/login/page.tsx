@@ -212,9 +212,12 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.07)", textAlign: "center" }}>
+              <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.07)", textAlign: "center", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <a href={LANDING_URL} className="back-link" style={{ fontSize: "0.78rem" }}>
                   ← Return to ThinkTLS home
+                </a>
+                <a href="/forgot-password" style={{ fontSize: "0.78rem", color: "rgba(61,129,227,0.8)", textDecoration: "none" }}>
+                  Forgot password?
                 </a>
               </div>
             </div>

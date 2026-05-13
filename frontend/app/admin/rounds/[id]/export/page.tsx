@@ -131,6 +131,12 @@ export default function ExportCenter() {
             href={`${API_BASE}/rounds/${id}/export/margin-report.xlsx`}
             ext="xlsx"
           />
+          <ExportRow
+            label="Inventory Disposition Report (.xlsx)"
+            description="Every master line with disposition: AWARDED, NO_BIDS, BELOW_RESERVE, or PENDING."
+            href={`${API_BASE}/rounds/${id}/export/disposition.xlsx`}
+            ext="xlsx"
+          />
         </Section>
 
         <Section title="Analysis">

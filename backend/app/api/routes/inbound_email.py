@@ -6,12 +6,26 @@ and auto-processes them as bid file submissions.
 SendGrid Inbound Parse posts multipart/form-data to this endpoint.
 Configure webhook URL in SendGrid: https://yourhost/api/inbound-email
 """
+import hmac
+import hashlib
+import os
 import logging
 import re
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
+
+SENDGRID_WEBHOOK_KEY = os.getenv("SENDGRID_WEBHOOK_KEY", "")
+
+
+def _verify_sendgrid_signature(request_body: bytes, signature: str, timestamp: str) -> bool:
+    """Verify SendGrid's signed webhook to prevent spoofed requests."""
+    if not SENDGRID_WEBHOOK_KEY:
+        return True  # Signature validation disabled (dev/test mode)
+    token = timestamp + request_body.decode("utf-8", errors="replace")
+    expected = hmac.new(SENDGRID_WEBHOOK_KEY.encode(), token.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
 from app.models.bid_round import BidRound
 from app.models.bid_file import BidFile
 from app.models.bid_line import BidLine
@@ -37,6 +51,15 @@ async def receive_inbound_email(request: Request):
     SendGrid Inbound Parse webhook handler.
     Accepts multipart/form-data with email fields + attachments.
     """
+    # Verify SendGrid signature if key is configured
+    if SENDGRID_WEBHOOK_KEY:
+        raw_body = await request.body()
+        sig = request.headers.get("X-Twilio-Email-Event-Webhook-Signature", "")
+        ts  = request.headers.get("X-Twilio-Email-Event-Webhook-Timestamp", "")
+        if not sig or not _verify_sendgrid_signature(raw_body, sig, ts):
+            logger.warning("SendGrid webhook signature verification failed")
+            raise HTTPException(403, "Invalid webhook signature")
+
     try:
         form = await request.form()
     except Exception as e:

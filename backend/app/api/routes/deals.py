@@ -36,6 +36,10 @@ def list_deals(round_id: int, db: Session = Depends(get_db), _=Depends(require_a
     return [_deal_out(d, db) for d in deals]
 
 
+import os as _os
+_AUTO_PUSH_RAZOR = _os.getenv("AUTO_PUSH_RAZOR", "false").lower() == "true"
+
+
 @router.post("/{deal_id}/approve")
 def approve_deal(deal_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
@@ -46,7 +50,12 @@ def approve_deal(deal_id: int, db: Session = Depends(get_db), admin=Depends(requ
     deal.approved_at = datetime.now(timezone.utc)
     db.commit()
     recalculate_buyer_scores(db, deal.bid_round_id)
-    return {"status": "approved"}
+    if _AUTO_PUSH_RAZOR:
+        try:
+            push_deal_to_razor(db, deal)
+        except RazorPushError:
+            pass  # notification already emitted inside push_deal_to_razor
+    return {"status": "approved", "razor_auto_pushed": _AUTO_PUSH_RAZOR}
 
 
 @router.post("/rounds/{round_id}/approve-all")
@@ -63,7 +72,12 @@ def approve_all_deals(round_id: int, db: Session = Depends(get_db), admin=Depend
         deal.approved_at = now
     db.commit()
     recalculate_buyer_scores(db, round_id)
-    return {"approved": len(deals)}
+    if _AUTO_PUSH_RAZOR:
+        try:
+            push_round_to_razor(db, round_id)
+        except Exception:
+            pass
+    return {"approved": len(deals), "razor_auto_pushed": _AUTO_PUSH_RAZOR}
 
 
 @router.post("/{deal_id}/reject")

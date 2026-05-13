@@ -1,0 +1,88 @@
+"use client";
+import React from "react";
+
+interface Props {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[ErrorBoundary]", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
+      return (
+        <div style={{
+          minHeight: "100vh",
+          background: "#0c0c0c",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px",
+        }}>
+          <div style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "16px",
+            padding: "48px",
+            maxWidth: "480px",
+            width: "100%",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>⚠️</div>
+            <h2 style={{ color: "white", fontSize: "1.25rem", fontWeight: 700, marginBottom: "8px" }}>
+              Something went wrong
+            </h2>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", marginBottom: "24px", lineHeight: 1.6 }}>
+              An unexpected error occurred. The error has been logged.
+            </p>
+            {this.state.error && (
+              <pre style={{
+                background: "rgba(255,0,0,0.08)",
+                border: "1px solid rgba(255,0,0,0.2)",
+                borderRadius: "8px",
+                padding: "12px",
+                fontSize: "0.75rem",
+                color: "#f87171",
+                textAlign: "left",
+                overflowX: "auto",
+                marginBottom: "24px",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}>
+                {this.state.error.message}
+              </pre>
+            )}
+            <button
+              className="btn-brand"
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
