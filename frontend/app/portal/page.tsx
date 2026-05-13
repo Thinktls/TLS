@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import Link from "next/link";
 
 interface Deal {
@@ -32,8 +33,6 @@ const roundStatusColor: Record<string, string> = {
   processing: "#60a5fa",
   complete: "#a78bfa",
 };
-
-const API_BASE = "http://localhost:8000/api";
 
 export default function MyDeals() {
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -149,15 +148,13 @@ export default function MyDeals() {
                           <Link href={`/portal/results?round=${r.id}`} className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.78rem", padding: "6px 14px" }}>
                             View Results
                           </Link>
-                          <a
-                            href={`${API_BASE}/buyer/rounds/${r.id}/award-sheet`}
+                          <button
+                            onClick={() => downloadFile(`/buyer/rounds/${r.id}/award-sheet`, `award_sheet_round_${r.id}.xlsx`)}
                             className="btn-brand"
-                            style={{ textDecoration: "none", fontSize: "0.78rem", padding: "6px 14px" }}
-                            target="_blank"
-                            rel="noreferrer"
+                            style={{ fontSize: "0.78rem", padding: "6px 14px" }}
                           >
                             ↓ Award Sheet
-                          </a>
+                          </button>
                         </>
                       )}
                     </div>

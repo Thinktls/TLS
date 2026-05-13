@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     FLUFF_PERCENTAGE: float = 3.5
 
+    FRONTEND_URL: str = "http://localhost:3000"
     ADMIN_EMAIL: str = "admin@thinktls.com"
     ADMIN_PASSWORD: str = "changeme123"
 

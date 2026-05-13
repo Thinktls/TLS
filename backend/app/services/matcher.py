@@ -18,12 +18,32 @@ def match_bid_lines(bid_lines: list[BidLine], master_items: list[MasterItem]) ->
     master_index = {m.part_number_normalized: m for m in master_items}
     master_list = list(master_items)
 
+    # Build duplicate detection index: (buyer_id, normalized_pn) → first line seen
+    seen: dict[tuple, BidLine] = {}
+
     for line in bid_lines:
         pn = line.normalized_part_number or ""
 
+        # Duplicate detection: same buyer submitting same normalized PN twice in this batch
+        dedup_key = (line.buyer_id, pn)
+        if dedup_key in seen:
+            line.match_status = "exception"
+            line.exception_type = "duplicate"
+            line.exception_notes = f"Duplicate part number '{pn}' submitted by same buyer — keeping earlier line"
+            continue
+        seen[dedup_key] = line
+
         # Tier 1: exact
         if pn in master_index:
-            _assign_match(line, master_index[pn], "exact", 100.0)
+            master = master_index[pn]
+            _assign_match(line, master, "exact", 100.0)
+            # Overbid detection: bid quantity exceeds master quantity
+            if line.quantity and master.quantity and line.quantity > master.quantity:
+                line.match_status = "exception"
+                line.exception_type = "overbid"
+                line.exception_notes = (
+                    f"Bid qty {line.quantity} exceeds master qty {master.quantity}"
+                )
             continue
 
         # Tier 2: fuzzy
@@ -37,6 +57,12 @@ def match_bid_lines(bid_lines: list[BidLine], master_items: list[MasterItem]) ->
 
         if best_score >= AUTO_MATCH_THRESHOLD:
             _assign_match(line, best_master, "fuzzy", best_score)
+            if line.quantity and best_master and best_master.quantity and line.quantity > best_master.quantity:
+                line.match_status = "exception"
+                line.exception_type = "overbid"
+                line.exception_notes = (
+                    f"Bid qty {line.quantity} exceeds master qty {best_master.quantity}"
+                )
         elif best_score >= REVIEW_THRESHOLD:
             line.master_item_id = best_master.id if best_master else None
             line.match_method = "fuzzy"

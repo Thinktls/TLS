@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import Link from "next/link";
 
 interface Buyer {
@@ -13,13 +14,19 @@ interface Buyer {
   invite_status: string;
 }
 
-const API_BASE = "http://localhost:8000/api";
-
 export default function ExportCenter() {
   const { id } = useParams();
   const [roundName, setRoundName] = useState("");
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [roundStatus, setRoundStatus] = useState("");
+  const [sending, setSending] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [msgType, setMsgType] = useState<"ok" | "err">("ok");
+
+  function flash(text: string, type: "ok" | "err" = "ok") {
+    setMsg(text); setMsgType(type);
+    setTimeout(() => setMsg(""), 4000);
+  }
 
   useEffect(() => {
     Promise.all([
@@ -28,7 +35,20 @@ export default function ExportCenter() {
     ]);
   }, [id]);
 
+  async function sendResultsNotifications() {
+    setSending(true);
+    try {
+      const res = await api.post(`/rounds/${id}/send-results`);
+      flash(`✓ Results sent to ${res.data.sent} buyer(s)`);
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to send notifications", "err");
+    } finally {
+      setSending(false);
+    }
+  }
+
   const isComplete = roundStatus === "complete";
+  const slug = roundName.replace(/\s+/g, "_");
 
   return (
     <AdminLayout>
@@ -36,12 +56,37 @@ export default function ExportCenter() {
         <Link href={`/admin/rounds/${id}`} style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
           ← Round Detail
         </Link>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: "10px 0 4px" }}>
-          Export Center
-        </h2>
-        <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", marginBottom: "32px" }}>
-          {roundName} — All downloads are auth-gated and served from the API.
-        </p>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", margin: "10px 0 4px" }}>
+          <div>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
+              Export Center
+            </h2>
+            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", marginTop: "4px" }}>
+              {roundName}
+            </p>
+          </div>
+          {isComplete && (
+            <button
+              onClick={sendResultsNotifications}
+              disabled={sending}
+              className="btn-brand"
+              style={{ background: "#0d7c66" }}
+            >
+              {sending ? "Sending..." : "Send Results to All Buyers"}
+            </button>
+          )}
+        </div>
+
+        {msg && (
+          <div style={{
+            marginTop: "12px", marginBottom: "8px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
+            background: msgType === "ok" ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
+            border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
+            color: msgType === "ok" ? "#34d399" : "#f87171",
+          }}>
+            {msg}
+          </div>
+        )}
 
         {!isComplete && (
           <div style={{
@@ -49,6 +94,7 @@ export default function ExportCenter() {
             background: "rgba(251,191,36,0.1)",
             border: "1px solid rgba(251,191,36,0.2)",
             borderRadius: "12px",
+            marginTop: "12px",
             marginBottom: "24px",
             fontSize: "0.83rem",
             color: "#fbbf24",
@@ -57,23 +103,28 @@ export default function ExportCenter() {
           </div>
         )}
 
+        <div style={{ height: "24px" }} />
+
         <Section title="Bid Results">
           <ExportRow
             label="Deals Export (.xlsx)"
             description="All deals with winner, price, quantity, and Razor status."
-            href={`${API_BASE}/rounds/${id}/export/deals.xlsx`}
+            path={`/rounds/${id}/export/deals.xlsx`}
+            filename={`deals_${slug}.xlsx`}
             ext="xlsx"
           />
           <ExportRow
             label="Deals Export (.csv)"
             description="Same as above in CSV format."
-            href={`${API_BASE}/rounds/${id}/export/deals.csv`}
+            path={`/rounds/${id}/export/deals.csv`}
+            filename={`deals_${slug}.csv`}
             ext="csv"
           />
           <ExportRow
             label="Full Bid Comparison (.xlsx)"
             description="All buyer prices side-by-side — every matched line, every buyer."
-            href={`${API_BASE}/rounds/${id}/export/comparison.xlsx`}
+            path={`/rounds/${id}/export/comparison.xlsx`}
+            filename={`comparison_${slug}.xlsx`}
             ext="xlsx"
           />
         </Section>
@@ -82,7 +133,8 @@ export default function ExportCenter() {
           <ExportRow
             label="All Award Sheets (.zip)"
             description="One Excel per buyer inside a ZIP — wins and loss notices with fluffed prices."
-            href={`${API_BASE}/rounds/${id}/export/all-awards.zip`}
+            path={`/rounds/${id}/export/all-awards.zip`}
+            filename={`award_sheets_${slug}.zip`}
             ext="zip"
           />
           {buyers.length > 0 && (
@@ -92,11 +144,9 @@ export default function ExportCenter() {
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {buyers.map((b) => (
-                  <a
+                  <button
                     key={b.id}
-                    href={`${API_BASE}/rounds/${id}/export/award-sheet/${b.id}`}
-                    target="_blank"
-                    rel="noreferrer"
+                    onClick={() => downloadFile(`/rounds/${id}/export/award-sheet/${b.id}`, `award_${b.company_name || b.full_name}_${slug}.xlsx`)}
                     style={{
                       padding: "5px 14px",
                       background: "rgba(255,255,255,0.04)",
@@ -104,14 +154,14 @@ export default function ExportCenter() {
                       borderRadius: "8px",
                       fontSize: "0.78rem",
                       color: "rgba(255,255,255,0.7)",
-                      textDecoration: "none",
+                      cursor: "pointer",
                       transition: "all 0.15s",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(61,129,227,0.4)")}
                     onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
                   >
                     ↓ {b.company_name || b.full_name}
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
@@ -122,19 +172,22 @@ export default function ExportCenter() {
           <ExportRow
             label="Razor Sales Order (.csv)"
             description="Razor-compatible format for approved deals. Only includes status=approved."
-            href={`${API_BASE}/rounds/${id}/export/razor.csv`}
+            path={`/rounds/${id}/export/razor.csv`}
+            filename={`razor_order_${slug}.csv`}
             ext="csv"
           />
           <ExportRow
             label="Margin Report (.xlsx)"
             description="Reserve vs. winning price breakdown — margin $ and % per line item."
-            href={`${API_BASE}/rounds/${id}/export/margin-report.xlsx`}
+            path={`/rounds/${id}/export/margin-report.xlsx`}
+            filename={`margin_report_${slug}.xlsx`}
             ext="xlsx"
           />
           <ExportRow
             label="Inventory Disposition Report (.xlsx)"
             description="Every master line with disposition: AWARDED, NO_BIDS, BELOW_RESERVE, or PENDING."
-            href={`${API_BASE}/rounds/${id}/export/disposition.xlsx`}
+            path={`/rounds/${id}/export/disposition.xlsx`}
+            filename={`disposition_${slug}.xlsx`}
             ext="xlsx"
           />
         </Section>
@@ -143,7 +196,8 @@ export default function ExportCenter() {
           <ExportRow
             label="Bid Comparison Table (browser)"
             description="Interactive virtual-scroll comparison with winner highlights."
-            href={`/admin/rounds/${id}/comparison`}
+            path={`/admin/rounds/${id}/comparison`}
+            filename=""
             ext="view"
             internal
           />
@@ -170,27 +224,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function ExportRow({ label, description, href, ext, internal }: {
-  label: string; description: string; href: string; ext: string; internal?: boolean;
+function ExportRow({ label, description, path, filename, ext, internal }: {
+  label: string; description: string; path: string; filename: string; ext: string; internal?: boolean;
 }) {
   const extColor: Record<string, string> = {
     xlsx: "#34d399", csv: "#60a5fa", zip: "#fbbf24", view: "#a78bfa",
   };
-  const content = (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "12px 16px",
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.07)",
-      borderRadius: "10px",
-      transition: "all 0.15s",
-      cursor: "pointer",
-      textDecoration: "none",
-    }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.14)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)"; }}
+
+  const inner = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "12px 16px",
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        borderRadius: "10px",
+        transition: "all 0.15s",
+        cursor: "pointer",
+        width: "100%",
+        textAlign: "left",
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.14)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"; }}
     >
       <div>
         <p style={{ fontWeight: 500, color: "white", margin: "0 0 3px", fontSize: "0.85rem" }}>{label}</p>
@@ -204,7 +261,7 @@ function ExportRow({ label, description, href, ext, internal }: {
         color: extColor[ext] || "rgba(255,255,255,0.5)",
         fontSize: "0.72rem",
         fontWeight: 700,
-        textTransform: "uppercase",
+        textTransform: "uppercase" as const,
         letterSpacing: "0.04em",
         flexShrink: 0,
         marginLeft: 16,
@@ -215,11 +272,15 @@ function ExportRow({ label, description, href, ext, internal }: {
   );
 
   if (internal) {
-    return <Link href={href} style={{ textDecoration: "none" }}>{content}</Link>;
+    return <Link href={path} style={{ textDecoration: "none" }}>{inner}</Link>;
   }
+
   return (
-    <a href={href} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-      {content}
-    </a>
+    <button
+      onClick={() => downloadFile(path, filename)}
+      style={{ background: "none", border: "none", padding: 0, width: "100%", cursor: "pointer" }}
+    >
+      {inner}
+    </button>
   );
 }

@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const api = axios.create({ baseURL: "http://localhost:8000/api" });
+const API_BASE = (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL)
+  ? process.env.NEXT_PUBLIC_API_URL
+  : "http://localhost:8000/api";
+
+const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {

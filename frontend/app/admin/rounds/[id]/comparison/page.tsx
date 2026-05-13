@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import Link from "next/link";
 
 interface BidEntry {
@@ -94,15 +95,13 @@ export default function ComparisonPage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
-            <a
-              href={`http://localhost:8000/api/rounds/${id}/export/comparison.xlsx`}
+            <button
+              onClick={() => downloadFile(`/rounds/${id}/export/comparison.xlsx`, `comparison_round_${id}.xlsx`)}
               className="btn-ghost"
-              style={{ textDecoration: "none", fontSize: "0.8rem" }}
-              target="_blank"
-              rel="noreferrer"
+              style={{ fontSize: "0.8rem" }}
             >
               ↓ Export .xlsx
-            </a>
+            </button>
           </div>
         </div>
 

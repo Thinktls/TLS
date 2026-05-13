@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 
 interface ResultLine {
   part_number: string;
@@ -27,8 +28,6 @@ interface RoundRow {
   lines_submitted: number;
   lines_won: number;
 }
-
-const API_BASE = "http://localhost:8000/api";
 
 function ResultsInner() {
   const searchParams = useSearchParams();
@@ -124,15 +123,13 @@ function ResultsInner() {
                       </div>
                     ))}
                   </div>
-                  <a
-                    href={`${API_BASE}/buyer/rounds/${result.round_id}/award-sheet`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    onClick={() => downloadFile(`/buyer/rounds/${result.round_id}/award-sheet`, `award_sheet_round_${result.round_id}.xlsx`)}
                     className="btn-brand"
-                    style={{ textDecoration: "none", fontSize: "0.82rem" }}
+                    style={{ fontSize: "0.82rem" }}
                   >
                     ↓ Download Award Sheet
-                  </a>
+                  </button>
                 </div>
 
                 {/* Results table */}

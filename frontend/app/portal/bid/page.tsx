@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 
 interface Round {
   id: number;
@@ -13,8 +14,6 @@ interface Round {
   invite_status: string | null;
   assigned: boolean;
 }
-
-const API_BASE = "http://localhost:8000/api";
 
 function SubmitBidInner() {
   const searchParams = useSearchParams();
@@ -118,15 +117,13 @@ function SubmitBidInner() {
                     </p>
                   )}
                   <div style={{ marginTop: "8px" }}>
-                    <a
-                      href={`${API_BASE}/buyer/rounds/${selectedRound}/template`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/template`, `bid_template_round_${selectedRound}.xlsx`)}
                       className="btn-brand"
-                      style={{ textDecoration: "none", fontSize: "0.78rem", padding: "7px 16px", display: "inline-block" }}
+                      style={{ fontSize: "0.78rem", padding: "7px 16px" }}
                     >
                       ↓ Download Bid Template (.xlsx)
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}

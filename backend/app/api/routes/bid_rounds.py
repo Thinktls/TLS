@@ -25,7 +25,7 @@ from app.services.export_service import (
     export_buyer_award_sheet, export_all_award_sheets_zip,
     export_razor_csv, export_margin_report, export_disposition_report,
 )
-from app.services.email_service import send_bid_invitation
+from app.services.email_service import send_bid_invitation, send_round_results
 
 router = APIRouter(prefix="/rounds", tags=["bid_rounds"])
 
@@ -192,7 +192,7 @@ def get_round_participation(round_id: int, db: Session = Depends(get_db), _=Depe
             "invited_at": row.invited_at.isoformat() if row.invited_at else None,
             "uploaded_at": bid_file.uploaded_at.isoformat() if bid_file and bid_file.uploaded_at else None,
             "lines_submitted": lines_submitted,
-            "file_name": bid_file.original_filename if bid_file else None,
+            "file_name": bid_file.filename if bid_file else None,
         })
 
     total = len(result)
@@ -266,8 +266,9 @@ def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Sessi
     if not assigned:
         raise HTTPException(400, "Assign buyers to this round before sending invitations")
 
+    from app.core.config import settings as _settings
     deadline_str = r.submission_deadline.strftime("%B %d, %Y") if r.submission_deadline else "See admin for deadline"
-    upload_url = f"http://localhost:3000/portal/bid?round={round_id}"
+    upload_url = f"{_settings.FRONTEND_URL}/portal/bid?round={round_id}"
 
     sent = 0
     for row in assigned:
@@ -284,6 +285,37 @@ def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Sessi
 
     db.commit()
     return {"sent": sent, "message": f"Invitations queued for {sent} buyer(s)"}
+
+
+@router.post("/{round_id}/send-results")
+def send_results_notifications(round_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Send bid result emails to all buyers assigned to this round."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status != "complete":
+        raise HTTPException(400, "Round must be complete before sending results")
+
+    assigned = db.execute(
+        text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
+    ).fetchall()
+
+    from app.core.config import settings
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+
+    sent = 0
+    for row in assigned:
+        buyer = db.query(User).filter(User.id == row.buyer_id).first()
+        if not buyer or not buyer.is_active:
+            continue
+        won = db.query(Deal).filter(Deal.bid_round_id == round_id, Deal.buyer_id == buyer.id).count()
+        total_lines = db.query(BidLine).filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id, BidLine.match_status == "matched").count()
+        lost = max(0, total_lines - won)
+        portal_url = f"{frontend_url}/portal/results?round={round_id}"
+        background_tasks.add_task(send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url)
+        sent += 1
+
+    return {"sent": sent, "message": f"Results queued for {sent} buyer(s)"}
 
 
 @router.post("/{round_id}/process")
@@ -329,6 +361,19 @@ def _run_processing(round_id: int):
         if r:
             r.status = "complete"
             db.commit()
+
+            # Notify admin about processing completion
+            from app.services.email_service import send_exception_alert
+            from app.core.config import settings
+            exceptions_count = db.query(BidLine).filter(
+                BidLine.bid_round_id == round_id, BidLine.match_status == "exception"
+            ).count()
+            if exceptions_count > 0 and getattr(settings, "ADMIN_EMAIL", None):
+                frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+                send_exception_alert(
+                    settings.ADMIN_EMAIL, r.name, exceptions_count,
+                    f"{frontend_url}/admin/rounds/{round_id}/exceptions"
+                )
     finally:
         db.close()
 

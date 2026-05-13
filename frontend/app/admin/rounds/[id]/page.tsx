@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import Link from "next/link";
 
 interface Round {
@@ -178,8 +179,6 @@ export default function RoundDetail() {
     </AdminLayout>
   );
 
-  const API_BASE = "http://localhost:8000/api";
-
   return (
     <AdminLayout>
       <div style={{ maxWidth: "860px" }}>
@@ -220,15 +219,12 @@ export default function RoundDetail() {
               {uploading ? "Uploading..." : round.master_file_uploaded ? "Replace Master File" : "Upload Master File (.xlsx/.csv)"}
             </button>
             {round.master_file_uploaded && (
-              <a
-                href={`${API_BASE}/rounds/${id}/generate-template`}
+              <button
+                onClick={() => downloadFile(`/rounds/${id}/generate-template`, `bid_template_${round.name.replace(/\s+/g, "_")}_${id}.xlsx`)}
                 className="btn-brand"
-                style={{ textDecoration: "none" }}
-                target="_blank"
-                rel="noreferrer"
               >
                 ↓ Download Bid Template
-              </a>
+              </button>
             )}
           </div>
         </div>
