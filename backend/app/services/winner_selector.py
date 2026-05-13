@@ -7,7 +7,7 @@ Winner selection engine:
   - Anomaly detection: z-score > 2.5, or >10x median, or <20% of median
 """
 import statistics
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from app.models.bid_line import BidLine
 from app.models.master_item import MasterItem
 from app.models.deal import Deal
@@ -16,8 +16,12 @@ from app.core.config import settings
 
 
 def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
+    # selectinload(BidLine.bid_file) fires one IN-query for all distinct
+    # bid_file_ids after loading lines — eliminates the N+1 that previously
+    # hit the DB once per line when accessing l.bid_file.uploaded_at.
     matched_lines = (
         db.query(BidLine)
+        .options(selectinload(BidLine.bid_file))
         .filter(BidLine.bid_round_id == bid_round_id, BidLine.match_status == "matched", BidLine.unit_price.isnot(None))
         .all()
     )
