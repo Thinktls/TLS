@@ -22,9 +22,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ThinkTLS Bid Desk API", version="1.0.0", lifespan=lifespan)
 
+import os as _os
+
+_frontend_url = _os.environ.get("FRONTEND_URL", "http://localhost:3000")
+_cors_origins = list({
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5173",
+    _frontend_url,
+})
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:5173"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
