@@ -221,7 +221,7 @@ export default function ExceptionsPage() {
   async function triggerAI() {
     setAiRunning(true);
     try {
-      await api.post(`/bid-rounds/${id}/ai-match`);
+      await api.post(`/rounds/${id}/ai-match`);
       showToast("AI matching started — refresh in a moment");
       setTimeout(load, 4000);
     } catch {

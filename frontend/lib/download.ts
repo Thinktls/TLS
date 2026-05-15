@@ -7,7 +7,7 @@ import api from "./api";
  */
 export async function downloadFile(path: string, filename: string): Promise<void> {
   const resp = await api.get(path, { responseType: "blob" });
-  const blob = new Blob([resp.data], { type: resp.headers["content-type"] || "application/octet-stream" });
+  const blob = new Blob([resp.data], { type: (resp.headers["content-type"] as string) || "application/octet-stream" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

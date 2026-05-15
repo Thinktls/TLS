@@ -74,6 +74,113 @@ def list_rounds(db: Session = Depends(get_db), _=Depends(get_current_user)):
     return db.query(BidRound).order_by(BidRound.created_at.desc()).all()
 
 
+@router.get("/report/summary")
+def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
+    """
+    Global KPI summary for the reporting dashboard.
+    Returns aggregated stats across all rounds.
+    """
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import func as sqlfunc
+    from app.models.deal import Deal
+    from app.models.user import User as UserModel
+
+    now = datetime.now(timezone.utc)
+    thirty_days_ago = now - timedelta(days=30)
+
+    deals_30d = db.query(Deal).filter(Deal.created_at >= thirty_days_ago, Deal.status == "approved").all()
+    total_deal_value_30d = round(sum(d.total_value for d in deals_30d), 2)
+
+    all_deals = db.query(Deal).filter(Deal.status == "approved").all()
+    total_deal_value = round(sum(d.total_value for d in all_deals), 2)
+
+    # Average margin % — compare winning_price to master reserve_price
+    margins = []
+    for d in all_deals:
+        master = db.query(MasterItem).filter(MasterItem.id == d.master_item_id).first()
+        if master and master.reserve_price and master.reserve_price > 0:
+            margins.append((d.winning_price - master.reserve_price) / master.reserve_price * 100)
+    avg_margin_pct = round(sum(margins) / len(margins), 2) if margins else 0.0
+
+    active_buyers = db.query(User).filter(User.role == "buyer", User.is_active == True).count()
+
+    all_rounds = db.query(BidRound).all()
+    total_lines = db.query(BidLine).count()
+    unmatched = db.query(BidLine).filter(BidLine.match_status == "exception", BidLine.exception_type == "unmatched").count()
+    unbid_rate = round(unmatched / total_lines * 100, 2) if total_lines > 0 else 0.0
+
+    # Top buyers by total margin contribution
+    top_buyers = (
+        db.query(User)
+        .filter(User.role == "buyer", User.total_lines_bid > 0)
+        .order_by(User.total_margin_contribution.desc())
+        .limit(10)
+        .all()
+    )
+
+    return {
+        "kpis": {
+            "total_deal_value_30d": total_deal_value_30d,
+            "total_deal_value_all_time": total_deal_value,
+            "avg_margin_pct": avg_margin_pct,
+            "active_buyers": active_buyers,
+            "unbid_rate_pct": unbid_rate,
+            "total_rounds": len(all_rounds),
+            "total_deals": len(all_deals),
+        },
+        "top_buyers": [
+            {
+                "id": b.id,
+                "full_name": b.full_name,
+                "company_name": b.company_name,
+                "win_rate": round(b.win_rate * 100, 1),
+                "total_lines_won": b.total_lines_won,
+                "total_lines_bid": b.total_lines_bid,
+                "total_margin_contribution": round(b.total_margin_contribution, 2),
+                "buyer_score": round(b.buyer_score, 1),
+            }
+            for b in top_buyers
+        ],
+        "recent_rounds": [
+            {
+                "id": r.id,
+                "name": r.name,
+                "status": r.status,
+                "total_line_items": r.total_line_items,
+                "created_at": r.created_at,
+            }
+            for r in sorted(all_rounds, key=lambda x: x.created_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:5]
+        ],
+    }
+
+
+@router.get("/report/monthly-deal-value")
+def report_monthly_deal_value(db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Monthly approved deal value for the last 12 months."""
+    from datetime import datetime, timedelta, timezone
+    from app.models.deal import Deal
+
+    now = datetime.now(timezone.utc)
+    months = []
+    for i in range(11, -1, -1):
+        first_day = (now.replace(day=1) - timedelta(days=i * 28)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if first_day.month == 12:
+            last_day = first_day.replace(year=first_day.year + 1, month=1, day=1)
+        else:
+            last_day = first_day.replace(month=first_day.month + 1, day=1)
+        total = (
+            db.query(Deal)
+            .filter(Deal.status == "approved", Deal.created_at >= first_day, Deal.created_at < last_day)
+            .all()
+        )
+        months.append({
+            "month": first_day.strftime("%b %Y"),
+            "value": round(sum(d.total_value for d in total), 2),
+            "count": len(total),
+        })
+    return months
+
+
 @router.get("/{round_id}", response_model=RoundOut)
 def get_round(round_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
@@ -654,110 +761,3 @@ def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(requ
         "price_distribution": price_dist[:30],  # top 30 widest spreads
         "submission_timeline": timeline,
     }
-
-
-@router.get("/report/summary")
-def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
-    """
-    Global KPI summary for the reporting dashboard.
-    Returns aggregated stats across all rounds.
-    """
-    from datetime import datetime, timedelta, timezone
-    from sqlalchemy import func as sqlfunc
-    from app.models.deal import Deal
-    from app.models.user import User as UserModel
-
-    now = datetime.now(timezone.utc)
-    thirty_days_ago = now - timedelta(days=30)
-
-    deals_30d = db.query(Deal).filter(Deal.created_at >= thirty_days_ago, Deal.status == "approved").all()
-    total_deal_value_30d = round(sum(d.total_value for d in deals_30d), 2)
-
-    all_deals = db.query(Deal).filter(Deal.status == "approved").all()
-    total_deal_value = round(sum(d.total_value for d in all_deals), 2)
-
-    # Average margin % — compare winning_price to master reserve_price
-    margins = []
-    for d in all_deals:
-        master = db.query(MasterItem).filter(MasterItem.id == d.master_item_id).first()
-        if master and master.reserve_price and master.reserve_price > 0:
-            margins.append((d.winning_price - master.reserve_price) / master.reserve_price * 100)
-    avg_margin_pct = round(sum(margins) / len(margins), 2) if margins else 0.0
-
-    active_buyers = db.query(User).filter(User.role == "buyer", User.is_active == True).count()
-
-    all_rounds = db.query(BidRound).all()
-    total_lines = db.query(BidLine).count()
-    unmatched = db.query(BidLine).filter(BidLine.match_status == "exception", BidLine.exception_type == "unmatched").count()
-    unbid_rate = round(unmatched / total_lines * 100, 2) if total_lines > 0 else 0.0
-
-    # Top buyers by total margin contribution
-    top_buyers = (
-        db.query(User)
-        .filter(User.role == "buyer", User.total_lines_bid > 0)
-        .order_by(User.total_margin_contribution.desc())
-        .limit(10)
-        .all()
-    )
-
-    return {
-        "kpis": {
-            "total_deal_value_30d": total_deal_value_30d,
-            "total_deal_value_all_time": total_deal_value,
-            "avg_margin_pct": avg_margin_pct,
-            "active_buyers": active_buyers,
-            "unbid_rate_pct": unbid_rate,
-            "total_rounds": len(all_rounds),
-            "total_deals": len(all_deals),
-        },
-        "top_buyers": [
-            {
-                "id": b.id,
-                "full_name": b.full_name,
-                "company_name": b.company_name,
-                "win_rate": round(b.win_rate * 100, 1),
-                "total_lines_won": b.total_lines_won,
-                "total_lines_bid": b.total_lines_bid,
-                "total_margin_contribution": round(b.total_margin_contribution, 2),
-                "buyer_score": round(b.buyer_score, 1),
-            }
-            for b in top_buyers
-        ],
-        "recent_rounds": [
-            {
-                "id": r.id,
-                "name": r.name,
-                "status": r.status,
-                "total_line_items": r.total_line_items,
-                "created_at": r.created_at,
-            }
-            for r in sorted(all_rounds, key=lambda x: x.created_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:5]
-        ],
-    }
-
-
-@router.get("/report/monthly-deal-value")
-def report_monthly_deal_value(db: Session = Depends(get_db), _=Depends(require_admin)):
-    """Monthly approved deal value for the last 12 months."""
-    from datetime import datetime, timedelta, timezone
-    from app.models.deal import Deal
-
-    now = datetime.now(timezone.utc)
-    months = []
-    for i in range(11, -1, -1):
-        first_day = (now.replace(day=1) - timedelta(days=i * 28)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if first_day.month == 12:
-            last_day = first_day.replace(year=first_day.year + 1, month=1, day=1)
-        else:
-            last_day = first_day.replace(month=first_day.month + 1, day=1)
-        total = (
-            db.query(Deal)
-            .filter(Deal.status == "approved", Deal.created_at >= first_day, Deal.created_at < last_day)
-            .all()
-        )
-        months.append({
-            "month": first_day.strftime("%b %Y"),
-            "value": round(sum(d.total_value for d in total), 2),
-            "count": len(total),
-        })
-    return months

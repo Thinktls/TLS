@@ -91,7 +91,7 @@ export default function NewRound() {
 
   useEffect(() => {
     if (step === 3) {
-      api.get("/buyers").then((r) => setBuyers(r.data.filter((b: Buyer) => b.is_active))).catch(() => {});
+      api.get("/auth/buyers").then((r) => setBuyers(r.data.filter((b: Buyer) => b.is_active))).catch(() => {});
     }
   }, [step]);
 
