@@ -11,6 +11,7 @@ from app.models.invite_token import InviteToken
 from app.core.security import verify_password, hash_password, create_access_token, get_current_user, require_admin
 from app.schemas.auth import LoginRequest, TokenResponse, UserCreate, UserOut
 from app.services.email_service import _send as send_email
+from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -127,7 +128,7 @@ def send_invite(user_id: int, db: Session = Depends(get_db), _=Depends(require_a
     db.add(token)
     db.commit()
 
-    setup_url = f"http://localhost:3000/setup-password?token={token_str}"
+    setup_url = f"{settings.FRONTEND_URL}/setup-password?token={token_str}"
     send_email(
         user.email,
         user.full_name,
@@ -211,7 +212,7 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
         token = InviteToken(token=token_str, buyer_id=user.id, expires_at=expires)
         db.add(token)
         db.commit()
-        reset_url = f"http://localhost:3000/reset-password?token={token_str}"
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_str}"
         send_email(
             user.email,
             user.full_name,

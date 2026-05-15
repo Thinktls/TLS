@@ -70,10 +70,15 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
         winner.is_winner = True
         winner.real_winning_price = winner.unit_price
 
-        # Fluff engine: losing buyers told real_price * (1 + buyer_fluff%)
+        # Fluff engine: losing buyers told real_price * (1 + buyer_fluff%) only when enabled
         for loser in valid_lines[1:]:
             buyer = db.query(User).filter(User.id == loser.buyer_id).first()
-            fluff_pct = buyer.fluff_percentage if buyer else settings.FLUFF_PERCENTAGE
+            if buyer and buyer.fluff_enabled:
+                fluff_pct = buyer.fluff_percentage
+            elif not buyer:
+                fluff_pct = settings.FLUFF_PERCENTAGE
+            else:
+                fluff_pct = 0.0
             loser.fluffed_loss_price = round(winner.unit_price * (1 + fluff_pct / 100), 4)
 
         # Create deal

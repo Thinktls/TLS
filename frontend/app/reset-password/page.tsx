@@ -2,8 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import api from "@/lib/api";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -33,17 +32,12 @@ function ResetPasswordForm() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, new_password: password }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || "Reset failed");
+      await api.post("/auth/reset-password", { token, new_password: password });
       setDone(true);
       setTimeout(() => router.push("/login"), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(msg || "Reset failed");
     } finally {
       setLoading(false);
     }
