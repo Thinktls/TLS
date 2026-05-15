@@ -248,42 +248,6 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     return {"message": "Password reset successfully. You can now log in."}
 
 
-@router.get("/buyers/{user_id}/profile")
-def buyer_profile(user_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
-    from app.models.bid_line import BidLine
-    from app.models.deal import Deal
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    lines = db.query(BidLine).filter(BidLine.buyer_id == user_id, BidLine.match_status == "matched").all()
-    deals = db.query(Deal).filter(Deal.winning_buyer_id == user_id, Deal.status == "approved").all()
-
-    # Recent bid history — last 20 lines
-    recent = sorted(lines, key=lambda l: l.created_at or 0, reverse=True)[:20]
-
-    return {
-        "id": user.id,
-        "full_name": user.full_name,
-        "email": user.email,
-        "company_name": user.company_name,
-        "is_active": user.is_active,
-        "fluff_percentage": user.fluff_percentage,
-        "fluff_enabled": user.fluff_enabled,
-        "win_rate": round(user.win_rate * 100, 1) if user.win_rate else 0.0,
-        "total_lines_won": user.total_lines_won or 0,
-        "total_lines_bid": user.total_lines_bid or 0,
-        "total_margin_contribution": round(user.total_margin_contribution or 0, 2),
-        "buyer_score": round(user.buyer_score or 0, 1),
-        "last_bid_at": user.last_bid_at,
-        "last_win_date": user.last_win_date,
-        "score_updated_at": user.score_updated_at,
-        "total_deal_value": round(sum(d.total_value for d in deals), 2),
-        "total_deals_won": len(deals),
-    }
-
-
 @router.get("/buyers/compare")
 def compare_buyers(db: Session = Depends(get_db), _=Depends(require_admin)):
     """
@@ -337,4 +301,37 @@ def compare_buyers(db: Session = Depends(get_db), _=Depends(require_admin)):
     return {
         "buyers": rows,
         "rounds": [{"id": r.id, "name": r.name, "status": r.status} for r in all_rounds],
+    }
+
+
+@router.get("/buyers/{user_id}/profile")
+def buyer_profile(user_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    from app.models.bid_line import BidLine
+    from app.models.deal import Deal
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    lines = db.query(BidLine).filter(BidLine.buyer_id == user_id, BidLine.match_status == "matched").all()
+    deals = db.query(Deal).filter(Deal.winning_buyer_id == user_id, Deal.status == "approved").all()
+
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "company_name": user.company_name,
+        "is_active": user.is_active,
+        "fluff_percentage": user.fluff_percentage,
+        "fluff_enabled": user.fluff_enabled,
+        "win_rate": round(user.win_rate * 100, 1) if user.win_rate else 0.0,
+        "total_lines_won": user.total_lines_won or 0,
+        "total_lines_bid": user.total_lines_bid or 0,
+        "total_margin_contribution": round(user.total_margin_contribution or 0, 2),
+        "buyer_score": round(user.buyer_score or 0, 1),
+        "last_bid_at": user.last_bid_at,
+        "last_win_date": user.last_win_date,
+        "score_updated_at": user.score_updated_at,
+        "total_deal_value": round(sum(d.total_value for d in deals), 2),
+        "total_deals_won": len(deals),
     }
