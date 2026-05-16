@@ -44,8 +44,8 @@ async def natural_language_query(req: NLQueryRequest, db: Session = Depends(get_
     try:
         result = db.execute(text(sql))
         columns = list(result.keys())
-        rows = [dict(zip(columns, row)) for row in result.fetchall()]
-        return {"question": req.question, "sql": sql, "columns": columns, "rows": rows, "count": len(rows)}
+        rows = [dict(zip(columns, row)) for row in result.fetchmany(500)]
+        return {"question": req.question, "sql": sql, "columns": columns, "rows": rows, "count": len(rows), "truncated": len(rows) == 500}
     except Exception as e:
         raise HTTPException(500, f"Query execution error: {str(e)}")
 
@@ -53,9 +53,9 @@ async def natural_language_query(req: NLQueryRequest, db: Session = Depends(get_
 async def _translate_to_sql(question: str) -> str | None:
     try:
         import anthropic
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
-        message = client.messages.create(
+        message = await client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=512,
             messages=[{
@@ -74,7 +74,6 @@ Question: {question}"""
         sql = message.content[0].text.strip()
         if sql.upper() == "NULL" or not sql:
             return None
-        # Strip markdown code fences if model wraps it
         sql = sql.replace("```sql", "").replace("```", "").strip()
         return sql
     except Exception:

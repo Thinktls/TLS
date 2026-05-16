@@ -59,10 +59,14 @@ def run_ai_matching(db: Session, bid_round_id: int) -> dict:
         results = _batch_ai_match(batch, master_items)
 
         for line, (matched_master, confidence, reason) in zip(batch, results):
-            line.ai_match_suggestion = matched_master.part_number if matched_master else None
+            line.ai_match_suggestion = matched_master.part_number_normalized if matched_master else None
             line.ai_match_confidence = confidence
 
-            if matched_master and confidence >= AUTO_ACCEPT_THRESHOLD:
+            if reason.startswith("Error:"):
+                errors += 1
+                still_flagged += 1
+                line.exception_notes = f"AI matching error — {reason}"
+            elif matched_master and confidence >= AUTO_ACCEPT_THRESHOLD:
                 line.master_item_id = matched_master.id
                 line.match_method = "ai"
                 line.match_score = confidence
@@ -72,7 +76,7 @@ def run_ai_matching(db: Session, bid_round_id: int) -> dict:
                 auto_accepted += 1
             else:
                 line.exception_notes = (
-                    f"AI suggestion: {matched_master.part_number if matched_master else 'none'} "
+                    f"AI suggestion: {matched_master.part_number_normalized if matched_master else 'none'} "
                     f"({confidence:.0f}% confidence) — {reason}. Below auto-accept threshold."
                 )
                 still_flagged += 1

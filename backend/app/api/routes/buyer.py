@@ -32,29 +32,32 @@ router = APIRouter(prefix="/buyer", tags=["buyer"])
 @router.get("/rounds")
 def list_open_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
     """Open rounds assigned to this buyer via round_buyers table."""
-    assigned = db.execute(
-        text("SELECT round_id FROM round_buyers WHERE buyer_id = :bid"), {"bid": buyer.id}
+    assigned_rows = db.execute(
+        text("SELECT round_id, invite_status FROM round_buyers WHERE buyer_id = :bid"),
+        {"bid": buyer.id},
     ).fetchall()
-    assigned_ids = {row.round_id for row in assigned}
+    assigned_map = {row.round_id: row.invite_status for row in assigned_rows}
 
-    rounds = db.query(BidRound).filter(BidRound.status == "open").all()
-    # Show assigned rounds first, then any open rounds (fallback if assignment not done yet)
-    result = []
-    for r in rounds:
-        row = db.execute(
-            text("SELECT invite_status FROM round_buyers WHERE round_id=:rid AND buyer_id=:bid"),
-            {"rid": r.id, "bid": buyer.id},
-        ).fetchone()
-        result.append({
+    if not assigned_map:
+        return []
+
+    rounds = db.query(BidRound).filter(
+        BidRound.status == "open",
+        BidRound.id.in_(list(assigned_map.keys())),
+    ).all()
+
+    return [
+        {
             "id": r.id,
             "name": r.name,
             "commodity": r.commodity,
             "customer": r.customer,
             "deadline": r.submission_deadline,
-            "invite_status": row.invite_status if row else None,
-            "assigned": r.id in assigned_ids,
-        })
-    return result
+            "invite_status": assigned_map.get(r.id),
+            "assigned": True,
+        }
+        for r in rounds
+    ]
 
 
 @router.get("/my-rounds")
@@ -92,6 +95,14 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
         raise HTTPException(404, "Round not found")
     if r.status != "open":
         raise HTTPException(400, "This round is not accepting bids")
+
+    # Enforce assignment: buyer must be in round_buyers
+    assigned = db.execute(
+        text("SELECT 1 FROM round_buyers WHERE round_id=:rid AND buyer_id=:bid"),
+        {"rid": round_id, "bid": buyer.id},
+    ).fetchone()
+    if not assigned:
+        raise HTTPException(403, "You are not assigned to this round")
 
     # Check deadline
     if r.submission_deadline and datetime.now(timezone.utc) > r.submission_deadline:
@@ -138,6 +149,12 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     # Update buyer activity
     buyer.last_bid_at = datetime.now(timezone.utc)
     buyer.total_rounds_participated += 1
+
+    # Mark buyer as having uploaded in the participation tracker
+    db.execute(
+        text("UPDATE round_buyers SET invite_status='uploaded' WHERE round_id=:rid AND buyer_id=:bid"),
+        {"rid": round_id, "bid": buyer.id},
+    )
 
     db.commit()
     create_notification(

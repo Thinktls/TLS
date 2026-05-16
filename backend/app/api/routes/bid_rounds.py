@@ -442,9 +442,11 @@ def process_round(round_id: int, background_tasks: BackgroundTasks, db: Session 
 
 
 def _run_processing(round_id: int):
+    import logging as _log
     from app.db.session import SessionLocal
     from app.services.buyer_scorer import recalculate_buyer_scores
     from app.services.ai_matcher import run_ai_matching
+    _logger = _log.getLogger(__name__)
     db = SessionLocal()
     try:
         master_items = db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
@@ -458,8 +460,7 @@ def _run_processing(round_id: int):
 
         # Tier 3: AI matching for remaining exceptions
         ai_summary = run_ai_matching(db, round_id)
-        import logging
-        logging.getLogger(__name__).info(f"Round {round_id} AI matching: {ai_summary}")
+        _logger.info(f"Round {round_id} AI matching: {ai_summary}")
 
         select_winners(db, round_id)
         recalculate_buyer_scores(db, round_id)
@@ -481,6 +482,18 @@ def _run_processing(round_id: int):
                     settings.ADMIN_EMAIL, r.name, exceptions_count,
                     f"{frontend_url}/admin/rounds/{round_id}/exceptions"
                 )
+
+    except Exception as exc:
+        _logger.error(f"Processing failed for round {round_id}: {exc}", exc_info=True)
+        try:
+            r = db.query(BidRound).filter(BidRound.id == round_id).first()
+            if r:
+                r.status = "error"
+                db.commit()
+        except Exception:
+            pass
+        raise
+
     finally:
         db.close()
 

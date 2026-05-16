@@ -62,6 +62,12 @@ def recalculate_buyer_scores(db: Session, bid_round_id: int) -> None:
         .all()
     }
 
+    # Pre-fetch all master items for this round to avoid N+1 on reserve_price lookup
+    round_masters = {
+        m.id: m
+        for m in db.query(MasterItem).filter(MasterItem.bid_round_id == bid_round_id).all()
+    }
+
     updated = 0
     for buyer_id in buyer_ids:
         buyer = db.query(User).filter(User.id == buyer_id).first()
@@ -83,7 +89,10 @@ def recalculate_buyer_scores(db: Session, bid_round_id: int) -> None:
         last_win = None
         for line in all_lines:
             if line.is_winner:
-                master = db.query(MasterItem).filter(MasterItem.id == line.master_item_id).first()
+                # Use pre-fetched dict first; fall back to DB query for cross-round lines
+                master = round_masters.get(line.master_item_id) if line.master_item_id else None
+                if master is None and line.master_item_id:
+                    master = db.query(MasterItem).filter(MasterItem.id == line.master_item_id).first()
                 if master and master.reserve_price and line.unit_price:
                     margin_total += max(0.0, line.unit_price - master.reserve_price) * (line.quantity or 1)
                 if last_win is None or (line.created_at and line.created_at > last_win):
