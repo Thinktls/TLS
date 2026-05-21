@@ -2,7 +2,7 @@
 Three-tier part number matching:
   1. Exact match on normalized_part_number
   2. rapidfuzz token_sort_ratio  >= 88 => auto-match, 65-87 => flag for review
-  3. AI semantic match via Claude API (called only for flagged items)
+  3. AI semantic match via configured AI backend (called only for flagged items)
 """
 from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
