@@ -20,6 +20,12 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
   const [saved, setSaved] = useState(false);
   const dirty = pct !== buyer.fluff_percentage || enabled !== buyer.fluff_enabled;
 
+  // Sync local state when parent updates the buyer record (e.g. after save or bulk apply)
+  useEffect(() => {
+    setPct(buyer.fluff_percentage ?? 3.5);
+    setEnabled(buyer.fluff_enabled ?? true);
+  }, [buyer.fluff_percentage, buyer.fluff_enabled]);
+
   async function save() {
     setSaving(true);
     await onSave(buyer.id, pct, enabled);

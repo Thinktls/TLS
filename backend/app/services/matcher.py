@@ -86,47 +86,15 @@ def _assign_match(line: BidLine, master: MasterItem, method: str, score: float):
 
 
 async def ai_match_line(raw_part: str, description: str, master_items: list[MasterItem]) -> tuple[MasterItem | None, float, str]:
-    """Use Claude API to semantically match a part number. Returns (master_item, confidence, reasoning)."""
-    try:
-        import anthropic
-        from app.core.config import settings
+    """Semantically match a single part number using the configured AI backend (Anthropic or Ollama)."""
+    from app.services.ai_matcher import _build_prompt, _parse_response, _batch_ai_match
+    from app.models.bid_line import BidLine
 
-        if not settings.ANTHROPIC_API_KEY:
-            return None, 0.0, "No API key configured"
+    # Wrap the single input as a fake BidLine so batch helpers can be reused
+    dummy = BidLine()
+    dummy.raw_part_number = raw_part
+    dummy.description = description
 
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
-        candidates = master_items[:20]  # limit context size
-        candidate_text = "\n".join([
-            f"{i+1}. Part: {m.part_number} | Desc: {m.description} | Mfr: {m.manufacturer}"
-            for i, m in enumerate(candidates)
-        ])
-
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=256,
-            messages=[{
-                "role": "user",
-                "content": f"""You are matching IT hardware part numbers. A buyer submitted this part:
-Part Number: {raw_part}
-Description: {description}
-
-From the ThinkTLS master list, find the best match:
-{candidate_text}
-
-Reply with JSON only: {{"match_index": <1-based index or null>, "confidence": <0-100>, "reason": "<one sentence>"}}"""
-            }]
-        )
-
-        import json
-        result = json.loads(message.content[0].text.strip())
-        idx = result.get("match_index")
-        confidence = float(result.get("confidence", 0))
-        reason = result.get("reason", "")
-
-        if idx and 1 <= idx <= len(candidates):
-            return candidates[idx - 1], confidence, reason
-        return None, confidence, reason
-
-    except Exception as e:
-        return None, 0.0, f"AI match error: {str(e)}"
+    results = _batch_ai_match([dummy], master_items)
+    master, confidence, reason = results[0]
+    return master, confidence, reason

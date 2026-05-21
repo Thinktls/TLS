@@ -10,7 +10,6 @@ When RAZOR_API_URL is unset (dev / staging), calls are stubbed and a
 RazorPushError is raised so the caller can log a notification and fall
 back to CSV export.
 """
-import os
 import time
 import logging
 from datetime import datetime, timezone
@@ -21,11 +20,9 @@ from sqlalchemy.orm import Session
 
 from app.models.deal import Deal
 from app.api.routes.notifications import create_notification
+from app.core.config import settings
 
 log = logging.getLogger(__name__)
-
-RAZOR_API_URL = os.getenv("RAZOR_API_URL", "")
-RAZOR_API_KEY = os.getenv("RAZOR_API_KEY", "")
 
 MAX_ATTEMPTS = 3
 BACKOFF_BASE = 2.0  # seconds
@@ -52,12 +49,12 @@ def _build_payload(deal: Deal) -> dict:
 
 def _do_post(payload: dict) -> str:
     """POST to Razor and return the Razor deal ID on success."""
-    if not RAZOR_API_URL:
+    if not settings.RAZOR_API_URL:
         raise RazorPushError("RAZOR_API_URL not configured — integration pending")
 
-    headers = {"Authorization": f"Bearer {RAZOR_API_KEY}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {settings.RAZOR_API_KEY}", "Content-Type": "application/json"}
     with httpx.Client(timeout=15) as client:
-        resp = client.post(f"{RAZOR_API_URL}/deals", json=payload, headers=headers)
+        resp = client.post(f"{settings.RAZOR_API_URL}/deals", json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         razor_id = data.get("id") or data.get("dealId") or str(resp.status_code)

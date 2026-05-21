@@ -88,9 +88,10 @@ export default function BuyersPage() {
     }
     try {
       await api.patch(`/auth/buyers/${id}/fluff`, null, { params: { fluff_percentage: pct } });
+      // Optimistic update — reflect immediately without waiting for full reload
+      setBuyers((prev) => prev.map((b) => b.id === id ? { ...b, fluff_percentage: pct } : b));
       flash(`✓ Fluff updated to ${pct}%`);
       setEditingFluff(null);
-      load();
     } catch (err: any) {
       flash(err.response?.data?.detail || "Failed to update fluff", "err");
     }

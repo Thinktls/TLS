@@ -1,6 +1,10 @@
 """
-Natural language query interface powered by Claude API.
+Natural language query interface.
 Translates plain-English questions to SQL, runs against a read-only DB connection.
+
+Supports two backends (in priority order):
+  1. Anthropic Claude (set ANTHROPIC_API_KEY)
+  2. Ollama / any OpenAI-compatible endpoint (set OLLAMA_BASE_URL + OLLAMA_MODEL)
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
@@ -23,21 +27,31 @@ Tables:
 - deals(id, bid_round_id, master_item_id, winning_buyer_id, part_number, quantity, winning_price, total_value, status, razor_push_status)
 """
 
+SQL_SYSTEM_PROMPT = f"""You are a SQL generator for the ThinkTLS Bid Desk platform.
+
+{SCHEMA_CONTEXT}
+
+Convert questions to PostgreSQL SELECT queries. Return ONLY the SQL, no explanation, no markdown.
+If the question cannot be answered with these tables, return: NULL"""
+
 
 class NLQueryRequest(BaseModel):
     question: str
 
 
+def _ai_available() -> bool:
+    return bool(settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL)
+
+
 @router.post("/")
 async def natural_language_query(req: NLQueryRequest, db: Session = Depends(get_db), _=Depends(require_admin)):
-    if not settings.ANTHROPIC_API_KEY:
-        raise HTTPException(503, "AI query requires ANTHROPIC_API_KEY to be configured")
+    if not _ai_available():
+        raise HTTPException(503, "AI query requires ANTHROPIC_API_KEY or OLLAMA_BASE_URL to be configured")
 
     sql = await _translate_to_sql(req.question)
     if not sql:
         raise HTTPException(400, "Could not interpret your question as a database query")
 
-    # Safety: only allow SELECT
     if not sql.strip().upper().startswith("SELECT"):
         raise HTTPException(400, "Only SELECT queries are permitted")
 
@@ -45,12 +59,27 @@ async def natural_language_query(req: NLQueryRequest, db: Session = Depends(get_
         result = db.execute(text(sql))
         columns = list(result.keys())
         rows = [dict(zip(columns, row)) for row in result.fetchmany(500)]
-        return {"question": req.question, "sql": sql, "columns": columns, "rows": rows, "count": len(rows), "truncated": len(rows) == 500}
+        return {
+            "question": req.question,
+            "sql": sql,
+            "columns": columns,
+            "rows": rows,
+            "count": len(rows),
+            "truncated": len(rows) == 500,
+        }
     except Exception as e:
         raise HTTPException(500, f"Query execution error: {str(e)}")
 
 
 async def _translate_to_sql(question: str) -> str | None:
+    if settings.ANTHROPIC_API_KEY:
+        return await _translate_anthropic(question)
+    if settings.OLLAMA_BASE_URL:
+        return await _translate_ollama(question)
+    return None
+
+
+async def _translate_anthropic(question: str) -> str | None:
     try:
         import anthropic
         client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -60,21 +89,42 @@ async def _translate_to_sql(question: str) -> str | None:
             max_tokens=512,
             messages=[{
                 "role": "user",
-                "content": f"""You are a SQL generator for the ThinkTLS Bid Desk platform.
-
-{SCHEMA_CONTEXT}
-
-Convert this question to a PostgreSQL SELECT query. Return ONLY the SQL, no explanation, no markdown.
-If the question cannot be answered with these tables, return: NULL
-
-Question: {question}"""
-            }]
+                "content": f"{SQL_SYSTEM_PROMPT}\n\nQuestion: {question}",
+            }],
         )
-
         sql = message.content[0].text.strip()
         if sql.upper() == "NULL" or not sql:
             return None
-        sql = sql.replace("```sql", "").replace("```", "").strip()
-        return sql
+        return sql.replace("```sql", "").replace("```", "").strip()
+    except Exception:
+        return None
+
+
+async def _translate_ollama(question: str) -> str | None:
+    try:
+        import httpx
+
+        base = settings.OLLAMA_BASE_URL.rstrip("/")
+        payload = {
+            "model": settings.OLLAMA_MODEL,
+            "messages": [
+                {"role": "system", "content": SQL_SYSTEM_PROMPT},
+                {"role": "user", "content": f"Question: {question}"},
+            ],
+            "stream": False,
+        }
+
+        headers = {}
+        if settings.OLLAMA_API_KEY:
+            headers["Authorization"] = f"Bearer {settings.OLLAMA_API_KEY}"
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(f"{base}/v1/chat/completions", json=payload, headers=headers)
+            resp.raise_for_status()
+
+        sql = resp.json()["choices"][0]["message"]["content"].strip()
+        if sql.upper() == "NULL" or not sql:
+            return None
+        return sql.replace("```sql", "").replace("```", "").strip()
     except Exception:
         return None

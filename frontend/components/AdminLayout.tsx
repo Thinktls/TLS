@@ -193,6 +193,13 @@ function NotificationBell() {
   );
 }
 
+function isNavActive(navHref: string, currentPath: string, allNav: typeof nav): boolean {
+  if (currentPath === navHref) return true;
+  if (!currentPath.startsWith(navHref + "/")) return false;
+  // Prefix match only if no more-specific nav item also claims this path
+  return !allNav.some((other) => other.href !== navHref && currentPath.startsWith(other.href));
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
 
@@ -226,7 +233,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Nav */}
         <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
           {nav.map((n) => {
-            const active = n.href === "/admin" ? path === "/admin" : path.startsWith(n.href);
+            const active = isNavActive(n.href, path, nav);
             return (
               <Link
                 key={n.href}

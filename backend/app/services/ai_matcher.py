@@ -2,7 +2,11 @@
 AI fuzzy matcher — Phase 2 upgrade.
 
 Processes all bid lines with match_status='exception' and exception_type='partial_match'
-or 'unmatched' in batches of 20. Calls Claude API for semantic matching.
+or 'unmatched' in batches. Calls an LLM for semantic matching.
+
+Supports two backends (in priority order):
+  1. Anthropic Claude (set ANTHROPIC_API_KEY)
+  2. Ollama / any OpenAI-compatible endpoint (set OLLAMA_BASE_URL + OLLAMA_MODEL)
 
 Auto-accepts if confidence >= 85.
 Stores ai_match_suggestion + ai_match_confidence on every processed line regardless.
@@ -21,14 +25,18 @@ AUTO_ACCEPT_THRESHOLD = 85.0
 BATCH_SIZE = 20
 
 
+def _ai_available() -> bool:
+    return bool(settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL)
+
+
 def run_ai_matching(db: Session, bid_round_id: int) -> dict:
     """
     Run AI matching on all unmatched/partial_match exceptions for a round.
     Returns a summary dict with counts.
     """
-    if not settings.ANTHROPIC_API_KEY:
-        logger.warning("ANTHROPIC_API_KEY not set — AI matching skipped")
-        return {"skipped": True, "reason": "No API key configured"}
+    if not _ai_available():
+        logger.warning("No AI backend configured — AI matching skipped. Set ANTHROPIC_API_KEY or OLLAMA_BASE_URL.")
+        return {"skipped": True, "reason": "No AI backend configured (set ANTHROPIC_API_KEY or OLLAMA_BASE_URL)"}
 
     lines_to_match = (
         db.query(BidLine)
@@ -53,7 +61,6 @@ def run_ai_matching(db: Session, bid_round_id: int) -> dict:
     still_flagged = 0
     errors = 0
 
-    # Process in batches of BATCH_SIZE
     for i in range(0, len(lines_to_match), BATCH_SIZE):
         batch = lines_to_match[i : i + BATCH_SIZE]
         results = _batch_ai_match(batch, master_items)
@@ -91,29 +98,18 @@ def run_ai_matching(db: Session, bid_round_id: int) -> dict:
     }
 
 
-def _batch_ai_match(
-    lines: list[BidLine],
-    master_items: list[MasterItem],
-) -> list[tuple[Optional[MasterItem], float, str]]:
-    """Send a batch of lines to Claude API for matching. Returns one result per line."""
-    try:
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
-        # Build master item index for lookup
-        master_by_index: dict[int, MasterItem] = {i + 1: m for i, m in enumerate(master_items[:100])}
-        master_list_text = "\n".join(
-            f"{i}. {m.part_number} | {m.description or ''} | {m.manufacturer or ''}"
-            for i, m in master_by_index.items()
-        )
-
-        lines_text = "\n".join(
-            f"Line {j + 1}: raw_pn={line.raw_part_number!r} desc={line.description or ''!r}"
-            for j, line in enumerate(lines)
-        )
-
-        prompt = f"""You are matching IT hardware part numbers for a procurement platform.
+def _build_prompt(lines: list[BidLine], master_items: list[MasterItem]) -> tuple[str, dict]:
+    """Build the matching prompt and master index. Returns (prompt, master_by_index)."""
+    master_by_index: dict[int, MasterItem] = {i + 1: m for i, m in enumerate(master_items[:100])}
+    master_list_text = "\n".join(
+        f"{i}. {m.part_number} | {m.description or ''} | {m.manufacturer or ''}"
+        for i, m in master_by_index.items()
+    )
+    lines_text = "\n".join(
+        f"Line {j + 1}: raw_pn={line.raw_part_number!r} desc={line.description or ''!r}"
+        for j, line in enumerate(lines)
+    )
+    prompt = f"""You are matching IT hardware part numbers for a procurement platform.
 
 MASTER CATALOG (up to 100 items):
 {master_list_text}
@@ -128,35 +124,96 @@ Respond with a JSON array — one object per buyer line, in the same order:
   ...
 ]
 Return ONLY the JSON array. No explanation."""
+    return prompt, master_by_index
+
+
+def _parse_response(raw: str, lines: list[BidLine], master_by_index: dict) -> list[tuple[Optional[MasterItem], float, str]]:
+    """Parse LLM JSON response into (master, confidence, reason) tuples."""
+    if raw.startswith("```"):
+        raw = "\n".join(raw.split("\n")[1:])
+        raw = raw.rsplit("```", 1)[0].strip()
+
+    results_json: list[dict] = json.loads(raw)
+    output: list[tuple[Optional[MasterItem], float, str]] = []
+    for entry in results_json:
+        idx = entry.get("master_index")
+        confidence = float(entry.get("confidence", 0))
+        reason = entry.get("reason", "")
+        master = master_by_index.get(idx) if idx else None
+        output.append((master, confidence, reason))
+
+    while len(output) < len(lines):
+        output.append((None, 0.0, "No result returned"))
+
+    return output
+
+
+def _batch_ai_match(
+    lines: list[BidLine],
+    master_items: list[MasterItem],
+) -> list[tuple[Optional[MasterItem], float, str]]:
+    """Route to the appropriate AI backend."""
+    if settings.ANTHROPIC_API_KEY:
+        return _batch_anthropic(lines, master_items)
+    if settings.OLLAMA_BASE_URL:
+        return _batch_ollama(lines, master_items)
+    return [(None, 0.0, "Error: No AI backend configured")] * len(lines)
+
+
+def _batch_anthropic(
+    lines: list[BidLine],
+    master_items: list[MasterItem],
+) -> list[tuple[Optional[MasterItem], float, str]]:
+    """Match using Anthropic Claude API."""
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        prompt, master_by_index = _build_prompt(lines, master_items)
 
         message = client.messages.create(
-            model="claude-haiku-4-5-20251001",  # fast + cheap for batch matching
+            model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
+        return _parse_response(message.content[0].text.strip(), lines, master_by_index)
+    except Exception as e:
+        logger.error(f"Anthropic batch matching failed: {e}")
+        return [(None, 0.0, f"Error: {str(e)}")] * len(lines)
 
-        raw = message.content[0].text.strip()
-        # Strip markdown code fences if present
-        if raw.startswith("```"):
-            raw = "\n".join(raw.split("\n")[1:])
-            raw = raw.rsplit("```", 1)[0].strip()
 
-        results_json: list[dict] = json.loads(raw)
+def _batch_ollama(
+    lines: list[BidLine],
+    master_items: list[MasterItem],
+) -> list[tuple[Optional[MasterItem], float, str]]:
+    """Match using Ollama (or any OpenAI-compatible endpoint)."""
+    try:
+        import httpx
 
-        output: list[tuple[Optional[MasterItem], float, str]] = []
-        for entry in results_json:
-            idx = entry.get("master_index")
-            confidence = float(entry.get("confidence", 0))
-            reason = entry.get("reason", "")
-            master = master_by_index.get(idx) if idx else None
-            output.append((master, confidence, reason))
+        prompt, master_by_index = _build_prompt(lines, master_items)
+        base = settings.OLLAMA_BASE_URL.rstrip("/")
 
-        # Pad if Claude returned fewer results than lines
-        while len(output) < len(lines):
-            output.append((None, 0.0, "No result returned"))
+        # Try OpenAI-compatible /v1/chat/completions endpoint (Ollama supports this)
+        payload = {
+            "model": settings.OLLAMA_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "format": "json",  # Ollama JSON mode — forces valid JSON output
+        }
 
-        return output
+        headers = {}
+        if settings.OLLAMA_API_KEY:
+            headers["Authorization"] = f"Bearer {settings.OLLAMA_API_KEY}"
+
+        resp = httpx.post(
+            f"{base}/v1/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=120.0,
+        )
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"].strip()
+        return _parse_response(raw, lines, master_by_index)
 
     except Exception as e:
-        logger.error(f"AI batch matching failed: {e}")
+        logger.error(f"Ollama batch matching failed: {e}")
         return [(None, 0.0, f"Error: {str(e)}")] * len(lines)
