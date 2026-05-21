@@ -193,7 +193,7 @@ def _extract_round_id(subject: str) -> int | None:
 
 
 def _is_valid_extension(filename: str) -> bool:
-    return filename.lower().endswith((".xlsx", ".xls", ".csv"))
+    return filename.lower().endswith((".xlsx", ".xls", ".csv", ".pdf", ".docx", ".doc"))
 
 
 def _process_attachment(db: Session, content: bytes, filename: str, buyer: User, bid_round: BidRound) -> dict:

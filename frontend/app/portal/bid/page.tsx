@@ -150,9 +150,9 @@ function SubmitBidInner() {
                 {uploading ? "Uploading your bid..." : "Drop your pricing file here"}
               </p>
               <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", margin: "0 0 20px" }}>
-                or click to browse · .xlsx, .xls, .csv · Must include Part Number and Unit Price columns
+                or click to browse · Excel, CSV, PDF, Word · Must include Part Number and Unit Price columns
               </p>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={handleFileChange} />
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.pdf,.docx,.doc" style={{ display: "none" }} onChange={handleFileChange} />
               <button
                 onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
                 disabled={!selectedRound || uploading}

@@ -344,12 +344,12 @@ export default function NewRound() {
                   {working ? "Parsing file..." : "Drop master file here"}
                 </p>
                 <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.75rem", margin: 0 }}>
-                  .xlsx, .xls, .csv · Must include Part Number, Description, Quantity columns
+                  Excel, CSV, PDF, Word · Part Number column required · auto-detects layout
                 </p>
                 <input
                   ref={masterFileRef}
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.xls,.csv,.pdf,.docx,.doc"
                   style={{ display: "none" }}
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMaster(f); }}
                 />

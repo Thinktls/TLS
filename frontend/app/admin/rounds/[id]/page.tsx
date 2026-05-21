@@ -214,9 +214,9 @@ export default function RoundDetail() {
             <p style={{ fontSize: "0.85rem", color: "#fbbf24", margin: "0 0 12px" }}>No master file uploaded yet</p>
           )}
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={uploadMaster} />
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.pdf,.docx,.doc" style={{ display: "none" }} onChange={uploadMaster} />
             <button onClick={() => fileRef.current?.click()} disabled={uploading} className="btn-ghost">
-              {uploading ? "Uploading..." : round.master_file_uploaded ? "Replace Master File" : "Upload Master File (.xlsx/.csv)"}
+              {uploading ? "Uploading..." : round.master_file_uploaded ? "Replace Master File" : "Upload Master File"}
             </button>
             {round.master_file_uploaded && (
               <button
