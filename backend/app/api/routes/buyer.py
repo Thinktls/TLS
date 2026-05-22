@@ -12,7 +12,7 @@ Buyer-facing routes:
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -68,12 +68,34 @@ def my_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
         {"bid": buyer.id},
     ).fetchall()
 
+    if not rows:
+        return []
+
+    round_ids = [r.round_id for r in rows]
+
+    # Bulk-fetch all rounds in one query
+    rounds = {r.id: r for r in db.query(BidRound).filter(BidRound.id.in_(round_ids)).all()}
+
+    # Bulk-fetch line counts in two queries instead of 2×N
+    line_counts = {
+        row.bid_round_id: row.cnt
+        for row in db.query(BidLine.bid_round_id, func.count().label("cnt"))
+        .filter(BidLine.bid_round_id.in_(round_ids), BidLine.buyer_id == buyer.id)
+        .group_by(BidLine.bid_round_id)
+        .all()
+    }
+    won_counts = {
+        row.bid_round_id: row.cnt
+        for row in db.query(BidLine.bid_round_id, func.count().label("cnt"))
+        .filter(BidLine.bid_round_id.in_(round_ids), BidLine.buyer_id == buyer.id, BidLine.is_winner == True)
+        .group_by(BidLine.bid_round_id)
+        .all()
+    }
+
     result = []
     for row in rows:
-        r = db.query(BidRound).filter(BidRound.id == row.round_id).first()
+        r = rounds.get(row.round_id)
         if r:
-            lines = db.query(BidLine).filter(BidLine.bid_round_id == r.id, BidLine.buyer_id == buyer.id).count()
-            won = db.query(BidLine).filter(BidLine.bid_round_id == r.id, BidLine.buyer_id == buyer.id, BidLine.is_winner == True).count()
             result.append({
                 "id": r.id,
                 "name": r.name,
@@ -82,8 +104,8 @@ def my_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
                 "deadline": r.submission_deadline,
                 "invite_status": row.invite_status,
                 "invited_at": row.invited_at,
-                "lines_submitted": lines,
-                "lines_won": won,
+                "lines_submitted": line_counts.get(r.id, 0),
+                "lines_won": won_counts.get(r.id, 0),
             })
     return result
 
@@ -129,9 +151,6 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
         bid_file.error_message = str(e)
         db.commit()
         raise HTTPException(400, str(e))
-
-    master_items = db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
-    master_index = {m.part_number_normalized: m for m in master_items}
 
     for row in rows:
         line = BidLine(

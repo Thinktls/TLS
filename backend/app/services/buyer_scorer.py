@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.bid_line import BidLine
 from app.models.master_item import MasterItem
 from app.models.user import User
+from app.models.deal import Deal
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,14 @@ def recalculate_buyer_scores(db: Session, bid_round_id: int) -> None:
         lines_won = sum(1 for l in all_lines if l.is_winner)
         win_rate = round(lines_won / lines_bid, 4) if lines_bid > 0 else 0.0
 
+        # Pre-fetch all deals won by this buyer for accurate approved_at dates
+        won_deals = {
+            (d.bid_round_id, d.master_item_id): d
+            for d in db.query(Deal)
+            .filter(Deal.winning_buyer_id == buyer_id)
+            .all()
+        }
+
         # Margin contribution: sum((winning_price - reserve_price) × qty) for won lines
         margin_total = 0.0
         last_win = None
@@ -95,8 +104,11 @@ def recalculate_buyer_scores(db: Session, bid_round_id: int) -> None:
                     master = db.query(MasterItem).filter(MasterItem.id == line.master_item_id).first()
                 if master and master.reserve_price and line.unit_price:
                     margin_total += max(0.0, line.unit_price - master.reserve_price) * (line.quantity or 1)
-                if last_win is None or (line.created_at and line.created_at > last_win):
-                    last_win = line.created_at
+                # Use deal.approved_at (actual award date) not line.created_at (bid submission)
+                deal = won_deals.get((line.bid_round_id, line.master_item_id))
+                win_date = (deal.approved_at if deal and deal.approved_at else line.created_at)
+                if last_win is None or (win_date and win_date > last_win):
+                    last_win = win_date
 
         buyer.win_rate = win_rate
         buyer.total_lines_won = lines_won

@@ -259,9 +259,24 @@ export default function RoundDetail() {
               padding: "16px",
               marginBottom: "16px",
             }}>
-              <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)", margin: "0 0 12px" }}>
-                Select buyers to assign to this round:
-              </p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
+                  Select buyers to assign to this round:
+                </p>
+                <button
+                  onClick={() => {
+                    const active = allBuyers.filter((b) => b.is_active);
+                    setSelectedBuyerIds(
+                      selectedBuyerIds.size === active.length
+                        ? new Set()
+                        : new Set(active.map((b) => b.id))
+                    );
+                  }}
+                  style={{ fontSize: "0.73rem", color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  {selectedBuyerIds.size === allBuyers.filter((b) => b.is_active).length ? "Deselect All" : "Select All"}
+                </button>
+              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "240px", overflowY: "auto" }}>
                 {allBuyers.filter((b) => b.is_active).map((b) => (
                   <label key={b.id} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "8px", borderRadius: "8px", background: selectedBuyerIds.has(b.id) ? "rgba(61,129,227,0.12)" : "transparent" }}>

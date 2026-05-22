@@ -356,6 +356,28 @@ export default function NewRound() {
               </div>
             )}
 
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)" }}>Don't have a file?</span>
+              <button
+                onClick={() => {
+                  const csv = [
+                    "Part Number,Description,Manufacturer,Quantity,Reserve Price,Category",
+                    "CISCO-C9300-48P,Catalyst 9300 48-port PoE+,Cisco,10,1500.00,Networking",
+                    "DELL-R750-2U,PowerEdge R750 2U Server,Dell,5,4000.00,Servers",
+                    "HPE-DL380-G10,ProLiant DL380 Gen10,HPE,3,3500.00,Servers",
+                  ].join("\n");
+                  const a = Object.assign(document.createElement("a"), {
+                    href: URL.createObjectURL(new Blob([csv], { type: "text/csv" })),
+                    download: "master_template_sample.csv",
+                  });
+                  a.click();
+                }}
+                style={{ fontSize: "0.72rem", color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                Download sample CSV template
+              </button>
+            </div>
+
             <div style={{ display: "flex", gap: "10px" }}>
               <button onClick={() => setStep(1)} className="btn-ghost" style={{ padding: "10px 20px" }}>← Back</button>
               <button
@@ -375,9 +397,23 @@ export default function NewRound() {
           <div style={{ ...card, display: "flex", flexDirection: "column", gap: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <p style={{ fontWeight: 600, color: "white", fontSize: "0.95rem", margin: 0 }}>Assign Buyers</p>
-              <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)" }}>
-                {selectedBuyers.size} selected
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)" }}>
+                  {selectedBuyers.size} of {buyers.length} selected
+                </span>
+                {buyers.length > 0 && (
+                  <button
+                    onClick={() => setSelectedBuyers(
+                      selectedBuyers.size === buyers.length
+                        ? new Set()
+                        : new Set(buyers.map((b) => b.id))
+                    )}
+                    style={{ fontSize: "0.75rem", color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {selectedBuyers.size === buyers.length ? "Deselect All" : "Select All"}
+                  </button>
+                )}
+              </div>
             </div>
 
             {buyers.length === 0 ? (

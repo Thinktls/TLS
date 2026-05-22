@@ -38,7 +38,7 @@ def list_deals(round_id: int, db: Session = Depends(get_db), _=Depends(require_a
 
 
 @router.post("/{deal_id}/approve")
-def approve_deal(deal_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+async def approve_deal(deal_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if not deal:
         raise HTTPException(404, "Deal not found")
@@ -49,14 +49,14 @@ def approve_deal(deal_id: int, db: Session = Depends(get_db), admin=Depends(requ
     recalculate_buyer_scores(db, deal.bid_round_id)
     if settings.AUTO_PUSH_RAZOR:
         try:
-            push_deal_to_razor(db, deal)
+            await push_deal_to_razor(db, deal)
         except RazorPushError:
             pass  # notification already emitted inside push_deal_to_razor
     return {"status": "approved", "razor_auto_pushed": settings.AUTO_PUSH_RAZOR}
 
 
 @router.post("/rounds/{round_id}/approve-all")
-def approve_all_deals(round_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+async def approve_all_deals(round_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
     deals = (
         db.query(Deal)
         .filter(Deal.bid_round_id == round_id, Deal.status == "pending_approval")
@@ -71,7 +71,7 @@ def approve_all_deals(round_id: int, db: Session = Depends(get_db), admin=Depend
     recalculate_buyer_scores(db, round_id)
     if settings.AUTO_PUSH_RAZOR:
         try:
-            push_round_to_razor(db, round_id)
+            await push_round_to_razor(db, round_id)
         except Exception:
             pass
     return {"approved": len(deals), "razor_auto_pushed": settings.AUTO_PUSH_RAZOR}
@@ -164,14 +164,14 @@ def get_deal_overrides(deal_id: int, db: Session = Depends(get_db), _=Depends(re
 
 
 @router.post("/{deal_id}/push-razor")
-def push_to_razor(deal_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+async def push_to_razor(deal_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if not deal:
         raise HTTPException(404, "Deal not found")
     if deal.status != "approved":
         raise HTTPException(400, "Deal must be approved before pushing to Razor")
     try:
-        razor_deal_id = push_deal_to_razor(db, deal)
+        razor_deal_id = await push_deal_to_razor(db, deal)
         db.commit()
         return {"status": "pushed", "razor_deal_id": razor_deal_id}
     except RazorPushError as e:
@@ -184,9 +184,9 @@ def push_to_razor(deal_id: int, db: Session = Depends(get_db), _=Depends(require
 
 
 @router.post("/rounds/{round_id}/push-razor-all")
-def push_round_razor(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+async def push_round_razor(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     """Push all approved deals in a round to Razor ERP in bulk."""
-    result = push_round_to_razor(db, round_id)
+    result = await push_round_to_razor(db, round_id)
     return result
 
 

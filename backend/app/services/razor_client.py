@@ -10,7 +10,7 @@ When RAZOR_API_URL is unset (dev / staging), calls are stubbed and a
 RazorPushError is raised so the caller can log a notification and fall
 back to CSV export.
 """
-import time
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -47,21 +47,21 @@ def _build_payload(deal: Deal) -> dict:
     }
 
 
-def _do_post(payload: dict) -> str:
+async def _do_post(payload: dict) -> str:
     """POST to Razor and return the Razor deal ID on success."""
     if not settings.RAZOR_API_URL:
         raise RazorPushError("RAZOR_API_URL not configured — integration pending")
 
     headers = {"Authorization": f"Bearer {settings.RAZOR_API_KEY}", "Content-Type": "application/json"}
-    with httpx.Client(timeout=15) as client:
-        resp = client.post(f"{settings.RAZOR_API_URL}/deals", json=payload, headers=headers)
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(f"{settings.RAZOR_API_URL}/deals", json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         razor_id = data.get("id") or data.get("dealId") or str(resp.status_code)
         return razor_id
 
 
-def push_deal_to_razor(db: Session, deal: Deal) -> str:
+async def push_deal_to_razor(db: Session, deal: Deal) -> str:
     """
     Push a single approved deal to Razor ERP with retry.
     Updates deal.razor_push_status in place; caller must commit.
@@ -72,7 +72,7 @@ def push_deal_to_razor(db: Session, deal: Deal) -> str:
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            razor_id = _do_post(payload)
+            razor_id = await _do_post(payload)
             deal.razor_deal_id = razor_id
             deal.razor_push_status = "success"
             deal.razor_pushed_at = datetime.now(timezone.utc)
@@ -83,7 +83,7 @@ def push_deal_to_razor(db: Session, deal: Deal) -> str:
             last_exc = exc
             log.warning("Razor push attempt %d/%d failed for deal %d: %s", attempt, MAX_ATTEMPTS, deal.id, exc)
             if attempt < MAX_ATTEMPTS:
-                time.sleep(BACKOFF_BASE ** attempt)
+                await asyncio.sleep(BACKOFF_BASE ** attempt)
 
     deal.razor_push_status = "failed"
     create_notification(
@@ -96,7 +96,7 @@ def push_deal_to_razor(db: Session, deal: Deal) -> str:
     raise RazorPushError(str(last_exc))
 
 
-def push_round_to_razor(db: Session, round_id: int) -> dict:
+async def push_round_to_razor(db: Session, round_id: int) -> dict:
     """Push all approved deals in a round. Returns a summary dict."""
     deals = db.query(Deal).filter(
         Deal.bid_round_id == round_id,
@@ -106,7 +106,7 @@ def push_round_to_razor(db: Session, round_id: int) -> dict:
     pushed, failed = 0, 0
     for deal in deals:
         try:
-            push_deal_to_razor(db, deal)
+            await push_deal_to_razor(db, deal)
             pushed += 1
         except RazorPushError:
             failed += 1
