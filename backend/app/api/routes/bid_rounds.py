@@ -215,6 +215,28 @@ async def upload_master_file(round_id: int, file: UploadFile = File(...), db: Se
     return {"message": f"Uploaded {len(rows)} line items", "total": len(rows)}
 
 
+class RoundPatch(BaseModel):
+    name: Optional[str] = None
+    commodity: Optional[str] = None
+    customer: Optional[str] = None
+    notes: Optional[str] = None
+    submission_deadline: Optional[datetime] = None
+    reserve_price_enabled: Optional[bool] = None
+
+
+@router.patch("/{round_id}")
+def patch_round(round_id: int, req: RoundPatch, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Edit mutable round fields after creation."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    for field, value in req.model_dump(exclude_none=True).items():
+        setattr(r, field, value)
+    db.commit()
+    db.refresh(r)
+    return r
+
+
 @router.post("/{round_id}/open")
 def open_round(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
@@ -222,6 +244,19 @@ def open_round(round_id: int, db: Session = Depends(get_db), _=Depends(require_a
         raise HTTPException(404, "Round not found")
     if not r.master_file_uploaded:
         raise HTTPException(400, "Upload master file before opening round")
+    r.status = "open"
+    db.commit()
+    return {"status": "open"}
+
+
+@router.post("/{round_id}/reopen")
+def reopen_round(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Reopen a closed or errored round back to 'open' so buyers can submit again."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status not in ("closed", "error"):
+        raise HTTPException(400, f"Cannot reopen a round with status '{r.status}'")
     r.status = "open"
     db.commit()
     return {"status": "open"}
@@ -578,6 +613,58 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
         rows.append(row)
 
     return {"buyers": buyers, "rows": rows}
+
+
+@router.get("/{round_id}/bid-lines")
+def list_bid_lines(
+    round_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    buyer_id: Optional[int] = Query(None),
+    match_status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """Paginated bid lines for a round with optional filters."""
+    q = db.query(BidLine).filter(BidLine.bid_round_id == round_id)
+    if buyer_id is not None:
+        q = q.filter(BidLine.buyer_id == buyer_id)
+    if match_status is not None:
+        q = q.filter(BidLine.match_status == match_status)
+
+    total = q.count()
+    lines = q.order_by(BidLine.id).offset(offset).limit(limit).all()
+
+    buyer_ids = {l.buyer_id for l in lines}
+    buyers_map = {
+        b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()
+    }
+
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "items": [
+            {
+                "id": l.id,
+                "raw_part_number": l.raw_part_number,
+                "normalized_part_number": l.normalized_part_number,
+                "description": l.description,
+                "unit_price": l.unit_price,
+                "quantity": l.quantity,
+                "match_status": l.match_status,
+                "match_method": l.match_method,
+                "match_score": l.match_score,
+                "exception_type": l.exception_type,
+                "is_winner": l.is_winner,
+                "is_anomaly": l.is_anomaly,
+                "master_item_id": l.master_item_id,
+                "buyer_id": l.buyer_id,
+                "buyer_name": buyers_map[l.buyer_id].company_name if l.buyer_id in buyers_map else None,
+            }
+            for l in lines
+        ],
+    }
 
 
 @router.get("/{round_id}/summary")

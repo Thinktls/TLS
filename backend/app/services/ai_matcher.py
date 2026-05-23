@@ -98,9 +98,41 @@ def run_ai_matching(db: Session, bid_round_id: int) -> dict:
     }
 
 
+_CATALOG_WINDOW = 60  # master items to send per prompt
+
+
+def _top_candidates(lines: list[BidLine], master_items: list[MasterItem]) -> list[MasterItem]:
+    """
+    Return the top _CATALOG_WINDOW master items most relevant to this batch of lines,
+    using rapidfuzz token_sort_ratio against normalized part numbers and descriptions.
+    Falls back to a simple slice when rapidfuzz is unavailable.
+    """
+    if not master_items:
+        return []
+    try:
+        from rapidfuzz import fuzz
+        # Build a search string from all lines in the batch
+        query_tokens = " ".join(
+            f"{l.raw_part_number} {l.description or ''}" for l in lines
+        ).lower()
+
+        scored = [
+            (m, max(
+                fuzz.token_sort_ratio(query_tokens, (m.part_number_normalized or "").lower()),
+                fuzz.token_sort_ratio(query_tokens, (m.description or "").lower()),
+            ))
+            for m in master_items
+        ]
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return [m for m, _ in scored[:_CATALOG_WINDOW]]
+    except ImportError:
+        return master_items[:_CATALOG_WINDOW]
+
+
 def _build_prompt(lines: list[BidLine], master_items: list[MasterItem]) -> tuple[str, dict]:
     """Build the matching prompt and master index. Returns (prompt, master_by_index)."""
-    master_by_index: dict[int, MasterItem] = {i + 1: m for i, m in enumerate(master_items[:100])}
+    candidates = _top_candidates(lines, master_items)
+    master_by_index: dict[int, MasterItem] = {i + 1: m for i, m in enumerate(candidates)}
     master_list_text = "\n".join(
         f"{i}. {m.part_number} | {m.description or ''} | {m.manufacturer or ''}"
         for i, m in master_by_index.items()
@@ -111,7 +143,7 @@ def _build_prompt(lines: list[BidLine], master_items: list[MasterItem]) -> tuple
     )
     prompt = f"""You are matching IT hardware part numbers for a procurement platform.
 
-MASTER CATALOG (up to 100 items):
+MASTER CATALOG ({len(candidates)} best-matched items pre-selected):
 {master_list_text}
 
 BUYER SUBMITTED LINES (need matching):
