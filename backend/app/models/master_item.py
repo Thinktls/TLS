@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Index, Integer, String, Float, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -7,6 +7,10 @@ from app.db.base import Base
 class MasterItem(Base):
     """One line in the ThinkTLS master list — the source of truth for what's being bid."""
     __tablename__ = "master_items"
+    __table_args__ = (
+        # d4e5f6 migration already created: ix_master_items_bid_round_id
+        Index("ix_master_items_round_pn_norm", "bid_round_id", "part_number_normalized"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     bid_round_id = Column(Integer, ForeignKey("bid_rounds.id"), nullable=False)

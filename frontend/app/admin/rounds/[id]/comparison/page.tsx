@@ -41,18 +41,24 @@ export default function ComparisonPage() {
   const { id } = useParams();
   const [data, setData] = useState<ComparisonData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [roundName, setRoundName] = useState("");
   const parentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  function fetchData() {
+    setLoadError(false);
+    setLoading(true);
     Promise.all([
       api.get(`/rounds/${id}/comparison`).then((r) => r.data),
       api.get(`/rounds/${id}`).then((r) => r.data.name),
     ]).then(([comp, name]) => {
       setData(comp);
       setRoundName(name);
-    }).finally(() => setLoading(false));
-  }, [id]);
+    }).catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { fetchData(); }, [id]);
 
   const virtualizer = useVirtualizer({
     count: data?.rows.length ?? 0,
@@ -67,9 +73,12 @@ export default function ComparisonPage() {
     </AdminLayout>
   );
 
-  if (!data) return (
+  if (loadError || !data) return (
     <AdminLayout>
-      <div style={{ color: "#f87171", paddingTop: "60px", textAlign: "center" }}>Failed to load comparison data.</div>
+      <div style={{ textAlign: "center", paddingTop: "80px" }}>
+        <p style={{ color: "#f87171", fontSize: "0.9rem", marginBottom: "12px" }}>Failed to load comparison data.</p>
+        <button onClick={fetchData} className="btn-ghost" style={{ fontSize: "0.82rem" }}>Retry</button>
+      </div>
     </AdminLayout>
   );
 
@@ -96,6 +105,7 @@ export default function ComparisonPage() {
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
             <button
+              aria-label="Export bid comparison as Excel file"
               onClick={() => downloadFile(`/rounds/${id}/export/comparison.xlsx`, `comparison_round_${id}.xlsx`)}
               className="btn-ghost"
               style={{ fontSize: "0.8rem" }}

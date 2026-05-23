@@ -118,6 +118,7 @@ function MasterSearch({
       marginTop: "10px",
     }}>
       <input
+        aria-label="Search master items by part number or description"
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
@@ -162,6 +163,7 @@ export default function ExceptionsPage() {
   const [exceptions, setExceptions] = useState<ExceptionLine[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [resolving, setResolving] = useState<number | null>(null);
   const [bulkWorking, setBulkWorking] = useState(false);
@@ -176,13 +178,19 @@ export default function ExceptionsPage() {
   }
 
   const load = useCallback(async () => {
-    const [excRes, statsRes] = await Promise.all([
-      api.get(`/exceptions/rounds/${id}`),
-      api.get(`/exceptions/rounds/${id}/stats`),
-    ]);
-    setExceptions(excRes.data);
-    setStats(statsRes.data);
-    setLoading(false);
+    setLoadError(false);
+    try {
+      const [excRes, statsRes] = await Promise.all([
+        api.get(`/exceptions/rounds/${id}`),
+        api.get(`/exceptions/rounds/${id}/stats`),
+      ]);
+      setExceptions(excRes.data);
+      setStats(statsRes.data);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
@@ -255,6 +263,15 @@ export default function ExceptionsPage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading...</div>
+    </AdminLayout>
+  );
+
+  if (loadError) return (
+    <AdminLayout>
+      <div style={{ textAlign: "center", paddingTop: "80px" }}>
+        <p style={{ color: "#f87171", fontSize: "0.9rem", marginBottom: "12px" }}>Failed to load exceptions.</p>
+        <button onClick={load} className="btn-ghost" style={{ fontSize: "0.82rem" }}>Retry</button>
+      </div>
     </AdminLayout>
   );
 
@@ -463,6 +480,7 @@ export default function ExceptionsPage() {
                 {/* Notes field */}
                 {!ex.resolved && (
                   <input
+                    aria-label="Resolution notes"
                     value={notes[ex.id] || ""}
                     onChange={(e) => setNotes((n) => ({ ...n, [ex.id]: e.target.value }))}
                     placeholder="Optional resolution notes..."
@@ -485,6 +503,7 @@ export default function ExceptionsPage() {
                       </button>
                     )}
                     <button
+                      aria-label={searchingLine === ex.id ? "Cancel master item search" : `Remap ${ex.raw_part_number} to a master item`}
                       onClick={() => setSearchingLine(searchingLine === ex.id ? null : ex.id)}
                       disabled={isWorking}
                       className="btn-ghost"
@@ -493,6 +512,7 @@ export default function ExceptionsPage() {
                       {searchingLine === ex.id ? "Cancel Search" : "🔍 Remap"}
                     </button>
                     <button
+                      aria-label={`Reject ${ex.raw_part_number}`}
                       onClick={() => resolve(ex.id, "reject")}
                       disabled={isWorking}
                       className="btn-ghost"

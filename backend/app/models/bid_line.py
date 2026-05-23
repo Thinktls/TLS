@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, Text
+from sqlalchemy import Column, Index, Integer, String, Float, ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -7,6 +7,12 @@ from app.db.base import Base
 class BidLine(Base):
     """A single priced line item submitted by a buyer."""
     __tablename__ = "bid_lines"
+    __table_args__ = (
+        # d4e5f6 migration already created: ix_bid_lines_round_match_status, ix_bid_lines_bid_round_id, ix_bid_lines_buyer_id
+        Index("ix_bid_lines_round_buyer_id",  "bid_round_id", "buyer_id"),
+        Index("ix_bid_lines_round_winner",    "bid_round_id", "is_winner"),
+        Index("ix_bid_lines_master_item_id",  "master_item_id"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     bid_file_id = Column(Integer, ForeignKey("bid_files.id"), nullable=False)

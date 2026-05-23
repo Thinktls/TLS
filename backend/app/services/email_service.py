@@ -68,3 +68,19 @@ def send_exception_alert(admin_email: str, round_name: str, exception_count: int
     <p><a href="{review_url}" style="background:#e74c3c;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Review Exceptions</a></p>
     """
     _send(admin_email, "ThinkTLS Admin", subject, body)
+
+
+def send_approval_ready_email(admin_email: str, round_name: str, deal_count: int, round_url: str):
+    subject = f"ThinkTLS: Winners selected — {round_name} ready for approval"
+    body = f"""
+    <h2>Round ready for approval</h2>
+    <p>Processing for <strong>{round_name}</strong> is complete with no open exceptions.</p>
+    <table style="border-collapse:collapse;width:280px;margin:12px 0;">
+      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Deals Ready</strong></td><td style="padding:8px;border:1px solid #ddd;color:green;">{deal_count}</td></tr>
+    </table>
+    <p>All bid lines have been matched and winners selected. You may now review and approve the deals.</p>
+    <p><a href="{round_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Review &amp; Approve</a></p>
+    <hr/>
+    <p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
+    """
+    _send(admin_email, "ThinkTLS Admin", subject, body)

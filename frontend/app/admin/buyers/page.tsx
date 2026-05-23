@@ -24,6 +24,7 @@ interface NewBuyerForm {
 export default function BuyersPage() {
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [toggling, setToggling] = useState<number | null>(null);
@@ -41,9 +42,15 @@ export default function BuyersPage() {
   });
 
   async function load() {
-    const res = await api.get("/auth/buyers");
-    setBuyers(res.data);
-    setLoading(false);
+    setLoadError(false);
+    try {
+      const res = await api.get("/auth/buyers");
+      setBuyers(res.data);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -188,6 +195,11 @@ export default function BuyersPage() {
         {/* Buyers table */}
         {loading ? (
           <div style={{ color: "rgba(255,255,255,0.3)", textAlign: "center", paddingTop: "40px" }}>Loading...</div>
+        ) : loadError ? (
+          <div style={{ textAlign: "center", paddingTop: "60px" }}>
+            <p style={{ color: "#f87171", fontSize: "0.9rem", marginBottom: "12px" }}>Failed to load buyers.</p>
+            <button onClick={load} className="btn-ghost" style={{ fontSize: "0.82rem" }}>Retry</button>
+          </div>
         ) : buyers.length === 0 ? (
           <div style={{ textAlign: "center", paddingTop: "60px", color: "rgba(255,255,255,0.3)", fontSize: "0.9rem" }}>
             No buyers yet. Add one above.
@@ -239,11 +251,12 @@ export default function BuyersPage() {
                               outline: "none",
                             }}
                           />
-                          <button onClick={() => saveFluff(b.id)} style={{ fontSize: "0.72rem", color: "#34d399", background: "none", border: "none", cursor: "pointer" }}>✓</button>
-                          <button onClick={() => setEditingFluff(null)} style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                          <button aria-label="Save fluff percentage" onClick={() => saveFluff(b.id)} style={{ fontSize: "0.72rem", color: "#34d399", background: "none", border: "none", cursor: "pointer" }}>✓</button>
+                          <button aria-label="Cancel fluff edit" onClick={() => setEditingFluff(null)} style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
                         </div>
                       ) : (
                         <button
+                          aria-label={`Edit fluff percentage for ${b.full_name}`}
                           onClick={() => { setEditingFluff(b.id); setFluffValue(String(b.fluff_percentage)); }}
                           style={{
                             background: "rgba(255,255,255,0.06)",
@@ -277,6 +290,7 @@ export default function BuyersPage() {
                     {/* Toggle action */}
                     <td style={{ textAlign: "center" }}>
                       <button
+                        aria-label={`${b.is_active ? "Disable" : "Enable"} ${b.full_name}`}
                         onClick={() => toggleBuyer(b.id)}
                         disabled={toggling === b.id}
                         style={{

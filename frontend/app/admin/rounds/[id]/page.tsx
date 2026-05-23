@@ -27,6 +27,15 @@ interface Summary {
   exception_breakdown: Record<string, number>;
 }
 
+interface ProcessingStatus {
+  status: string;
+  total_lines: number;
+  matched: number;
+  exceptions: number;
+  deals: number;
+  progress_pct: number;
+}
+
 interface AssignedBuyer {
   id: number;
   full_name: string;
@@ -69,11 +78,13 @@ export default function RoundDetail() {
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState<"ok" | "err">("ok");
   const [showBuyerPicker, setShowBuyerPicker] = useState(false);
   const [selectedBuyerIds, setSelectedBuyerIds] = useState<Set<number>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function flash(text: string, type: "ok" | "err" = "ok") {
     setMsg(text);
@@ -94,6 +105,27 @@ export default function RoundDetail() {
   }
 
   useEffect(() => { load(); }, [id]);
+
+  // Poll processing status when round is in processing state
+  useEffect(() => {
+    if (round?.status === "processing") {
+      pollRef.current = setInterval(async () => {
+        try {
+          const res = await api.get(`/rounds/${id}/processing-status`);
+          setProcessingStatus(res.data);
+          if (res.data.status !== "processing") {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            load();
+          }
+        } catch { /* ignore */ }
+      }, 3000);
+    } else {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      setProcessingStatus(null);
+    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [round?.status, id]);
 
   async function loadAllBuyers() {
     const res = await api.get("/auth/buyers");
@@ -337,21 +369,62 @@ export default function RoundDetail() {
           <h3 style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.95rem" }}>Round Controls</h3>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {round.status === "draft" && (
-              <button onClick={() => changeStatus("open")} className="btn-brand" style={{ background: "#059669" }}>
+              <button onClick={() => changeStatus("open")} className="btn-brand" style={{ background: "#059669" }}
+                aria-label="Open this round to start accepting bids">
                 Open Round
               </button>
             )}
             {round.status === "open" && (
-              <button onClick={() => changeStatus("close")} className="btn-brand" style={{ background: "#d97706" }}>
+              <button onClick={() => changeStatus("close")} className="btn-brand" style={{ background: "#d97706" }}
+                aria-label="Close bidding and prepare for processing">
                 Close Round
               </button>
             )}
             {round.status === "closed" && (
-              <button onClick={processRound} disabled={processing} className="btn-brand">
-                {processing ? "Processing..." : "Process Bids & Select Winners"}
+              <button onClick={processRound} disabled={processing} className="btn-brand"
+                aria-label="Run matching engine and select winners">
+                {processing ? "Starting..." : "Process Bids & Select Winners"}
               </button>
             )}
           </div>
+
+          {/* Processing progress bar — shown while status = processing */}
+          {round.status === "processing" && (
+            <div style={{ marginTop: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "0.82rem", color: "#60a5fa", fontWeight: 500 }}>
+                  Processing… matching bid lines and selecting winners
+                </span>
+                <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.5)" }}>
+                  {processingStatus ? `${processingStatus.progress_pct}%` : "—"}
+                </span>
+              </div>
+              <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: "100px", height: "6px", overflow: "hidden" }}>
+                <div style={{
+                  height: "100%",
+                  borderRadius: "100px",
+                  background: "linear-gradient(90deg, #3D81E3, #a78bfa)",
+                  width: `${processingStatus?.progress_pct ?? 0}%`,
+                  transition: "width 0.6s ease",
+                }} />
+              </div>
+              {processingStatus && (
+                <div style={{ display: "flex", gap: "20px", marginTop: "12px", flexWrap: "wrap" }}>
+                  {[
+                    ["Lines", processingStatus.total_lines],
+                    ["Matched", processingStatus.matched],
+                    ["Exceptions", processingStatus.exceptions],
+                    ["Deals", processingStatus.deals],
+                  ].map(([label, val]) => (
+                    <div key={label as string}>
+                      <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "white" }}>{(val as number).toLocaleString()}</p>
+                      <p style={{ margin: 0, fontSize: "0.68rem", color: "rgba(255,255,255,0.4)" }}>{label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Summary ─── */}

@@ -25,7 +25,7 @@ from app.services.export_service import (
     export_buyer_award_sheet, export_all_award_sheets_zip,
     export_razor_csv, export_margin_report, export_disposition_report,
 )
-from app.services.email_service import send_bid_invitation, send_round_results
+from app.services.email_service import send_bid_invitation, send_round_results, send_approval_ready_email
 
 router = APIRouter(prefix="/rounds", tags=["bid_rounds"])
 
@@ -473,14 +473,24 @@ def _run_processing(round_id: int):
             # Notify admin about processing completion
             from app.services.email_service import send_exception_alert
             from app.core.config import settings
+            frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+            admin_email = getattr(settings, "ADMIN_EMAIL", None)
             exceptions_count = db.query(BidLine).filter(
-                BidLine.bid_round_id == round_id, BidLine.match_status == "exception"
+                BidLine.bid_round_id == round_id,
+                BidLine.match_status == "exception",
+                BidLine.exception_resolved == False,
             ).count()
-            if exceptions_count > 0 and getattr(settings, "ADMIN_EMAIL", None):
-                frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+            if exceptions_count > 0 and admin_email:
                 send_exception_alert(
-                    settings.ADMIN_EMAIL, r.name, exceptions_count,
+                    admin_email, r.name, exceptions_count,
                     f"{frontend_url}/admin/rounds/{round_id}/exceptions"
+                )
+            elif exceptions_count == 0 and admin_email:
+                from app.models.deal import Deal
+                deal_count = db.query(Deal).filter(Deal.bid_round_id == round_id).count()
+                send_approval_ready_email(
+                    admin_email, r.name, deal_count,
+                    f"{frontend_url}/admin/rounds/{round_id}"
                 )
 
     except Exception as exc:
@@ -593,6 +603,39 @@ def _exception_breakdown(lines):
         t = l.exception_type or "unknown"
         breakdown[t] = breakdown.get(t, 0) + 1
     return breakdown
+
+
+@router.get("/{round_id}/processing-status")
+def processing_status(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """
+    Lightweight poll endpoint for the UI while a round is processing.
+    Returns the current round status and progress counters so the frontend
+    can show a real progress bar without re-fetching the full round detail.
+    """
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+
+    from sqlalchemy import func as sqlfunc
+    total = db.query(sqlfunc.count(BidLine.id)).filter(BidLine.bid_round_id == round_id).scalar() or 0
+    matched = db.query(sqlfunc.count(BidLine.id)).filter(
+        BidLine.bid_round_id == round_id, BidLine.match_status == "matched"
+    ).scalar() or 0
+    exceptions = db.query(sqlfunc.count(BidLine.id)).filter(
+        BidLine.bid_round_id == round_id, BidLine.match_status == "exception"
+    ).scalar() or 0
+    deals = db.query(sqlfunc.count(Deal.id)).filter(Deal.bid_round_id == round_id).scalar() or 0
+
+    pct = round((matched + exceptions) / total * 100, 1) if total > 0 else 0
+
+    return {
+        "status": r.status,
+        "total_lines": total,
+        "matched": matched,
+        "exceptions": exceptions,
+        "deals": deals,
+        "progress_pct": pct,
+    }
 
 
 @router.get("/{round_id}/export/deals.xlsx")
