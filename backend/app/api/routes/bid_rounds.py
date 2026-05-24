@@ -94,10 +94,14 @@ def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
     all_deals = db.query(Deal).filter(Deal.status == "approved").all()
     total_deal_value = round(sum(d.total_value for d in all_deals), 2)
 
-    # Average margin % — compare winning_price to master reserve_price
+    # Average margin % — pre-fetch masters once to avoid N+1
+    master_ids_d = {d.master_item_id for d in all_deals}
+    masters_idx = {
+        m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids_d)).all()
+    }
     margins = []
     for d in all_deals:
-        master = db.query(MasterItem).filter(MasterItem.id == d.master_item_id).first()
+        master = masters_idx.get(d.master_item_id)
         if master and master.reserve_price and master.reserve_price > 0:
             margins.append((d.winning_price - master.reserve_price) / master.reserve_price * 100)
     avg_margin_pct = round(sum(margins) / len(margins), 2) if margins else 0.0
@@ -578,12 +582,17 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
         .all()
     )
 
-    # Index lines by master_item_id → buyer_id
+    # Pre-fetch all buyers involved in this round in a single query
     from collections import defaultdict
+    buyer_ids = {l.buyer_id for l in lines}
+    buyer_map: dict[int, str] = {
+        b.id: (b.company_name or str(b.id))
+        for b in db.query(User).filter(User.id.in_(buyer_ids)).all()
+    }
+
     by_item: dict = defaultdict(dict)
     for line in lines:
-        buyer = db.query(User).filter(User.id == line.buyer_id).first()
-        company = buyer.company_name if buyer else str(line.buyer_id)
+        company = buyer_map.get(line.buyer_id, str(line.buyer_id))
         by_item[line.master_item_id][company] = {
             "buyer_id": line.buyer_id,
             "unit_price": line.unit_price,
@@ -592,12 +601,6 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
             "bid_line_id": line.id,
         }
 
-    # Collect all buyer company names across this round
-    buyer_ids = {l.buyer_id for l in lines}
-    buyer_map: dict[int, str] = {}
-    for bid in buyer_ids:
-        b = db.query(User).filter(User.id == bid).first()
-        buyer_map[bid] = b.company_name if b else str(bid)
     buyers = sorted(set(buyer_map.values()))
 
     rows = []

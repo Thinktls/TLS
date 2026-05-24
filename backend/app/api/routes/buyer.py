@@ -194,9 +194,14 @@ def my_results(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
         .all()
     )
 
+    master_ids = {l.master_item_id for l in lines if l.master_item_id}
+    masters_map = {
+        m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids)).all()
+    }
+
     results = []
     for l in lines:
-        master = db.query(MasterItem).filter(MasterItem.id == l.master_item_id).first()
+        master = masters_map.get(l.master_item_id) if l.master_item_id else None
         if l.is_winner:
             results.append({
                 "part_number": master.part_number if master else l.raw_part_number,
@@ -261,9 +266,14 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
         .filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id, BidLine.match_status == "matched")
         .all()
     )
+    master_ids_r = {l.master_item_id for l in lines if l.master_item_id}
+    masters_map_r = {
+        m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids_r)).all()
+    }
+
     results = []
     for l in lines:
-        master = db.query(MasterItem).filter(MasterItem.id == l.master_item_id).first()
+        master = masters_map_r.get(l.master_item_id) if l.master_item_id else None
         entry = {
             "part_number": master.part_number if master else l.raw_part_number,
             "description": master.description if master else l.description,

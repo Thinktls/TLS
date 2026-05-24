@@ -78,6 +78,7 @@ export default function RoundDetail() {
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState<"ok" | "err">("ok");
@@ -169,6 +170,19 @@ export default function RoundDetail() {
       flash(`Error: ${err.response?.data?.detail}`, "err");
     } finally {
       setProcessing(false);
+    }
+  }
+
+  async function reopenRound() {
+    setReopening(true);
+    try {
+      await api.post(`/rounds/${id}/reopen`);
+      flash("Round reopened — buyers can submit again");
+      load();
+    } catch (err: any) {
+      flash(`Error: ${err.response?.data?.detail}`, "err");
+    } finally {
+      setReopening(false);
     }
   }
 
@@ -381,9 +395,23 @@ export default function RoundDetail() {
               </button>
             )}
             {round.status === "closed" && (
-              <button onClick={processRound} disabled={processing} className="btn-brand"
-                aria-label="Run matching engine and select winners">
-                {processing ? "Starting..." : "Process Bids & Select Winners"}
+              <>
+                <button onClick={processRound} disabled={processing} className="btn-brand"
+                  aria-label="Run matching engine and select winners">
+                  {processing ? "Starting..." : "Process Bids & Select Winners"}
+                </button>
+                <button onClick={reopenRound} disabled={reopening} className="btn-ghost"
+                  aria-label="Reopen round so buyers can submit again"
+                  style={{ fontSize: "0.82rem" }}>
+                  {reopening ? "Reopening..." : "Reopen Round"}
+                </button>
+              </>
+            )}
+            {round.status === "error" && (
+              <button onClick={reopenRound} disabled={reopening} className="btn-brand"
+                aria-label="Reopen round after processing error"
+                style={{ background: "#d97706" }}>
+                {reopening ? "Reopening..." : "Reopen Round (fix error)"}
               </button>
             )}
           </div>

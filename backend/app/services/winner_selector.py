@@ -31,9 +31,19 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
     for line in matched_lines:
         by_item.setdefault(line.master_item_id, []).append(line)
 
+    # Pre-fetch masters and buyers once to avoid N+1
+    master_map = {
+        m.id: m for m in db.query(MasterItem)
+        .filter(MasterItem.bid_round_id == bid_round_id).all()
+    }
+    buyer_ids = {l.buyer_id for l in matched_lines}
+    buyer_map = {
+        b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()
+    }
+
     deals = []
     for item_id, lines in by_item.items():
-        master = db.query(MasterItem).filter(MasterItem.id == item_id).first()
+        master = master_map.get(item_id)
         if not master:
             continue
 
@@ -72,7 +82,7 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
 
         # Fluff engine: losing buyers told real_price * (1 + buyer_fluff%) only when enabled
         for loser in valid_lines[1:]:
-            buyer = db.query(User).filter(User.id == loser.buyer_id).first()
+            buyer = buyer_map.get(loser.buyer_id)
             if buyer and buyer.fluff_enabled:
                 fluff_pct = buyer.fluff_percentage
             elif not buyer:

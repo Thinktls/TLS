@@ -34,7 +34,22 @@ class BulkApproveRequest(BaseModel):
 @router.get("/rounds/{round_id}")
 def list_deals(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     deals = db.query(Deal).filter(Deal.bid_round_id == round_id).all()
-    return [_deal_out(d, db) for d in deals]
+    if not deals:
+        return []
+    # Pre-fetch buyers and override counts to avoid N+1
+    buyer_ids = {d.winning_buyer_id for d in deals}
+    deal_ids  = [d.id for d in deals]
+    buyers_map = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
+    from sqlalchemy import func as _func
+    from app.models.approval_override import ApprovalOverride as _AO
+    override_counts = {
+        row.deal_id: row.cnt
+        for row in db.query(_AO.deal_id, _func.count().label("cnt"))
+        .filter(_AO.deal_id.in_(deal_ids))
+        .group_by(_AO.deal_id)
+        .all()
+    }
+    return [_deal_out_fast(d, buyers_map, override_counts) for d in deals]
 
 
 @router.post("/{deal_id}/approve")
@@ -188,6 +203,28 @@ async def push_round_razor(round_id: int, db: Session = Depends(get_db), _=Depen
     """Push all approved deals in a round to Razor ERP in bulk."""
     result = await push_round_to_razor(db, round_id)
     return result
+
+
+def _deal_out_fast(d: Deal, buyers_map: dict, override_counts: dict) -> dict:
+    buyer = buyers_map.get(d.winning_buyer_id)
+    return {
+        "id": d.id,
+        "part_number": d.part_number,
+        "description": d.description,
+        "quantity": d.quantity,
+        "winning_price": d.winning_price,
+        "total_value": d.total_value,
+        "status": d.status,
+        "razor_push_status": d.razor_push_status,
+        "razor_deal_id": d.razor_deal_id,
+        "approved_by": d.approved_by,
+        "approved_at": d.approved_at,
+        "winner_company": buyer.company_name if buyer else "",
+        "winner_email": buyer.email if buyer else "",
+        "winning_buyer_id": d.winning_buyer_id,
+        "override_count": override_counts.get(d.id, 0),
+        "notes": d.notes,
+    }
 
 
 def _deal_out(d: Deal, db: Session) -> dict:
