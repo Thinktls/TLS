@@ -70,7 +70,10 @@ export default function BuyerProfilePage() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading...</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </AdminLayout>
   );
 
@@ -91,18 +94,19 @@ export default function BuyerProfilePage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "820px" }}>
-        <Link href="/admin/buyers" style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-          ← Buyers
+      <div style={{ maxWidth: "820px" }} className="animate-in">
+        <Link href="/admin/buyers" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Buyers
         </Link>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", margin: "12px 0 28px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               {profile.full_name}
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", margin: "4px 0 0" }}>
+            </h1>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
               {profile.company_name || profile.email}
             </p>
             <span style={{
@@ -142,9 +146,9 @@ export default function BuyerProfilePage() {
           display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px",
         }}>
           <div style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "14px",
+            background: "var(--bg-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-xl)",
             padding: "20px",
           }}>
             <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -158,9 +162,9 @@ export default function BuyerProfilePage() {
             </p>
           </div>
           <div style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "14px",
+            background: "var(--bg-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-xl)",
             padding: "20px",
           }}>
             <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -177,9 +181,9 @@ export default function BuyerProfilePage() {
 
         {/* Performance stats grid */}
         <div style={{
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: "16px",
+          background: "var(--bg-2)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-xl)",
           padding: "24px",
           marginBottom: "16px",
         }}>
@@ -201,9 +205,9 @@ export default function BuyerProfilePage() {
 
         {/* Activity timeline */}
         <div style={{
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: "16px",
+          background: "var(--bg-2)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-xl)",
           padding: "24px",
         }}>
           <p style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.9rem" }}>Activity</p>

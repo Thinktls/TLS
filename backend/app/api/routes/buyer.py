@@ -133,11 +133,20 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     content = await file.read()
     file_size = len(content)
 
+    # Persist file to the uploads volume so admin can download it later
+    import os as _os
+    upload_dir = f"/app/uploads/rounds/{round_id}"
+    _os.makedirs(upload_dir, exist_ok=True)
+    safe_name = f"{buyer.id}_{file.filename}".replace(" ", "_")
+    disk_path = f"{upload_dir}/{safe_name}"
+    with open(disk_path, "wb") as fh:
+        fh.write(content)
+
     bid_file = BidFile(
         bid_round_id=round_id,
         buyer_id=buyer.id,
         filename=file.filename,
-        file_path=f"/tmp/{round_id}_{buyer.id}_{file.filename}",
+        file_path=disk_path,
         file_size_bytes=file_size,
         status="processing",
     )
@@ -184,6 +193,58 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
         link=f"/admin/rounds/{round_id}",
     )
     return {"message": f"Submitted {len(rows)} line items", "bid_file_id": bid_file.id}
+
+
+@router.get("/rounds/{round_id}/my-submission")
+def my_submission(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """Return the buyer's submitted bid lines for a round so they can review what was parsed."""
+    bid_file = (
+        db.query(BidFile)
+        .filter(BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id)
+        .order_by(BidFile.uploaded_at.desc())
+        .first()
+    )
+    if not bid_file:
+        return {"bid_file": None, "lines": []}
+
+    lines = (
+        db.query(BidLine)
+        .filter(BidLine.bid_file_id == bid_file.id)
+        .order_by(BidLine.row_number)
+        .all()
+    )
+
+    master_ids = {l.master_item_id for l in lines if l.master_item_id}
+    masters_map = {
+        m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids)).all()
+    }
+
+    return {
+        "bid_file": {
+            "id": bid_file.id,
+            "filename": bid_file.filename,
+            "uploaded_at": bid_file.uploaded_at.isoformat() if bid_file.uploaded_at else None,
+            "lines_parsed": bid_file.lines_parsed,
+            "status": bid_file.status,
+            "error_message": bid_file.error_message,
+        },
+        "lines": [
+            {
+                "id": l.id,
+                "row_number": l.row_number,
+                "raw_part_number": l.raw_part_number,
+                "description": l.description,
+                "unit_price": l.unit_price,
+                "quantity": l.quantity,
+                "match_status": l.match_status,
+                "match_method": l.match_method,
+                "exception_type": l.exception_type,
+                "matched_part_number": masters_map[l.master_item_id].part_number if l.master_item_id and l.master_item_id in masters_map else None,
+                "matched_description": masters_map[l.master_item_id].description if l.master_item_id and l.master_item_id in masters_map else None,
+            }
+            for l in lines
+        ],
+    }
 
 
 @router.get("/my-results")

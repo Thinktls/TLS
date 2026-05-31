@@ -53,3 +53,5 @@ app.include_router(notifications_router, prefix="/api")
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "ThinkTLS Bid Desk"}
+
+

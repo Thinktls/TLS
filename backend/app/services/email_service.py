@@ -1,30 +1,67 @@
 """
-Email via SendGrid. Falls back to console logging if API key is missing.
+Email delivery — three backends tried in order:
+  1. SendGrid  (SENDGRID_API_KEY set)
+  2. SMTP      (SMTP_HOST + SMTP_USER + SMTP_PASSWORD set)  ← works with Gmail, Resend, Mailgun, etc.
+  3. Console   (dev fallback — logs to stdout)
 """
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, To
-from app.core.config import settings
 import logging
+import smtplib
+import ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 def _send(to_email: str, to_name: str, subject: str, html_body: str):
-    if not settings.SENDGRID_API_KEY:
-        logger.info(f"[EMAIL MOCK] To: {to_email} | Subject: {subject}")
-        return
+    if settings.SENDGRID_API_KEY:
+        _send_sendgrid(to_email, to_name, subject, html_body)
+    elif settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD:
+        _send_smtp(to_email, to_name, subject, html_body)
+    else:
+        logger.info(
+            f"[EMAIL MOCK] No email provider configured.\n"
+            f"  To: {to_email} ({to_name})\n"
+            f"  Subject: {subject}\n"
+            f"  Set SENDGRID_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASSWORD in .env to enable real emails."
+        )
 
-    message = Mail(
-        from_email=(settings.FROM_EMAIL, settings.FROM_NAME),
-        to_emails=To(to_email, to_name),
-        subject=subject,
-        html_content=html_body,
-    )
+
+def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str):
     try:
-        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
-        sg.send(message)
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail, To
+        message = Mail(
+            from_email=(settings.FROM_EMAIL, settings.FROM_NAME),
+            to_emails=To(to_email, to_name),
+            subject=subject,
+            html_content=html_body,
+        )
+        SendGridAPIClient(settings.SENDGRID_API_KEY).send(message)
+        logger.info(f"[EMAIL SendGrid] Sent to {to_email}: {subject}")
     except Exception as e:
-        logger.error(f"SendGrid error for {to_email}: {e}")
+        logger.error(f"[EMAIL SendGrid] Failed for {to_email}: {e}")
+
+
+def _send_smtp(to_email: str, to_name: str, subject: str, html_body: str):
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{settings.FROM_NAME} <{settings.FROM_EMAIL}>"
+        msg["To"] = f"{to_name} <{to_email}>"
+        msg.attach(MIMEText(html_body, "html"))
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.sendmail(settings.FROM_EMAIL, to_email, msg.as_string())
+        logger.info(f"[EMAIL SMTP] Sent to {to_email}: {subject}")
+    except Exception as e:
+        logger.error(f"[EMAIL SMTP] Failed for {to_email}: {e}")
 
 
 def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, deadline: str, upload_url: str):
@@ -84,3 +121,31 @@ def send_approval_ready_email(admin_email: str, round_name: str, deal_count: int
     <p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
     """
     _send(admin_email, "ThinkTLS Admin", subject, body)
+
+
+def send_password_reset(to_email: str, to_name: str, reset_url: str):
+    subject = "ThinkTLS: Reset your password"
+    body = f"""
+    <h2>Password Reset Request</h2>
+    <p>Hello {to_name},</p>
+    <p>Click the button below to reset your password. This link expires in 2 hours.</p>
+    <p><a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Reset Password</a></p>
+    <p>If you didn't request this, ignore this email.</p>
+    <hr/>
+    <p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
+    """
+    _send(to_email, to_name, subject, body)
+
+
+def send_buyer_invite(to_email: str, to_name: str, setup_url: str):
+    subject = "Welcome to ThinkTLS Bid Desk — Set up your account"
+    body = f"""
+    <h2>Welcome to ThinkTLS Bid Desk</h2>
+    <p>Hello {to_name},</p>
+    <p>Your buyer account has been created. Click below to set your password and access the platform.</p>
+    <p><a href="{setup_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Set Up My Account</a></p>
+    <p>This link expires in 72 hours.</p>
+    <hr/>
+    <p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
+    """
+    _send(to_email, to_name, subject, body)

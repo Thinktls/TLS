@@ -53,9 +53,9 @@ function timeAgo(iso: string | null): string {
 function StatBox({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div style={{
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: "12px",
+      background: "var(--bg-2)",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius-lg)",
       padding: "16px 20px",
     }}>
       <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -90,7 +90,10 @@ export default function ParticipationTracker() {
 
   if (!data) return (
     <AdminLayout>
-      <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading...</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </AdminLayout>
   );
 
@@ -102,17 +105,18 @@ export default function ParticipationTracker() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "900px" }}>
-        <Link href={`/admin/rounds/${id}`} style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-          ← Round Detail
+      <div style={{ maxWidth: "900px" }} className="animate-in">
+        <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Round Detail
         </Link>
 
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", margin: "10px 0 24px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "24px" }}>
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Buyer Participation
-            </h2>
-            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", marginTop: "4px" }}>
+            </h1>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-4)", margin: 0 }}>
               Live status · refreshes every 30s · last updated {timeAgo(lastRefresh.toISOString())}
             </p>
           </div>

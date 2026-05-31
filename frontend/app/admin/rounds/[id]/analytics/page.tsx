@@ -134,7 +134,10 @@ export default function RoundAnalyticsPage() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ color: "rgba(255,255,255,0.4)", padding: "80px 0", textAlign: "center" }}>Loading analytics…</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </AdminLayout>
   );
 
@@ -151,17 +154,16 @@ export default function RoundAnalyticsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1100px" }}>
+      <div style={{ maxWidth: "1100px" }} className="animate-in">
         {/* Breadcrumb + title */}
-        <div style={{ marginBottom: "6px" }}>
-          <Link href={`/admin/rounds/${id}`} style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.8rem", textDecoration: "none" }}>
-            ← {round.name}
-          </Link>
-        </div>
+        <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          {round.name}
+        </Link>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
           <div>
-            <h1 style={{ color: "white", fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>Round Analytics</h1>
-            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.82rem", margin: "4px 0 0" }}>
+            <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Round Analytics</h1>
+            <p style={{ color: "var(--text-4)", fontSize: "0.82rem", margin: 0 }}>
               {round.commodity} · {round.status} {round.submission_deadline ? `· Deadline ${fmtDate(round.submission_deadline)}` : ""}
             </p>
           </div>

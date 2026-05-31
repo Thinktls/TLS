@@ -5,184 +5,160 @@ import { logout, getFullName } from "@/lib/auth";
 import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 
+/* ── Nav icons ──────────────────────────────────────────────── */
+const Icons = {
+  Dashboard: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  ),
+  Rounds: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  Buyers: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  Compare: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="14"/>
+    </svg>
+  ),
+  Fluff: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/>
+    </svg>
+  ),
+  Reports: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+    </svg>
+  ),
+  AI: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  ),
+  Guide: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+};
+
 const nav = [
-  { href: "/admin",                  label: "Dashboard" },
-  { href: "/admin/rounds",           label: "Bid Rounds" },
-  { href: "/admin/buyers",           label: "Buyers" },
-  { href: "/admin/buyers/compare",   label: "Buyer Compare" },
-  { href: "/admin/buyers/fluff",     label: "Fluff Settings" },
-  { href: "/admin/reports",          label: "Reports" },
-  { href: "/admin/query",            label: "AI Query" },
-  { href: "/admin/guide",            label: "Admin Guide" },
+  { href: "/admin",                label: "Dashboard",      Icon: Icons.Dashboard },
+  { href: "/admin/rounds",         label: "Bid Rounds",     Icon: Icons.Rounds },
+  { href: "/admin/buyers",         label: "Buyers",         Icon: Icons.Buyers },
+  { href: "/admin/buyers/compare", label: "Buyer Compare",  Icon: Icons.Compare },
+  { href: "/admin/buyers/fluff",   label: "Fluff Settings", Icon: Icons.Fluff },
+  { href: "/admin/reports",        label: "Reports",        Icon: Icons.Reports },
+  { href: "/admin/query",          label: "AI Query",       Icon: Icons.AI },
+  { href: "/admin/guide",          label: "Admin Guide",    Icon: Icons.Guide },
 ];
 
+/* ── Notifications ──────────────────────────────────────────── */
 interface NotifItem {
-  id: number;
-  title: string;
-  body: string | null;
-  category: string;
-  link: string | null;
-  read: boolean;
-  created_at: string;
+  id: number; title: string; body: string | null;
+  category: string; link: string | null; read: boolean; created_at: string;
 }
-
-const CATEGORY_DOT: Record<string, string> = {
-  info: "#60a5fa",
-  success: "#34d399",
-  warning: "#fbbf24",
-  error: "#f87171",
+const CATEGORY_COLOR: Record<string, string> = {
+  info: "#60a5fa", success: "#34d399", warning: "#fbbf24", error: "#f87171",
 };
 
 function NotificationBell() {
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotifItem[]>([]);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   async function fetchCount() {
-    try {
-      const res = await api.get("/notifications/unread-count");
-      setCount(res.data.count);
-    } catch { /* not logged in yet */ }
+    try { const r = await api.get("/notifications/unread-count"); setCount(r.data.count); } catch {}
   }
-
   async function openFeed() {
     if (open) { setOpen(false); return; }
-    try {
-      const res = await api.get("/notifications", { params: { limit: 20 } });
-      setItems(res.data);
-    } catch { setItems([]); }
+    try { const r = await api.get("/notifications", { params: { limit: 20 } }); setItems(r.data); } catch { setItems([]); }
     setOpen(true);
   }
-
   async function markRead(id: number) {
     await api.patch(`/notifications/${id}/read`);
-    setItems((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-    setCount((c) => Math.max(0, c - 1));
+    setItems(p => p.map(n => n.id === id ? { ...n, read: true } : n));
+    setCount(c => Math.max(0, c - 1));
   }
-
-  async function markAllRead() {
+  async function markAll() {
     await api.patch("/notifications/read-all");
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    setCount(0);
+    setItems(p => p.map(n => ({ ...n, read: true }))); setCount(0);
   }
-
+  useEffect(() => { fetchCount(); const t = setInterval(fetchCount, 30_000); return () => clearInterval(t); }, []);
   useEffect(() => {
-    fetchCount();
-    const interval = setInterval(fetchCount, 30_000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
   function timeAgo(iso: string) {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return "just now";
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
+    const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 1) return "just now"; if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60); if (h < 24) return `${h}h`; return `${Math.floor(h / 24)}d`;
   }
 
   return (
-    <div ref={panelRef} style={{ position: "relative" }}>
-      <button
-        onClick={openFeed}
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "8px",
-          padding: "6px 10px",
-          cursor: "pointer",
-          display: "flex", alignItems: "center", gap: "6px",
-          color: "rgba(255,255,255,0.65)", fontSize: "1rem",
-          position: "relative",
-        }}
+    <div ref={ref} style={{ position: "relative" }}>
+      <button onClick={openFeed} style={{
+        position: "relative", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: "8px", width: "34px", height: "34px", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.55)",
+        transition: "all 0.15s",
+      }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)"; (e.currentTarget as HTMLElement).style.color = "white"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.55)"; }}
         title="Notifications"
       >
-        🔔
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
         {count > 0 && (
           <span style={{
-            position: "absolute", top: "-5px", right: "-5px",
-            background: "#ef4444", color: "white",
-            fontSize: "0.6rem", fontWeight: 700,
-            borderRadius: "100px", padding: "1px 5px",
-            minWidth: "16px", textAlign: "center",
-          }}>
-            {count > 99 ? "99+" : count}
-          </span>
+            position: "absolute", top: "-5px", right: "-5px", minWidth: "16px", height: "16px",
+            background: "linear-gradient(135deg, #ef4444, #f87171)", color: "white",
+            fontSize: "0.58rem", fontWeight: 700, borderRadius: "100px", padding: "0 4px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>{count > 99 ? "99+" : count}</span>
         )}
       </button>
 
       {open && (
         <div style={{
-          position: "absolute", top: "calc(100% + 8px)", right: 0,
-          width: "340px", maxHeight: "420px",
-          background: "#111114",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "14px",
-          boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-          zIndex: 9999, overflow: "hidden",
-          display: "flex", flexDirection: "column",
+          position: "absolute", top: "calc(100% + 8px)", right: 0, width: "340px", maxHeight: "420px",
+          background: "#0f0f16", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.7)", zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "14px 16px",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
-          }}>
-            <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "white" }}>Notifications</span>
-            {count > 0 && (
-              <button
-                onClick={markAllRead}
-                style={{ fontSize: "0.72rem", color: "#60a5fa", background: "none", border: "none", cursor: "pointer" }}
-              >
-                Mark all read
-              </button>
-            )}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "white" }}>Notifications</span>
+            {count > 0 && <button onClick={markAll} style={{ fontSize: "0.72rem", color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>Mark all read</button>}
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
-            {items.length === 0 && (
-              <p style={{ textAlign: "center", padding: "32px 0", color: "rgba(255,255,255,0.25)", fontSize: "0.82rem" }}>
-                No notifications
-              </p>
-            )}
-            {items.map((n) => (
-              <div
-                key={n.id}
-                onClick={() => { if (!n.read) markRead(n.id); if (n.link) window.location.href = n.link; }}
-                style={{
-                  padding: "12px 16px",
-                  cursor: n.link ? "pointer" : "default",
-                  background: n.read ? "transparent" : "rgba(61,129,227,0.05)",
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  display: "flex", gap: "10px", alignItems: "flex-start",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = n.read ? "transparent" : "rgba(61,129,227,0.05)"; }}
+            {items.length === 0 && <p style={{ textAlign: "center", padding: "32px 0", color: "var(--text-4)", fontSize: "0.82rem" }}>All caught up</p>}
+            {items.map(n => (
+              <div key={n.id} onClick={() => { if (!n.read) markRead(n.id); if (n.link) window.location.href = n.link; }}
+                style={{ padding: "12px 16px", cursor: n.link ? "pointer" : "default", background: n.read ? "transparent" : "rgba(61,129,227,0.04)", borderBottom: "1px solid rgba(255,255,255,0.03)", display: "flex", gap: "10px", alignItems: "flex-start", transition: "background 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = n.read ? "transparent" : "rgba(61,129,227,0.04)"; }}
               >
-                <div style={{
-                  width: "7px", height: "7px", borderRadius: "50%", flexShrink: 0, marginTop: "5px",
-                  background: n.read ? "rgba(255,255,255,0.12)" : (CATEGORY_DOT[n.category] || "#60a5fa"),
-                }} />
+                <div style={{ width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, marginTop: "6px", background: n.read ? "rgba(255,255,255,0.1)" : (CATEGORY_COLOR[n.category] || "#60a5fa") }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: "0.82rem", fontWeight: n.read ? 400 : 600, color: n.read ? "rgba(255,255,255,0.55)" : "white", margin: "0 0 3px", lineHeight: 1.3 }}>
-                    {n.title}
-                  </p>
-                  {n.body && (
-                    <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.35)", margin: "0 0 3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {n.body}
-                    </p>
-                  )}
-                  <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.25)", margin: 0 }}>{timeAgo(n.created_at)}</p>
+                  <p style={{ fontSize: "0.8rem", fontWeight: n.read ? 400 : 600, color: n.read ? "var(--text-3)" : "white", margin: "0 0 2px", lineHeight: 1.35 }}>{n.title}</p>
+                  {n.body && <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.body}</p>}
+                  <p style={{ fontSize: "0.67rem", color: "var(--text-4)", margin: 0 }}>{timeAgo(n.created_at)} ago</p>
                 </div>
               </div>
             ))}
@@ -193,95 +169,114 @@ function NotificationBell() {
   );
 }
 
-function isNavActive(navHref: string, currentPath: string, allNav: typeof nav): boolean {
-  if (currentPath === navHref) return true;
-  if (!currentPath.startsWith(navHref + "/")) return false;
-  // Prefix match only if no more-specific nav item also claims this path
-  return !allNav.some((other) => other.href !== navHref && currentPath.startsWith(other.href));
+/* ── Active check ────────────────────────────────────────────── */
+function isNavActive(href: string, path: string): boolean {
+  if (path === href) return true;
+  if (!path.startsWith(href + "/")) return false;
+  return !nav.some(n => n.href !== href && path.startsWith(n.href));
 }
 
+/* ── Logo ────────────────────────────────────────────────────── */
+function LogoMark() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 256 256" fill="white">
+      <path d="M 0 128 C 70.692 128 128 185.308 128 256 L 64 256 C 64 220.654 35.346 192 0 192 Z M 256 192 C 220.654 192 192 220.654 192 256 L 128 256 C 128 185.308 185.308 128 256 128 Z M 128 0 C 128 70.692 70.692 128 0 128 L 0 64 C 35.346 64 64 35.346 64 0 Z M 192 0 C 192 35.346 220.654 64 256 64 L 256 128 C 185.308 128 128 70.692 128 0 Z" />
+    </svg>
+  );
+}
+
+/* ── Layout ──────────────────────────────────────────────────── */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const initials = getFullName().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "A";
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0c0c0c" }}>
-      {/* Sidebar */}
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+      {/* ── Sidebar ── */}
       <aside style={{
-        width: "220px",
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        background: "rgba(255,255,255,0.02)",
-        borderRight: "1px solid rgba(255,255,255,0.07)",
+        width: "220px", flexShrink: 0, display: "flex", flexDirection: "column",
+        background: "var(--bg-1)", borderRight: "1px solid var(--border)", position: "relative",
       }}>
+        {/* Top accent line */}
+        <div style={{ height: "2px", background: "linear-gradient(90deg, #3D81E3, #8b5cf6, transparent)", flexShrink: 0 }} />
+
         {/* Logo */}
-        <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid var(--border)" }}>
+          <Link href="/admin" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
             <div style={{
-              width: "28px", height: "28px", borderRadius: "8px",
-              background: "#3D81E3",
+              width: "32px", height: "32px", borderRadius: "9px", flexShrink: 0,
+              background: "linear-gradient(135deg, #3D81E3, #6366f1)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "13px", fontWeight: 700, color: "white",
-            }}>T</div>
-            <div>
-              <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>ThinkTLS</div>
-              <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: "1px" }}>Bid Desk Admin</div>
+              boxShadow: "0 4px 16px rgba(61,129,227,0.35)",
+            }}>
+              <LogoMark />
             </div>
-          </div>
+            <div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>ThinkTLS</div>
+              <div style={{ fontSize: "0.65rem", color: "var(--text-4)", marginTop: "1px", letterSpacing: "0.03em" }}>BID DESK</div>
+            </div>
+          </Link>
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
-          {nav.map((n) => {
-            const active = isNavActive(n.href, path, nav);
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                style={{
-                  display: "block",
-                  padding: "9px 14px",
-                  borderRadius: "9px",
-                  fontSize: "0.875rem",
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "white" : "rgba(255,255,255,0.5)",
-                  background: active ? "rgba(61,129,227,0.18)" : "transparent",
-                  borderLeft: active ? "2px solid #3D81E3" : "2px solid transparent",
-                  textDecoration: "none",
-                  transition: "all 0.15s",
-                }}
-              >
-                {n.label}
-              </Link>
-            );
-          })}
+        <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: "1px", overflowY: "auto" }}>
+          <div className="section-label" style={{ marginTop: "4px" }}>Overview</div>
+          {nav.slice(0, 2).map(({ href, label, Icon }) => (
+            <Link key={href} href={href} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
+              <Icon />{label}
+            </Link>
+          ))}
+
+          <div className="section-label">People</div>
+          {nav.slice(2, 5).map(({ href, label, Icon }) => (
+            <Link key={href} href={href} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
+              <Icon />{label}
+            </Link>
+          ))}
+
+          <div className="section-label">Tools</div>
+          {nav.slice(5).map(({ href, label, Icon }) => (
+            <Link key={href} href={href} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
+              <Icon />{label}
+            </Link>
+          ))}
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)", marginBottom: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {getFullName()}
-          </p>
-          <button
-            onClick={logout}
-            style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-          >
-            Sign out
-          </button>
+        {/* User footer */}
+        <div style={{ padding: "14px 16px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{
+            width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0,
+            background: "linear-gradient(135deg, rgba(61,129,227,0.3), rgba(139,92,246,0.3))",
+            border: "1px solid rgba(61,129,227,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "0.72rem", fontWeight: 700, color: "#a0bfff",
+          }}>{initials}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text-2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {getFullName() || "Admin"}
+            </p>
+            <button onClick={logout} style={{ fontSize: "0.68rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
+            >Sign out</button>
+          </div>
         </div>
       </aside>
 
-      {/* Main */}
-      <main style={{ flex: 1, overflowY: "auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
-        {/* Top bar */}
+      {/* ── Main ── */}
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+        {/* Topbar */}
         <div style={{
-          display: "flex", justifyContent: "flex-end", alignItems: "center",
-          padding: "14px 48px",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          height: "52px", display: "flex", alignItems: "center", justifyContent: "flex-end",
+          padding: "0 32px", borderBottom: "1px solid var(--border)",
+          background: "rgba(10,10,15,0.8)", backdropFilter: "blur(12px)",
+          position: "sticky", top: 0, zIndex: 40, flexShrink: 0,
         }}>
           <NotificationBell />
         </div>
-        <div style={{ padding: "32px 48px", flex: 1 }}>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "32px 40px" }}>
           {children}
         </div>
       </main>

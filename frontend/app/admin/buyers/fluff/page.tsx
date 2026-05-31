@@ -188,13 +188,13 @@ export default function FluffSettingsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1100px" }}>
+      <div style={{ maxWidth: "1100px" }} className="animate-in">
         {/* Header */}
         <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ color: "white", fontSize: "1.5rem", fontWeight: 700, marginBottom: "6px" }}>
+          <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>
             Fluff Engine Settings
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.875rem" }}>
+          <p style={{ color: "var(--text-4)", fontSize: "0.875rem", margin: 0 }}>
             Configure the price obfuscation percentage each losing buyer sees on their loss notice.
             The real winning price is never revealed directly.
           </p>
@@ -261,7 +261,10 @@ export default function FluffSettingsPage() {
 
         {/* Table */}
         {loading ? (
-          <div style={{ color: "rgba(255,255,255,0.4)", padding: "40px 0", textAlign: "center" }}>Loading buyers…</div>
+          <div style={{ display: "flex", justifyContent: "center", paddingTop: "40px" }}>
+            <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
         ) : error ? (
           <div style={{ color: "#f87171", padding: "20px", textAlign: "center" }}>{error}</div>
         ) : buyers.length === 0 ? (

@@ -108,7 +108,14 @@ export default function BuyerComparePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <AdminLayout><div style={{ color: "rgba(255,255,255,0.4)", padding: "80px", textAlign: "center" }}>Loading…</div></AdminLayout>;
+  if (loading) return (
+    <AdminLayout>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </AdminLayout>
+  );
   if (error || !data) return <AdminLayout><div style={{ color: "#f87171", padding: "40px", textAlign: "center" }}>{error || "No data"}</div></AdminLayout>;
 
   const { buyers, rounds } = data;
@@ -127,11 +134,11 @@ export default function BuyerComparePage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1200px" }}>
+      <div style={{ maxWidth: "1200px" }} className="animate-in">
         {/* Header */}
         <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ color: "white", fontSize: "1.5rem", fontWeight: 700, margin: "0 0 6px" }}>Buyer Comparison</h1>
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>
+          <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyer Comparison</h1>
+          <p style={{ color: "var(--text-4)", fontSize: "0.85rem", margin: 0 }}>
             {buyers.length} buyers · Avg win rate {avgWinRate.toFixed(1)}% · Total value awarded {fmt(totalValue)}
           </p>
         </div>

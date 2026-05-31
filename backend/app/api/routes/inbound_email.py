@@ -202,11 +202,19 @@ def _process_attachment(db: Session, content: bytes, filename: str, buyer: User,
     except ValueError as e:
         return {"ok": False, "error": str(e)}
 
+    import os as _os
+    upload_dir = f"/app/uploads/rounds/{bid_round.id}"
+    _os.makedirs(upload_dir, exist_ok=True)
+    safe_name = f"{buyer.id}_{filename}".replace(" ", "_")
+    disk_path = f"{upload_dir}/{safe_name}"
+    with open(disk_path, "wb") as fh:
+        fh.write(content)
+
     bid_file = BidFile(
         bid_round_id=bid_round.id,
         buyer_id=buyer.id,
         filename=filename,
-        file_path=f"/tmp/email_{bid_round.id}_{buyer.id}_{filename}",
+        file_path=disk_path,
         file_size_bytes=len(content),
         status="processing",
     )

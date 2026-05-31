@@ -69,7 +69,10 @@ export default function ComparisonPage() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading comparison...</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </AdminLayout>
   );
 
@@ -83,8 +86,15 @@ export default function ComparisonPage() {
   );
 
   const { buyers, rows } = data;
-  const totalCols = 4 + buyers.length; // part, desc, qty, reserve + one per buyer
   const totalWidth = COL_W_PART + COL_W_DESC + COL_W_QTY + COL_W_RES + buyers.length * COL_W_BID;
+
+  // Build name → buyer_id map from the first bid entry found for each buyer
+  const buyerIdMap: Record<string, number> = {};
+  for (const row of rows) {
+    for (const [name, entry] of Object.entries(row.bids)) {
+      if (!(name in buyerIdMap)) buyerIdMap[name] = (entry as any).buyer_id;
+    }
+  }
 
   const items = virtualizer.getVirtualItems();
 
@@ -93,13 +103,14 @@ export default function ComparisonPage() {
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
           <div>
-            <Link href={`/admin/rounds/${id}`} style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-              ← Round Detail
+            <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+              Round Detail
             </Link>
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: "8px 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Bid Comparison
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
+            </h1>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
               {roundName} · {rows.length.toLocaleString()} items · {buyers.length} buyer{buyers.length !== 1 ? "s" : ""}
             </p>
           </div>
@@ -131,9 +142,9 @@ export default function ComparisonPage() {
 
         {/* Scrollable table container */}
         <div style={{
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: "16px",
+          background: "var(--bg-2)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-xl)",
           overflow: "hidden",
         }}>
           {/* Sticky header */}
@@ -153,7 +164,17 @@ export default function ComparisonPage() {
                 <HeaderCell width={COL_W_QTY} center>Qty</HeaderCell>
                 <HeaderCell width={COL_W_RES} center>Reserve $</HeaderCell>
                 {buyers.map((b) => (
-                  <HeaderCell key={b} width={COL_W_BID} center>{b}</HeaderCell>
+                  <HeaderCell key={b} width={COL_W_BID} center>
+                    {buyerIdMap[b] ? (
+                      <Link
+                        href={`/admin/rounds/${id}/buyers/${buyerIdMap[b]}`}
+                        style={{ color: "#60a5fa", textDecoration: "none", fontSize: "0.72rem", fontWeight: 700 }}
+                        title={`View ${b}'s bids for this round`}
+                      >
+                        {b} ↗
+                      </Link>
+                    ) : b}
+                  </HeaderCell>
                 ))}
               </div>
 

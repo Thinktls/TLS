@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     FROM_EMAIL: str = "bids@thinktls.com"
     FROM_NAME: str = "ThinkTLS Bid Desk"
 
+    # SMTP fallback — used when SENDGRID_API_KEY is blank
+    # Gmail example: SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=you@gmail.com SMTP_PASSWORD=<app-password>
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+
     ANTHROPIC_API_KEY: str = ""
 
     # Open-source / cloud LLM via any OpenAI-compatible endpoint

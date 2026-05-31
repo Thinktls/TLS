@@ -262,7 +262,10 @@ export default function ExceptionsPage() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading...</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </AdminLayout>
   );
 
@@ -277,31 +280,33 @@ export default function ExceptionsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "920px" }}>
+      <div style={{ maxWidth: "920px" }} className="animate-in">
         {/* Toast */}
         {toast && (
           <div style={{
             position: "fixed", top: "24px", right: "24px", zIndex: 9999,
             padding: "12px 20px", borderRadius: "10px", fontSize: "0.85rem", fontWeight: 500,
-            background: toast.ok ? "rgba(52,211,153,0.15)" : "rgba(239,68,68,0.15)",
-            border: `1px solid ${toast.ok ? "rgba(52,211,153,0.3)" : "rgba(239,68,68,0.3)"}`,
+            background: toast.ok ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
+            border: `1px solid ${toast.ok ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
             color: toast.ok ? "#34d399" : "#f87171",
+            backdropFilter: "blur(8px)",
           }}>
             {toast.msg}
           </div>
         )}
 
-        <Link href={`/admin/rounds/${id}`} style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-          ← Back to Round
+        <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "18px" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Round Detail
         </Link>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", margin: "10px 0 20px", flexWrap: "wrap", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Exception Queue
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
+            </h1>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
               Review flagged bid lines — approve, remap, or reject each one.
             </p>
           </div>
@@ -331,38 +336,28 @@ export default function ExceptionsPage() {
         {stats && (
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
             {[
-              { label: "Total", value: stats.total, color: "rgba(255,255,255,0.6)" },
-              { label: "Unresolved", value: stats.unresolved, color: "#fb923c" },
-              { label: "Resolved", value: stats.resolved, color: "#34d399" },
-              { label: "AI Ready", value: stats.ai_suggestions_available, color: "#a78bfa" },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{
-                padding: "8px 16px",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "10px",
-              }}>
-                <p style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.35)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</p>
-                <p style={{ fontSize: "1.1rem", fontWeight: 700, color, margin: 0 }}>{value}</p>
+              { label: "Total",      value: stats.total,                   color: "var(--text-2)", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
+              { label: "Unresolved", value: stats.unresolved,              color: "#fb923c",       bg: "rgba(251,146,60,0.07)", border: "rgba(251,146,60,0.2)" },
+              { label: "Resolved",   value: stats.resolved,                color: "#34d399",       bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
+              { label: "AI Ready",   value: stats.ai_suggestions_available, color: "#a78bfa",      bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)" },
+            ].map(({ label, value, color, bg, border }) => (
+              <div key={label} style={{ padding: "10px 16px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius-lg)" }}>
+                <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>
+                <p style={{ fontSize: "1.25rem", fontWeight: 800, color, margin: 0, letterSpacing: "-0.03em" }}>{value}</p>
               </div>
             ))}
           </div>
         )}
 
         {/* Filter tabs */}
-        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "20px" }}>
+        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "4px", width: "fit-content", marginBottom: "20px" }}>
           {filterTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveFilter(tab.key)}
-              style={{
-                padding: "6px 14px", borderRadius: "100px", fontSize: "0.78rem",
-                border: `1px solid ${activeFilter === tab.key ? "rgba(61,129,227,0.4)" : "rgba(255,255,255,0.08)"}`,
-                background: activeFilter === tab.key ? "rgba(61,129,227,0.15)" : "transparent",
-                color: activeFilter === tab.key ? "white" : "rgba(255,255,255,0.45)",
-                cursor: "pointer",
-              }}
-            >
+            <button key={tab.key} onClick={() => setActiveFilter(tab.key)} style={{
+              padding: "5px 13px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none", fontFamily: "inherit",
+              background: activeFilter === tab.key ? "rgba(61,129,227,0.18)" : "transparent",
+              color: activeFilter === tab.key ? "white" : "var(--text-4)",
+              fontWeight: activeFilter === tab.key ? 600 : 400, transition: "all 0.15s",
+            }}>
               {tab.label}
             </button>
           ))}
@@ -371,8 +366,11 @@ export default function ExceptionsPage() {
         {/* Exception cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {filtered.length === 0 && (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.3)", fontSize: "0.9rem" }}>
-              {activeFilter === "unresolved" ? "All exceptions resolved." : "No exceptions match this filter."}
+            <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "60px", textAlign: "center" }}>
+              <div style={{ fontSize: "2rem", marginBottom: "12px" }}>✓</div>
+              <p style={{ color: "var(--text-4)", fontSize: "0.9rem", margin: 0 }}>
+                {activeFilter === "unresolved" ? "All exceptions resolved." : "No exceptions match this filter."}
+              </p>
             </div>
           )}
 
@@ -382,9 +380,9 @@ export default function ExceptionsPage() {
 
             return (
               <div key={ex.id} style={{
-                background: ex.resolved ? "rgba(255,255,255,0.01)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${ex.resolved ? "rgba(255,255,255,0.05)" : "rgba(251,146,60,0.2)"}`,
-                borderRadius: "16px",
+                background: ex.resolved ? "rgba(255,255,255,0.01)" : "var(--bg-2)",
+                border: `1px solid ${ex.resolved ? "var(--border)" : "rgba(251,146,60,0.2)"}`,
+                borderRadius: "var(--radius-xl)",
                 padding: "20px 22px",
                 opacity: ex.resolved ? 0.6 : 1,
               }}>

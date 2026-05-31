@@ -222,6 +222,7 @@ def _deal_out_fast(d: Deal, buyers_map: dict, override_counts: dict) -> dict:
         "winner_company": buyer.company_name if buyer else "",
         "winner_email": buyer.email if buyer else "",
         "winning_buyer_id": d.winning_buyer_id,
+        "master_item_id": d.master_item_id,
         "override_count": override_counts.get(d.id, 0),
         "notes": d.notes,
     }

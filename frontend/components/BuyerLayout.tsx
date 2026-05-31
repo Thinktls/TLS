@@ -4,84 +4,109 @@ import { usePathname } from "next/navigation";
 import { logout, getFullName } from "@/lib/auth";
 
 const nav = [
-  { href: "/portal", label: "My Deals" },
-  { href: "/portal/bid", label: "Submit Bid" },
-  { href: "/portal/results", label: "My Results" },
+  {
+    href: "/portal", label: "Dashboard",
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+  },
+  {
+    href: "/portal/bid", label: "Submit Bid",
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  },
+  {
+    href: "/portal/submission", label: "My Submission",
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  },
+  {
+    href: "/portal/results", label: "My Results",
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+  },
+  {
+    href: "/portal/profile", label: "Profile",
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  },
 ];
+
+function LogoMark() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 256 256" fill="white">
+      <path d="M 0 128 C 70.692 128 128 185.308 128 256 L 64 256 C 64 220.654 35.346 192 0 192 Z M 256 192 C 220.654 192 192 220.654 192 256 L 128 256 C 128 185.308 185.308 128 256 128 Z M 128 0 C 128 70.692 70.692 128 0 128 L 0 64 C 35.346 64 64 35.346 64 0 Z M 192 0 C 192 35.346 220.654 64 256 64 L 256 128 C 185.308 128 128 70.692 128 0 Z" />
+    </svg>
+  );
+}
 
 export default function BuyerLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const name = getFullName();
+  const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "B";
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#0c0c0c" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       {/* Sidebar */}
       <aside style={{
-        width: "210px",
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        background: "rgba(255,255,255,0.02)",
-        borderRight: "1px solid rgba(255,255,255,0.07)",
+        width: "210px", flexShrink: 0, display: "flex", flexDirection: "column",
+        background: "var(--bg-1)", borderRight: "1px solid var(--border)",
       }}>
+        {/* Accent line */}
+        <div style={{ height: "2px", background: "linear-gradient(90deg, #3D81E3, #8b5cf6, transparent)" }} />
+
         {/* Logo */}
-        <div style={{ padding: "28px 24px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{
-              width: "28px", height: "28px", borderRadius: "8px",
-              background: "#3D81E3",
+              width: "32px", height: "32px", borderRadius: "9px",
+              background: "linear-gradient(135deg, #3D81E3, #6366f1)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "13px", fontWeight: 700, color: "white",
-            }}>T</div>
+              boxShadow: "0 4px 16px rgba(61,129,227,0.35)",
+            }}><LogoMark /></div>
             <div>
-              <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "white", letterSpacing: "-0.01em" }}>ThinkTLS</div>
-              <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: "1px" }}>Buyer Portal</div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>ThinkTLS</div>
+              <div style={{ fontSize: "0.62rem", color: "var(--text-4)", marginTop: "1px", letterSpacing: "0.04em" }}>BUYER PORTAL</div>
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: "2px" }}>
-          {nav.map((n) => {
-            const active = path === n.href;
+        <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: "1px" }}>
+          <div className="section-label" style={{ marginTop: "4px" }}>Navigation</div>
+          {nav.map(({ href, label, icon }) => {
+            const active = path === href || (href !== "/portal" && path.startsWith(href));
             return (
-              <Link
-                key={n.href}
-                href={n.href}
-                style={{
-                  display: "block",
-                  padding: "9px 14px",
-                  borderRadius: "9px",
-                  fontSize: "0.875rem",
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "white" : "rgba(255,255,255,0.5)",
-                  background: active ? "rgba(61,129,227,0.18)" : "transparent",
-                  borderLeft: active ? "2px solid #3D81E3" : "2px solid transparent",
-                  textDecoration: "none",
-                  transition: "all 0.15s",
-                }}
-              >
-                {n.label}
+              <Link key={href} href={href} className={`nav-item${active ? " active" : ""}`}>
+                {icon}{label}
               </Link>
             );
           })}
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)", marginBottom: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {getFullName()}
+        {/* Help callout */}
+        <div style={{ margin: "0 10px 10px", padding: "12px 14px", background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px" }}>
+          <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "#60a5fa", margin: "0 0 3px" }}>Need help?</p>
+          <p style={{ fontSize: "0.68rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>
+            Email <span style={{ color: "rgba(255,255,255,0.5)" }}>bids@thinktls.com</span>
           </p>
-          <button
-            onClick={logout}
-            style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-          >
-            Sign out
-          </button>
+        </div>
+
+        {/* User footer */}
+        <div style={{ padding: "14px 16px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{
+            width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0,
+            background: "linear-gradient(135deg, rgba(16,185,129,0.25), rgba(61,129,227,0.25))",
+            border: "1px solid rgba(16,185,129,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "0.72rem", fontWeight: 700, color: "#6ee7b7",
+          }}>{initials}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text-2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name || "Buyer"}</p>
+            <button onClick={logout} style={{ fontSize: "0.68rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
+            >Sign out</button>
+          </div>
         </div>
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, padding: "40px 48px", overflowY: "auto", minWidth: 0 }}>
+      <main style={{ flex: 1, overflowY: "auto", padding: "36px 44px", minWidth: 0, background: "var(--bg)" }}>
         {children}
       </main>
     </div>

@@ -20,8 +20,22 @@ interface Deal {
   winner_company: string;
   winner_email: string;
   winning_buyer_id: number;
+  master_item_id: number;
   override_count: number;
   notes: string | null;
+}
+
+interface BidEntry {
+  bid_line_id: number;
+  buyer_id: number;
+  buyer_company: string | null;
+  buyer_email: string | null;
+  unit_price: number | null;
+  quantity: number | null;
+  is_winner: boolean;
+  match_status: string;
+  is_anomaly: boolean;
+  fluffed_loss_price: number | null;
 }
 
 interface OverrideModal {
@@ -47,6 +61,89 @@ const labelStyle: React.CSSProperties = {
   marginBottom: "6px",
 };
 
+function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId: number }) {
+  const [bids, setBids] = useState<BidEntry[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get(`/rounds/${roundId}/master-items/${masterItemId}/bids`)
+      .then((r) => setBids(r.data))
+      .catch(() => setBids([]))
+      .finally(() => setLoading(false));
+  }, [roundId, masterItemId]);
+
+  if (loading) return (
+    <td colSpan={8} style={{ padding: "12px 20px", background: "rgba(0,0,0,0.25)" }}>
+      <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.3)" }}>Loading bids...</span>
+    </td>
+  );
+
+  if (!bids || bids.length === 0) return (
+    <td colSpan={8} style={{ padding: "12px 20px", background: "rgba(0,0,0,0.25)" }}>
+      <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.25)" }}>No bid data available.</span>
+    </td>
+  );
+
+  return (
+    <td colSpan={8} style={{ padding: "0", background: "rgba(0,0,0,0.2)" }}>
+      <div style={{ padding: "12px 24px 16px" }}>
+        <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 8px" }}>
+          All Competing Bids ({bids.length})
+        </p>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {["Buyer", "Unit Price", "Qty", "Status"].map((h) => (
+                <th key={h} style={{
+                  textAlign: h === "Unit Price" || h === "Qty" ? "right" : "left",
+                  fontSize: "0.68rem", fontWeight: 600, color: "rgba(255,255,255,0.3)",
+                  textTransform: "uppercase", letterSpacing: "0.05em",
+                  paddingBottom: "6px", borderBottom: "1px solid rgba(255,255,255,0.06)",
+                }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bids.map((b) => (
+              <tr key={b.bid_line_id} style={{ background: b.is_winner ? "rgba(52,211,153,0.06)" : "transparent" }}>
+                <td style={{ padding: "6px 8px 6px 0", fontSize: "0.78rem" }}>
+                  <span style={{ color: b.is_winner ? "#34d399" : "rgba(255,255,255,0.7)", fontWeight: b.is_winner ? 600 : 400 }}>
+                    {b.is_winner ? "★ " : ""}{b.buyer_company || b.buyer_email || `Buyer ${b.buyer_id}`}
+                  </span>
+                  {b.is_anomaly && (
+                    <span style={{ marginLeft: "6px", fontSize: "0.65rem", color: "#c084fc", background: "rgba(168,85,247,0.15)", padding: "1px 6px", borderRadius: "4px" }}>
+                      anomaly
+                    </span>
+                  )}
+                </td>
+                <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.78rem", padding: "6px 8px", color: b.is_winner ? "#34d399" : "rgba(255,255,255,0.65)" }}>
+                  {b.unit_price != null ? `$${b.unit_price.toFixed(2)}` : "—"}
+                </td>
+                <td style={{ textAlign: "right", fontSize: "0.78rem", padding: "6px 8px", color: "rgba(255,255,255,0.5)" }}>
+                  {b.quantity ?? "—"}
+                </td>
+                <td style={{ padding: "6px 0 6px 8px", fontSize: "0.72rem" }}>
+                  {b.is_winner ? (
+                    <span style={{ color: "#34d399" }}>Winner</span>
+                  ) : b.fluffed_loss_price != null ? (
+                    <span style={{ color: "rgba(255,255,255,0.3)" }}>
+                      Lost · shown ${b.fluffed_loss_price.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span style={{ color: "rgba(255,255,255,0.25)" }}>{b.match_status}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </td>
+  );
+}
+
 export default function DealsPage() {
   const { id } = useParams();
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -57,6 +154,7 @@ export default function DealsPage() {
   const [msgType, setMsgType] = useState<"ok" | "err">("ok");
   const [override, setOverride] = useState<OverrideModal | null>(null);
   const [submittingOverride, setSubmittingOverride] = useState(false);
+  const [expandedDeal, setExpandedDeal] = useState<number | null>(null);
 
   function flash(text: string, type: "ok" | "err" = "ok") {
     setMsg(text); setMsgType(type);
@@ -121,7 +219,10 @@ export default function DealsPage() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading...</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </AdminLayout>
   );
 
@@ -130,26 +231,27 @@ export default function DealsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1200px" }}>
-        <Link href={`/admin/rounds/${id}`} style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-          ← Round Detail
+      <div style={{ maxWidth: "1200px" }} className="animate-in">
+        <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Round Detail
         </Link>
 
-        {/* Header — stacks on mobile */}
+        {/* Header */}
         <div style={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
           flexWrap: "wrap",
           gap: "12px",
-          margin: "10px 0 24px",
+          marginBottom: "24px",
         }}>
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Deal Approval
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", margin: "4px 0 0" }}>
-              {deals.length} deals · ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} total
+            </h1>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+              {deals.length} deals · ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} total · Click any row to see all competing bids
             </p>
           </div>
           {pendingCount > 0 && (
@@ -177,15 +279,16 @@ export default function DealsPage() {
 
         {/* Scrollable table wrapper */}
         <div style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "18px",
+          background: "var(--bg-2)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-xl)",
           overflowX: "auto",
           WebkitOverflowScrolling: "touch",
         }}>
           <table className="dark-table" style={{ minWidth: "700px" }}>
             <thead>
               <tr>
+                <th style={{ width: "28px" }} />
                 <th>Part Number</th>
                 <th>Description</th>
                 <th>Winner</th>
@@ -199,73 +302,91 @@ export default function DealsPage() {
             <tbody>
               {deals.map((d) => {
                 const badge = statusBadge[d.status] || statusBadge.pending_approval;
+                const isExpanded = expandedDeal === d.id;
                 return (
-                  <tr key={d.id}>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.78rem", whiteSpace: "nowrap" }}>{d.part_number}</td>
-                    <td style={{ maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {d.description}
-                    </td>
-                    <td style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                      <div style={{ fontWeight: 500, color: "white" }}>{d.winner_company || "—"}</div>
-                      <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>{d.winner_email}</div>
-                    </td>
-                    <td style={{ textAlign: "right" }}>{d.quantity}</td>
-                    <td style={{ textAlign: "right", fontFamily: "monospace", whiteSpace: "nowrap" }}>${d.winning_price.toFixed(2)}</td>
-                    <td style={{ textAlign: "right", fontWeight: 600, color: "white", whiteSpace: "nowrap" }}>
-                      ${d.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
-                        <span style={{
-                          ...badge,
-                          padding: "3px 10px", borderRadius: "100px",
-                          fontSize: "0.7rem", fontWeight: 600, whiteSpace: "nowrap",
-                        }}>
-                          {d.status.replace(/_/g, " ")}
-                        </span>
-                        {d.override_count > 0 && (
-                          <span style={{ fontSize: "0.65rem", color: "#fbbf24" }}>
-                            {d.override_count} override{d.override_count > 1 ? "s" : ""}
+                  <>
+                    <tr
+                      key={d.id}
+                      style={{ cursor: "pointer" }}
+                      onClick={(e) => {
+                        // Don't expand when clicking action buttons
+                        if ((e.target as HTMLElement).closest("button")) return;
+                        setExpandedDeal(isExpanded ? null : d.id);
+                      }}
+                    >
+                      <td style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: "0.7rem", paddingRight: 0 }}>
+                        {isExpanded ? "▼" : "▶"}
+                      </td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.78rem", whiteSpace: "nowrap" }}>{d.part_number}</td>
+                      <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {d.description}
+                      </td>
+                      <td style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+                        <div style={{ fontWeight: 500, color: "white" }}>{d.winner_company || "—"}</div>
+                        <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>{d.winner_email}</div>
+                      </td>
+                      <td style={{ textAlign: "right" }}>{d.quantity}</td>
+                      <td style={{ textAlign: "right", fontFamily: "monospace", whiteSpace: "nowrap" }}>${d.winning_price.toFixed(2)}</td>
+                      <td style={{ textAlign: "right", fontWeight: 600, color: "white", whiteSpace: "nowrap" }}>
+                        ${d.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
+                          <span style={{
+                            ...badge,
+                            padding: "3px 10px", borderRadius: "100px",
+                            fontSize: "0.7rem", fontWeight: 600, whiteSpace: "nowrap",
+                          }}>
+                            {d.status.replace(/_/g, " ")}
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      {/* Action buttons — finger-sized tap targets on mobile */}
-                      <div style={{ display: "flex", gap: "5px", justifyContent: "center", flexWrap: "wrap" }}>
-                        {d.status === "pending_approval" && (
-                          <>
-                            <ActionBtn
-                              label="Approve"
-                              bg="rgba(52,211,153,0.15)" color="#34d399" border="rgba(52,211,153,0.2)"
-                              disabled={acting === d.id}
-                              onClick={() => singleAction(d.id, "approve", "approved")}
-                            />
-                            <ActionBtn
-                              label="Reject"
-                              bg="rgba(239,68,68,0.12)" color="#f87171" border="rgba(239,68,68,0.2)"
-                              disabled={acting === d.id}
-                              onClick={() => singleAction(d.id, "reject", "rejected")}
-                            />
-                          </>
-                        )}
-                        <ActionBtn
-                          label="Override"
-                          bg="rgba(251,191,36,0.1)" color="#fbbf24" border="rgba(251,191,36,0.2)"
-                          disabled={false}
-                          onClick={() => setOverride({ dealId: d.id, partNumber: d.part_number, field: "", newValue: "", reason: "" })}
-                        />
-                        {d.status === "approved" && (
+                          {d.override_count > 0 && (
+                            <span style={{ fontSize: "0.65rem", color: "#fbbf24" }}>
+                              {d.override_count} override{d.override_count > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: "5px", justifyContent: "center", flexWrap: "wrap" }}>
+                          {d.status === "pending_approval" && (
+                            <>
+                              <ActionBtn
+                                label="Approve"
+                                bg="rgba(52,211,153,0.15)" color="#34d399" border="rgba(52,211,153,0.2)"
+                                disabled={acting === d.id}
+                                onClick={() => singleAction(d.id, "approve", "approved")}
+                              />
+                              <ActionBtn
+                                label="Reject"
+                                bg="rgba(239,68,68,0.12)" color="#f87171" border="rgba(239,68,68,0.2)"
+                                disabled={acting === d.id}
+                                onClick={() => singleAction(d.id, "reject", "rejected")}
+                              />
+                            </>
+                          )}
                           <ActionBtn
-                            label="→ Razor"
-                            bg="rgba(61,129,227,0.15)" color="#60a5fa" border="rgba(61,129,227,0.2)"
-                            disabled={acting === d.id}
-                            onClick={() => singleAction(d.id, "push-razor", "pushed to Razor")}
+                            label="Override"
+                            bg="rgba(251,191,36,0.1)" color="#fbbf24" border="rgba(251,191,36,0.2)"
+                            disabled={false}
+                            onClick={() => setOverride({ dealId: d.id, partNumber: d.part_number, field: "", newValue: "", reason: "" })}
                           />
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                          {d.status === "approved" && (
+                            <ActionBtn
+                              label="→ Razor"
+                              bg="rgba(61,129,227,0.15)" color="#60a5fa" border="rgba(61,129,227,0.2)"
+                              disabled={acting === d.id}
+                              onClick={() => singleAction(d.id, "push-razor", "pushed to Razor")}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${d.id}-bids`} style={{ background: "rgba(0,0,0,0.15)" }}>
+                        <AllBidsPanel roundId={id as string} masterItemId={d.master_item_id} />
+                      </tr>
+                    )}
+                  </>
                 );
               })}
             </tbody>
@@ -290,7 +411,6 @@ export default function DealsPage() {
               maxHeight: "90vh",
               overflowY: "auto",
             }}>
-              {/* Drag handle indicator */}
               <div style={{
                 width: "40px", height: "4px", borderRadius: "2px",
                 background: "rgba(255,255,255,0.12)", margin: "0 auto 20px",

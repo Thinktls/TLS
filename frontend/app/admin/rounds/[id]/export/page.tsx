@@ -52,16 +52,17 @@ export default function ExportCenter() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "780px" }}>
-        <Link href={`/admin/rounds/${id}`} style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-          ← Round Detail
+      <div style={{ maxWidth: "780px" }} className="animate-in">
+        <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Round Detail
         </Link>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", margin: "10px 0 4px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "4px" }}>
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Export Center
-            </h2>
-            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", marginTop: "4px" }}>
+            </h1>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
               {roundName}
             </p>
           </div>
@@ -210,9 +211,9 @@ export default function ExportCenter() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: "rgba(255,255,255,0.02)",
-      border: "1px solid rgba(255,255,255,0.07)",
-      borderRadius: "16px",
+      background: "var(--bg-2)",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius-xl)",
       padding: "24px",
       marginBottom: "16px",
     }}>

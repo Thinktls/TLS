@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:16-alpine
@@ -33,6 +31,12 @@ services:
       SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
       SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-noreply@thinktls.com}
       SENDGRID_WEBHOOK_KEY: ${SENDGRID_WEBHOOK_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FROM_EMAIL: ${FROM_EMAIL:-bids@thinktls.com}
+      FROM_NAME: ${FROM_NAME:-ThinkTLS Bid Desk}
       RAZOR_API_URL: ${RAZOR_API_URL:-}
       RAZOR_API_KEY: ${RAZOR_API_KEY:-}
       AUTO_PUSH_RAZOR: ${AUTO_PUSH_RAZOR:-false}

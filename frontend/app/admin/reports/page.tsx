@@ -98,7 +98,10 @@ export default function ReportsDashboard() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading reports...</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </AdminLayout>
   );
 
@@ -122,12 +125,12 @@ export default function ReportsDashboard() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1100px" }}>
+      <div style={{ maxWidth: "1100px" }} className="animate-in">
         <div style={{ marginBottom: "32px" }}>
-          <h2 style={{ fontSize: "1.6rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: 0 }}>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
             Reports
-          </h2>
-          <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", marginTop: "4px" }}>
+          </h1>
+          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
             Platform-wide performance and buyer analytics
           </p>
         </div>
@@ -136,9 +139,9 @@ export default function ReportsDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "32px" }}>
           {kpiCards.map(({ label, value, color }) => (
             <div key={label} style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "14px",
+              background: "var(--bg-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-xl)",
               padding: "20px",
             }}>
               <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -151,9 +154,9 @@ export default function ReportsDashboard() {
 
         {/* Monthly Deal Value Bar Chart (recharts) */}
         <div style={{
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: "16px",
+          background: "var(--bg-2)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-xl)",
           padding: "24px",
           marginBottom: "24px",
         }}>
@@ -195,9 +198,9 @@ export default function ReportsDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           {/* Buyer Performance Table */}
           <div style={{
-            background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: "16px",
+            background: "var(--bg-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-xl)",
             padding: "24px",
           }}>
             <p style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.9rem" }}>
@@ -254,9 +257,9 @@ export default function ReportsDashboard() {
 
           {/* Recent Rounds */}
           <div style={{
-            background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: "16px",
+            background: "var(--bg-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-xl)",
             padding: "24px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>

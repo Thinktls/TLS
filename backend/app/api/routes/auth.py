@@ -51,13 +51,33 @@ def me(current_user=Depends(get_current_user)):
     return current_user
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/me/change-password")
+def change_password(req: ChangePasswordRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not verify_password(req.current_password, current_user.hashed_password):
+        raise HTTPException(400, "Current password is incorrect")
+    if len(req.new_password) < 8:
+        raise HTTPException(400, "New password must be at least 8 characters")
+    current_user.hashed_password = hash_password(req.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}
+
+
 @router.post("/buyers", response_model=UserOut)
 def create_buyer(req: UserCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     if db.query(User).filter(User.email == req.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Auto-generate a temporary password if not provided
+    temp_password = req.password if req.password else secrets.token_urlsafe(10)
+
     user = User(
         email=req.email,
-        hashed_password=hash_password(req.password),
+        hashed_password=hash_password(temp_password),
         full_name=req.full_name,
         company_name=req.company_name,
         role=req.role,
@@ -66,6 +86,32 @@ def create_buyer(req: UserCreate, db: Session = Depends(get_db), _=Depends(requi
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Send welcome email with login credentials immediately
+    send_email(
+        user.email,
+        user.full_name,
+        "Welcome to ThinkTLS Bid Desk — Your Login Details",
+        f"""
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+          <h2 style="color:#1a1a2e;">Welcome to ThinkTLS Bid Desk</h2>
+          <p>Hello {user.full_name},</p>
+          <p>Your buyer account has been created. Use the credentials below to log in:</p>
+          <div style="background:#f4f6fa;border-radius:8px;padding:18px 22px;margin:18px 0;">
+            <p style="margin:0 0 8px;"><strong>Login URL:</strong> <a href="{settings.FRONTEND_URL}/login">{settings.FRONTEND_URL}/login</a></p>
+            <p style="margin:0 0 8px;"><strong>Email:</strong> {user.email}</p>
+            <p style="margin:0;"><strong>Temporary Password:</strong> <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">{temp_password}</code></p>
+          </div>
+          <p>Once logged in, go to <strong>Profile</strong> to set a new password.</p>
+          <p><a href="{settings.FRONTEND_URL}/login" style="background:#3D81E3;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">
+            Log In Now →
+          </a></p>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+          <p style="color:#999;font-size:11px;">ThinkTLS Bid Desk — Confidential. If you did not expect this email, please ignore it.</p>
+        </div>
+        """,
+    )
+
     return user
 
 
@@ -114,38 +160,39 @@ class PasswordSetup(BaseModel):
 
 @router.post("/buyers/{user_id}/send-invite")
 def send_invite(user_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
-    """Generate a one-time password-setup token and email it to the buyer."""
+    """Reset buyer's password to a new temp one and email their credentials."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(404, "User not found")
 
-    # Invalidate any existing unused tokens
-    db.query(InviteToken).filter(InviteToken.buyer_id == user_id, InviteToken.used == False).delete()
-
-    token_str = secrets.token_urlsafe(32)
-    expires = datetime.now(timezone.utc) + timedelta(hours=72)
-    token = InviteToken(token=token_str, buyer_id=user_id, expires_at=expires)
-    db.add(token)
+    temp_password = secrets.token_urlsafe(10)
+    user.hashed_password = hash_password(temp_password)
     db.commit()
 
-    setup_url = f"{settings.FRONTEND_URL}/setup-password?token={token_str}"
     send_email(
         user.email,
         user.full_name,
-        "ThinkTLS Bid Desk — Set up your account",
+        "ThinkTLS Bid Desk — Your Login Details",
         f"""
-        <h2>Welcome to ThinkTLS Bid Desk</h2>
-        <p>Hello {user.full_name},</p>
-        <p>Your account has been created. Click the button below to set your password and access the platform.</p>
-        <p><a href="{setup_url}" style="background:#3D81E3;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;">
-          Set Up My Account →
-        </a></p>
-        <p style="color:#999;font-size:12px;">This link expires in 72 hours. If you did not expect this email, please ignore it.</p>
-        <hr/>
-        <p style="color:#666;font-size:11px;">ThinkTLS Bid Desk — Confidential</p>
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+          <h2 style="color:#1a1a2e;">Your ThinkTLS Bid Desk Credentials</h2>
+          <p>Hello {user.full_name},</p>
+          <p>Here are your updated login credentials:</p>
+          <div style="background:#f4f6fa;border-radius:8px;padding:18px 22px;margin:18px 0;">
+            <p style="margin:0 0 8px;"><strong>Login URL:</strong> <a href="{settings.FRONTEND_URL}/login">{settings.FRONTEND_URL}/login</a></p>
+            <p style="margin:0 0 8px;"><strong>Email:</strong> {user.email}</p>
+            <p style="margin:0;"><strong>Temporary Password:</strong> <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">{temp_password}</code></p>
+          </div>
+          <p>Once logged in, go to <strong>Profile</strong> to set a new password.</p>
+          <p><a href="{settings.FRONTEND_URL}/login" style="background:#3D81E3;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">
+            Log In Now →
+          </a></p>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+          <p style="color:#999;font-size:11px;">ThinkTLS Bid Desk — Confidential. If you did not expect this email, please ignore it.</p>
+        </div>
         """,
     )
-    return {"message": f"Invite sent to {user.email}", "expires_at": expires}
+    return {"message": f"Credentials sent to {user.email}"}
 
 
 @router.post("/setup-password")

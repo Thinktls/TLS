@@ -189,21 +189,22 @@ export default function NewRound() {
   }
 
   const card: React.CSSProperties = {
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: "18px",
+    background: "var(--bg-2)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius-xl)",
     padding: "32px",
   };
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "560px" }}>
-        <Link href="/admin/rounds" style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>
-          ← Back to Rounds
+      <div style={{ maxWidth: "560px" }} className="animate-in">
+        <Link href="/admin/rounds" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Bid Rounds
         </Link>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: "12px 0 28px" }}>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 28px" }}>
           New Bid Round
-        </h2>
+        </h1>
 
         <StepIndicator current={step} total={4} />
 

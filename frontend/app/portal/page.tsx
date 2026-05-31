@@ -3,186 +3,194 @@ import { useEffect, useState } from "react";
 import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
+import { getFullName } from "@/lib/auth";
 import Link from "next/link";
 
 interface Deal {
-  id: number;
-  part_number: string;
-  description: string;
-  quantity: number;
-  winning_price: number;
-  total_value: number;
-  status: string;
+  id: number; part_number: string; description: string;
+  quantity: number; winning_price: number; total_value: number; status: string;
 }
-
 interface RoundRow {
-  id: number;
-  name: string;
-  commodity: string;
-  status: string;
-  deadline: string | null;
-  invite_status: string;
-  lines_submitted: number;
-  lines_won: number;
+  id: number; name: string; commodity: string; status: string;
+  deadline: string | null; invite_status: string; lines_submitted: number; lines_won: number;
 }
 
-const roundStatusColor: Record<string, string> = {
-  draft: "rgba(255,255,255,0.35)",
-  open: "#34d399",
-  closed: "#fbbf24",
-  processing: "#60a5fa",
-  complete: "#a78bfa",
+const COMMODITY_ICON: Record<string, string> = {
+  laptops: "💻", desktops: "🖥", servers: "🖧", networking: "🌐",
+  storage: "💾", peripherals: "🖱", other: "📦",
 };
+const ROUND_STATUS_COLOR: Record<string, { color: string; badge: string }> = {
+  draft:      { color: "var(--text-4)",  badge: "badge-draft" },
+  open:       { color: "#34d399",        badge: "badge-open" },
+  closed:     { color: "#fbbf24",        badge: "badge-closed" },
+  processing: { color: "#60a5fa",        badge: "badge-processing" },
+  complete:   { color: "#a78bfa",        badge: "badge-complete" },
+};
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function MyDeals() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [rounds, setRounds] = useState<RoundRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"rounds" | "deals">("rounds");
+  const [tab, setTab] = useState<"rounds" | "deals">("rounds");
+  const name = getFullName().split(" ")[0] || "there";
 
   useEffect(() => {
     Promise.all([
-      api.get("/buyer/my-deals").then((r) => r.data).catch(() => []),
-      api.get("/buyer/my-rounds").then((r) => r.data).catch(() => []),
-    ]).then(([d, r]) => {
-      setDeals(d);
-      setRounds(r);
-    }).finally(() => setLoading(false));
+      api.get("/buyer/my-deals").then(r => r.data).catch(() => []),
+      api.get("/buyer/my-rounds").then(r => r.data).catch(() => []),
+    ]).then(([d, r]) => { setDeals(d); setRounds(r); }).finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
     <BuyerLayout>
-      <div style={{ color: "rgba(255,255,255,0.3)", paddingTop: "60px", textAlign: "center" }}>Loading...</div>
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
     </BuyerLayout>
   );
 
   const totalValue = deals.reduce((s, d) => s + d.total_value, 0);
-  const totalWon = deals.length;
-  const totalRounds = rounds.length;
+  const openRounds = rounds.filter(r => r.status === "open");
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: "8px 20px",
-    borderRadius: "8px",
-    fontSize: "0.85rem",
-    fontWeight: active ? 600 : 400,
-    color: active ? "white" : "rgba(255,255,255,0.4)",
+    padding: "7px 16px", borderRadius: "7px", fontSize: "0.82rem", cursor: "pointer", border: "none",
     background: active ? "rgba(61,129,227,0.18)" : "transparent",
-    border: active ? "1px solid rgba(61,129,227,0.3)" : "1px solid transparent",
-    cursor: "pointer",
+    color: active ? "white" : "var(--text-4)",
+    fontWeight: active ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
   });
 
   return (
     <BuyerLayout>
-      <div style={{ maxWidth: "900px" }}>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "white", letterSpacing: "-0.03em", margin: "0 0 4px" }}>
-          My Dashboard
-        </h2>
-        <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", marginBottom: "28px" }}>
-          Your bid rounds, results, and awarded deals.
-        </p>
+      <div style={{ maxWidth: "860px" }} className="animate-in">
+
+        {/* Header */}
+        <div style={{ marginBottom: "28px" }}>
+          <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: "0 0 4px" }}>{greeting()},</p>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.1 }}>
+            {name} <span style={{ fontSize: "1rem" }}>👋</span>
+          </h1>
+          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+            {rounds.length} round{rounds.length !== 1 ? "s" : ""} invited · {openRounds.length} open
+          </p>
+        </div>
+
+        {/* Alert if open rounds */}
+        {openRounds.length > 0 && (
+          <div style={{ marginBottom: "24px", padding: "14px 18px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", flexShrink: 0, animation: "pulse-glow 2s ease infinite" }} />
+            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.8)", margin: 0 }}>
+              <strong style={{ color: "#34d399" }}>{openRounds.length} round{openRounds.length > 1 ? "s" : ""}</strong> currently accepting bids.{" "}
+              <Link href={`/portal/bid?round=${openRounds[0].id}`} style={{ color: "#34d399", textDecoration: "none", fontWeight: 600 }}>Submit your bid →</Link>
+            </p>
+          </div>
+        )}
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "28px" }}>
           {[
-            { label: "Rounds Invited", value: totalRounds, color: "white" },
-            { label: "Deals Won", value: totalWon, color: "#34d399" },
-            { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#a78bfa" },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "14px",
-              padding: "20px",
-            }}>
-              <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</p>
-              <p style={{ fontSize: "1.8rem", fontWeight: 700, color, margin: 0 }}>{value}</p>
+            { label: "Rounds Invited",  value: rounds.length,  icon: "🗂", color: "#60a5fa", gradient: "linear-gradient(135deg,rgba(61,129,227,0.15),rgba(99,102,241,0.08))" },
+            { label: "Deals Won",       value: deals.length,   icon: "🏆", color: "#34d399", gradient: "linear-gradient(135deg,rgba(16,185,129,0.15),rgba(52,211,153,0.06))" },
+            { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: "💰", color: "#a78bfa", gradient: "linear-gradient(135deg,rgba(139,92,246,0.15),rgba(167,139,250,0.06))" },
+          ].map(({ label, value, icon, color, gradient }) => (
+            <div key={label} style={{ background: gradient, border: "1px solid rgba(255,255,255,0.07)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
+              <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>{icon}</div>
+              <p style={{ fontSize: "1.8rem", fontWeight: 800, color, margin: "0 0 3px", letterSpacing: "-0.04em" }}>{value}</p>
+              <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>{label}</p>
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-          <button style={tabStyle(activeTab === "rounds")} onClick={() => setActiveTab("rounds")}>Bid Rounds</button>
-          <button style={tabStyle(activeTab === "deals")} onClick={() => setActiveTab("deals")}>Won Deals</button>
+        <div style={{ display: "flex", gap: "4px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "4px", marginBottom: "20px", width: "fit-content" }}>
+          <button style={tabStyle(tab === "rounds")} onClick={() => setTab("rounds")}>
+            Bid Rounds ({rounds.length})
+          </button>
+          <button style={tabStyle(tab === "deals")} onClick={() => setTab("deals")}>
+            Won Deals ({deals.length})
+          </button>
         </div>
 
-        {/* Round History */}
-        {activeTab === "rounds" && (
+        {/* Rounds tab */}
+        {tab === "rounds" && (
           rounds.length === 0 ? (
-            <div style={{ textAlign: "center", paddingTop: "60px", color: "rgba(255,255,255,0.3)", fontSize: "0.9rem" }}>
-              You haven't been invited to any rounds yet.
+            <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "64px", textAlign: "center" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>📭</div>
+              <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No rounds yet</p>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>You'll see rounds here once you're invited.</p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {rounds.map((r) => (
-                <div key={r.id} style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: "14px",
-                  padding: "18px 20px",
-                }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                        <p style={{ fontWeight: 600, color: "white", margin: 0, fontSize: "0.92rem" }}>{r.name}</p>
-                        <span style={{
-                          fontSize: "0.68rem", fontWeight: 600, padding: "2px 9px", borderRadius: "100px",
-                          background: "rgba(255,255,255,0.05)",
-                          color: roundStatusColor[r.status] || "rgba(255,255,255,0.5)",
-                          textTransform: "capitalize",
-                        }}>{r.status}</span>
-                      </div>
-                      <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
-                        {r.commodity}{r.deadline ? ` · Deadline ${new Date(r.deadline).toLocaleDateString()}` : ""}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {rounds.map(r => {
+                const meta = ROUND_STATUS_COLOR[r.status] || ROUND_STATUS_COLOR.draft;
+                return (
+                  <div key={r.id} style={{
+                    background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
+                    padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px", transition: "border-color 0.15s",
+                  }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.13)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+                  >
+                    <div style={{
+                      width: "40px", height: "40px", borderRadius: "10px", flexShrink: 0,
+                      background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem",
+                    }}>{COMMODITY_ICON[r.commodity] || "📦"}</div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 700, color: "white", margin: "0 0 3px", fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
+                      <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>
+                        <span style={{ textTransform: "capitalize" }}>{r.commodity}</span>
+                        {r.deadline && ` · Deadline ${new Date(r.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
                         {r.lines_submitted > 0 && ` · ${r.lines_submitted} lines submitted · ${r.lines_won} won`}
                       </p>
                     </div>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center", flexShrink: 0, marginLeft: 16 }}>
+
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
+                      <span className={`badge ${meta.badge}`}>{r.status}</span>
                       {r.status === "open" && (
-                        <Link href={`/portal/bid?round=${r.id}`} className="btn-brand" style={{ textDecoration: "none", fontSize: "0.78rem", padding: "6px 14px" }}>
+                        <Link href={`/portal/bid?round=${r.id}`} className="btn-brand" style={{ textDecoration: "none", fontSize: "0.75rem", padding: "6px 14px" }}>
                           Submit Bid
                         </Link>
                       )}
                       {r.status === "complete" && (
                         <>
-                          <Link href={`/portal/results?round=${r.id}`} className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.78rem", padding: "6px 14px" }}>
-                            View Results
-                          </Link>
-                          <button
-                            onClick={() => downloadFile(`/buyer/rounds/${r.id}/award-sheet`, `award_sheet_round_${r.id}.xlsx`)}
-                            className="btn-brand"
-                            style={{ fontSize: "0.78rem", padding: "6px 14px" }}
-                          >
-                            ↓ Award Sheet
+                          <Link href={`/portal/results?round=${r.id}`} className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.75rem", padding: "6px 12px" }}>Results</Link>
+                          <button onClick={() => downloadFile(`/buyer/rounds/${r.id}/award-sheet`, `award_sheet_round_${r.id}.xlsx`)}
+                            className="btn-brand" style={{ fontSize: "0.75rem", padding: "6px 12px" }}>
+                            ↓ Sheet
                           </button>
                         </>
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )
         )}
 
-        {/* Won Deals */}
-        {activeTab === "deals" && (
+        {/* Deals tab */}
+        {tab === "deals" && (
           deals.length === 0 ? (
-            <div style={{ textAlign: "center", paddingTop: "60px", color: "rgba(255,255,255,0.3)", fontSize: "0.9rem" }}>
-              No deals yet. Submit bids to start winning.
+            <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "64px", textAlign: "center" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>🏆</div>
+              <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No deals yet</p>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Submit competitive bids to start winning.</p>
             </div>
           ) : (
-            <div style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "18px",
-              overflow: "hidden",
-            }}>
+            <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
               <table className="dark-table">
                 <thead>
                   <tr>
-                    <th>Part Number</th>
-                    <th>Description</th>
+                    <th>Part Number</th><th>Description</th>
                     <th style={{ textAlign: "right" }}>Qty</th>
                     <th style={{ textAlign: "right" }}>Your Price</th>
                     <th style={{ textAlign: "right" }}>Total Value</th>
@@ -190,22 +198,17 @@ export default function MyDeals() {
                   </tr>
                 </thead>
                 <tbody>
-                  {deals.map((d) => (
+                  {deals.map(d => (
                     <tr key={d.id}>
-                      <td style={{ fontFamily: "monospace", fontSize: "0.78rem" }}>{d.part_number}</td>
-                      <td style={{ maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "#60a5fa" }}>{d.part_number}</td>
+                      <td style={{ maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</td>
                       <td style={{ textAlign: "right" }}>{d.quantity}</td>
                       <td style={{ textAlign: "right", fontFamily: "monospace" }}>${d.winning_price.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: 600, color: "white" }}>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#34d399" }}>
                         ${d.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        <span style={{
-                          padding: "3px 10px", borderRadius: "100px", fontSize: "0.7rem", fontWeight: 600,
-                          background: "rgba(52,211,153,0.15)", color: "#34d399",
-                        }}>
-                          {d.status.replace(/_/g, " ")}
-                        </span>
+                        <span className="badge badge-won">{d.status.replace(/_/g, " ")}</span>
                       </td>
                     </tr>
                   ))}

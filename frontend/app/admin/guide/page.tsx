@@ -92,9 +92,9 @@ const sections: Section[] = [
 export default function AdminGuidePage() {
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "860px" }}>
+      <div style={{ maxWidth: "860px" }} className="animate-in">
         <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 700, marginBottom: "8px" }}>
+          <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 8px" }}>
             Admin Handover Guide
           </h1>
           <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.9rem", lineHeight: 1.6 }}>

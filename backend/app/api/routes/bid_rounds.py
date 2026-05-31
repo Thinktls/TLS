@@ -569,6 +569,142 @@ def _run_ai_match_only(round_id: int):
         db.close()
 
 
+@router.get("/{round_id}/bid-files")
+def list_bid_files(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """All files submitted by buyers for this round — for admin review and download."""
+    files = (
+        db.query(BidFile)
+        .filter(BidFile.bid_round_id == round_id)
+        .order_by(BidFile.uploaded_at.desc())
+        .all()
+    )
+    buyer_ids = {f.buyer_id for f in files}
+    buyers_map = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
+    return [
+        {
+            "id": f.id,
+            "buyer_id": f.buyer_id,
+            "buyer_name": buyers_map[f.buyer_id].full_name if f.buyer_id in buyers_map else None,
+            "buyer_company": buyers_map[f.buyer_id].company_name if f.buyer_id in buyers_map else None,
+            "filename": f.filename,
+            "file_size_bytes": f.file_size_bytes,
+            "lines_parsed": f.lines_parsed,
+            "status": f.status,
+            "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
+            "has_file": f.file_path is not None and os.path.exists(f.file_path),
+        }
+        for f in files
+    ]
+
+
+@router.get("/{round_id}/bid-files/{file_id}/download")
+def download_bid_file(round_id: int, file_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Download the original file submitted by a buyer."""
+    bf = db.query(BidFile).filter(BidFile.id == file_id, BidFile.bid_round_id == round_id).first()
+    if not bf:
+        raise HTTPException(404, "File not found")
+    if not bf.file_path or not os.path.exists(bf.file_path):
+        raise HTTPException(404, "File is no longer on disk")
+    import mimetypes
+    mime, _ = mimetypes.guess_type(bf.filename)
+    mime = mime or "application/octet-stream"
+    def _iter():
+        with open(bf.file_path, "rb") as fh:
+            yield from iter(lambda: fh.read(65536), b"")
+    safe_filename = bf.filename.replace(" ", "_")
+    return StreamingResponse(
+        _iter(),
+        media_type=mime,
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
+    )
+
+
+@router.get("/{round_id}/bid-files/{file_id}/reconstruct")
+def reconstruct_bid_file(round_id: int, file_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Reconstruct a downloadable Excel from the bid lines stored in DB when the original file is gone."""
+    bf = db.query(BidFile).filter(BidFile.id == file_id, BidFile.bid_round_id == round_id).first()
+    if not bf:
+        raise HTTPException(404, "File not found")
+
+    lines = (
+        db.query(BidLine)
+        .filter(BidLine.bid_file_id == file_id)
+        .order_by(BidLine.id)
+        .all()
+    )
+
+    import io
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Bid Lines"
+
+    headers = ["part_number", "description", "unit_price", "quantity", "match_status", "match_method", "exception_type", "is_winner"]
+    header_fill = PatternFill("solid", fgColor="1E3A5F")
+    header_font = Font(bold=True, color="FFFFFF")
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+
+    for row_idx, line in enumerate(lines, 2):
+        ws.cell(row=row_idx, column=1, value=line.raw_part_number)
+        ws.cell(row=row_idx, column=2, value=line.description)
+        ws.cell(row=row_idx, column=3, value=float(line.unit_price) if line.unit_price else None)
+        ws.cell(row=row_idx, column=4, value=line.quantity)
+        ws.cell(row=row_idx, column=5, value=line.match_status)
+        ws.cell(row=row_idx, column=6, value=line.match_method)
+        ws.cell(row=row_idx, column=7, value=line.exception_type)
+        ws.cell(row=row_idx, column=8, value="Yes" if line.is_winner else "No")
+
+    for col in ws.columns:
+        max_len = max((len(str(c.value or "")) for c in col), default=10)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    safe_stem = bf.filename.rsplit(".", 1)[0].replace(" ", "_")
+    out_name = f"{safe_stem}_reconstructed.xlsx"
+    return StreamingResponse(
+        iter([buf.read()]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{out_name}"'},
+    )
+
+
+@router.get("/{round_id}/master-items/{master_item_id}/bids")
+def get_item_bids(round_id: int, master_item_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """All bid lines for a single master item in a round — used by deal approval all-bids panel."""
+    lines = (
+        db.query(BidLine)
+        .filter(BidLine.bid_round_id == round_id, BidLine.master_item_id == master_item_id)
+        .order_by(BidLine.unit_price.desc())
+        .all()
+    )
+    buyer_ids = {l.buyer_id for l in lines}
+    buyers_map = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
+    return [
+        {
+            "bid_line_id": l.id,
+            "buyer_id": l.buyer_id,
+            "buyer_company": buyers_map[l.buyer_id].company_name if l.buyer_id in buyers_map else None,
+            "buyer_email": buyers_map[l.buyer_id].email if l.buyer_id in buyers_map else None,
+            "unit_price": l.unit_price,
+            "quantity": l.quantity,
+            "is_winner": l.is_winner,
+            "match_status": l.match_status,
+            "is_anomaly": l.is_anomaly,
+            "fluffed_loss_price": l.fluffed_loss_price,
+        }
+        for l in lines
+    ]
+
+
 @router.get("/{round_id}/comparison")
 def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     """

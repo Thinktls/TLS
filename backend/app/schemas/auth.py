@@ -16,7 +16,7 @@ class TokenResponse(BaseModel):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = ""
     full_name: str
     company_name: str | None = None
     role: str = "buyer"
