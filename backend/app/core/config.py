@@ -1,9 +1,15 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://thinktls:password@localhost:5432/thinktls_bid_desk"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def strip_database_url(cls, v: str) -> str:
+        return v.strip() if isinstance(v, str) else v
     SECRET_KEY: str = "change-me-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480

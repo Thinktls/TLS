@@ -14,7 +14,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # DATABASE_URL env var overrides the hardcoded alembic.ini URL so Docker works.
-_db_url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+_db_url = (os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")).strip()
 # configparser treats % as interpolation syntax — escape them so %23 doesn't crash
 config.set_main_option("sqlalchemy.url", _db_url.replace("%", "%%"))
 
