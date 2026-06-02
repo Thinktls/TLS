@@ -31,8 +31,15 @@ export default function LoginPage() {
       const res = await api.post("/auth/login", { email, password });
       saveAuth(res.data);
       router.push(res.data.role === "admin" ? "/admin" : "/portal");
-    } catch {
-      setError("Invalid email or password");
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401) {
+        setError("Invalid email or password.");
+      } else if (!status) {
+        setError("Cannot reach server. Please try again in a moment.");
+      } else {
+        setError(`Login failed (error ${status}). Please try again.`);
+      }
     } finally {
       setLoading(false);
     }
