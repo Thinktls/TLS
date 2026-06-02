@@ -387,10 +387,10 @@ export default function RoundDetail() {
                 disabled={sendingResults}
                 className="btn-ghost"
                 style={{ borderColor: "rgba(16,185,129,0.4)", color: "#34d399" }}
-                title="Send win/loss notice emails to all assigned buyers"
+                title="Resend win/loss notice emails to all assigned buyers (auto-sent on Approve All)"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                {sendingResults ? "Sending…" : "Send Loss Notices"}
+                {sendingResults ? "Sending…" : "Resend Loss Notices"}
               </button>
             </div>
           </div>

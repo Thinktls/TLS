@@ -260,8 +260,9 @@ export default function DealsPage() {
               disabled={approvingAll}
               className="btn-brand"
               style={{ background: "#059669", minHeight: "44px", minWidth: "160px" }}
+              title="Approve all pending deals and automatically send win/loss notices to buyers"
             >
-              {approvingAll ? "Approving..." : `Approve All (${pendingCount})`}
+              {approvingAll ? "Approving & Notifying…" : `Approve All & Lock Awards (${pendingCount})`}
             </button>
           )}
         </div>

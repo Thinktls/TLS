@@ -3,11 +3,12 @@ Deal approval + override logging + Razor ERP push routes.
 """
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.core.security import require_admin
 from app.models.deal import Deal
 from app.models.user import User
@@ -16,6 +17,7 @@ from app.models.approval_override import ApprovalOverride
 from app.services.buyer_scorer import recalculate_buyer_scores
 from app.api.routes.notifications import create_notification
 from app.services.razor_client import push_deal_to_razor, push_round_to_razor, RazorPushError
+from app.services.email_service import send_round_results
 from app.core.config import settings
 
 router = APIRouter(prefix="/deals", tags=["deals"])
@@ -70,8 +72,44 @@ async def approve_deal(deal_id: int, db: Session = Depends(get_db), admin=Depend
     return {"status": "approved", "razor_auto_pushed": settings.AUTO_PUSH_RAZOR}
 
 
+def _send_results_to_all_buyers(round_id: int):
+    """Background task: send win/loss notice emails to every assigned buyer."""
+    import logging
+    from app.models.bid_round import BidRound
+    _log = logging.getLogger(__name__)
+    db = SessionLocal()
+    try:
+        r = db.query(BidRound).filter(BidRound.id == round_id).first()
+        if not r:
+            return
+        assigned = db.execute(
+            text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
+        ).fetchall()
+        frontend_url = settings.FRONTEND_URL
+        for row in assigned:
+            buyer = db.query(User).filter(User.id == row.buyer_id).first()
+            if not buyer or not buyer.is_active:
+                continue
+            won = db.query(Deal).filter(
+                Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id
+            ).count()
+            total_lines = db.query(BidLine).filter(
+                BidLine.bid_round_id == round_id,
+                BidLine.buyer_id == buyer.id,
+                BidLine.match_status == "matched",
+            ).count()
+            lost = max(0, total_lines - won)
+            portal_url = f"{frontend_url}/portal/results?round={round_id}"
+            send_round_results(buyer.email, buyer.full_name, r.name, won, lost, portal_url)
+            _log.info(f"[AutoResults] Sent results for round {round_id} to {buyer.email}: won={won} lost={lost}")
+    except Exception as exc:
+        _log.error(f"[AutoResults] Failed to send results for round {round_id}: {exc}", exc_info=True)
+    finally:
+        db.close()
+
+
 @router.post("/rounds/{round_id}/approve-all")
-async def approve_all_deals(round_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+async def approve_all_deals(round_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), admin=Depends(require_admin)):
     deals = (
         db.query(Deal)
         .filter(Deal.bid_round_id == round_id, Deal.status == "pending_approval")
@@ -89,6 +127,8 @@ async def approve_all_deals(round_id: int, db: Session = Depends(get_db), admin=
             await push_round_to_razor(db, round_id)
         except Exception:
             pass
+    # Auto-send win/loss notice emails to all assigned buyers
+    background_tasks.add_task(_send_results_to_all_buyers, round_id)
     return {"approved": len(deals), "razor_auto_pushed": settings.AUTO_PUSH_RAZOR}
 
 
