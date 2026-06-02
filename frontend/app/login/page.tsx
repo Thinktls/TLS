@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import api from "@/lib/api";
 import { saveAuth } from "@/lib/auth";
 
@@ -23,6 +24,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Pre-warm Render free tier (sleeps after 15 min of inactivity)
+  useEffect(() => {
+    api.get("/auth/me").catch(() => {});
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -32,16 +38,20 @@ export default function LoginPage() {
       saveAuth(res.data);
       router.push(res.data.role === "admin" ? "/admin" : "/portal");
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 401) {
-        setError("Invalid email or password.");
-      } else if (!status) {
-        setError("Cannot reach server. Please try again in a moment.");
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        if (status === 401) {
+          setError("Invalid email or password.");
+        } else if (err.code === "ECONNABORTED") {
+          setError("Server is starting up — please wait a moment and try again.");
+        } else if (!status) {
+          setError("Cannot reach server. Please check your connection and try again.");
+        } else {
+          setError(`Login failed (error ${status}). Please try again.`);
+        }
       } else {
-        setError(`Login failed (error ${status}). Please try again.`);
+        setError("An unexpected error occurred. Please try again.");
       }
-    } finally {
-      setLoading(false);
     }
   }
 
