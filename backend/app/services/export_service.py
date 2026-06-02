@@ -308,13 +308,13 @@ def export_disposition_report(db: Session, bid_round_id: int) -> bytes:
         rows.append({
             "Part Number": m.part_number,
             "Description": m.description,
-            "Quantity Requested": m.quantity_requested,
+            "Quantity Requested": m.quantity,
             "Reserve Price": m.reserve_price,
             "Bids Received": len(valid_lines),
             "Disposition": disposition,
             "Awarded To": awarded_to,
             "Awarded Price": awarded_price,
-            "Total Award Value": round(awarded_price * (m.quantity_requested or 1), 4) if awarded_price else None,
+            "Total Award Value": round(awarded_price * (m.quantity or 1), 4) if awarded_price else None,
         })
 
     df = pd.DataFrame(rows)
