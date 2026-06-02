@@ -67,7 +67,7 @@ def change_password(req: ChangePasswordRequest, db: Session = Depends(get_db), c
     return {"message": "Password updated successfully"}
 
 
-@router.post("/buyers", response_model=UserOut)
+@router.post("/buyers")
 def create_buyer(req: UserCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     if db.query(User).filter(User.email == req.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -112,7 +112,17 @@ def create_buyer(req: UserCreate, db: Session = Depends(get_db), _=Depends(requi
         """,
     )
 
-    return user
+    return {
+        "id": user.id,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role,
+        "company_name": user.company_name,
+        "is_active": user.is_active,
+        "fluff_percentage": user.fluff_percentage,
+        "buyer_score": user.buyer_score,
+        "temp_password": temp_password,
+    }
 
 
 @router.get("/buyers", response_model=list[UserOut])

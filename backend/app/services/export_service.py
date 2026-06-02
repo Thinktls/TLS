@@ -157,18 +157,35 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
         .all()
     )
 
+    # Plain styles — no dark backgrounds, standard business Excel
+    plain_header_fill = PatternFill("solid", fgColor="2E5090")
+    plain_header_font = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+    plain_won_font    = Font(name="Calibri", bold=True, color="217346", size=10)  # dark green text only
+    plain_lost_font   = Font(name="Calibri", color="C00000", size=10)             # dark red text only
+    plain_data_font   = Font(name="Calibri", size=10)
+    no_fill           = PatternFill(fill_type=None)
+    thin_border = Border(
+        left=Side(style="thin", color="CCCCCC"),
+        right=Side(style="thin", color="CCCCCC"),
+        top=Side(style="thin", color="CCCCCC"),
+        bottom=Side(style="thin", color="CCCCCC"),
+    )
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Award Sheet"
     ws.sheet_view.showGridLines = False
 
-    # Header
     headers = ["Part Number", "Description", "Qty", "Your Price", "Result", "Loss Notice Price"]
     widths   = [22, 50, 8, 16, 10, 20]
     for i, (h, w) in enumerate(zip(headers, widths), start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
-        ws.cell(row=1, column=i, value=h)
-    _style_header_row(ws, len(headers))
+        cell = ws.cell(row=1, column=i, value=h)
+        cell.fill = plain_header_fill
+        cell.font = plain_header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+    ws.row_dimensions[1].height = 22
 
     for row_idx, line in enumerate(lines, start=2):
         master = db.query(MasterItem).filter(MasterItem.id == line.master_item_id).first()
@@ -181,17 +198,20 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
             result,
             line.fluffed_loss_price if not line.is_winner else "",
         ]
-        fill = WIN_FILL if line.is_winner else LOSS_FILL
-        font = WIN_FONT if line.is_winner else LOSS_FONT
-        _style_data_row(ws, row_idx, len(headers), fill, font)
+        row_font = plain_won_font if line.is_winner else plain_lost_font
         for col_idx, val in enumerate(values, start=1):
-            ws.cell(row=row_idx, column=col_idx, value=val)
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.fill = no_fill
+            cell.font = row_font if col_idx in (5, 6) else plain_data_font
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="left", vertical="center")
 
     # Summary row
     won = sum(1 for l in lines if l.is_winner)
     lost = len(lines) - won
-    ws.cell(row=len(lines) + 3, column=1, value=f"Total Won: {won}  |  Total Lost: {lost}")
-    ws.cell(row=len(lines) + 3, column=1).font = Font(bold=True, color="FFFFFF")
+    summary_row = len(lines) + 3
+    summary_cell = ws.cell(row=summary_row, column=1, value=f"Total Won: {won}   |   Total Lost: {lost}")
+    summary_cell.font = Font(name="Calibri", bold=True, size=11)
 
     buf = io.BytesIO()
     wb.save(buf)

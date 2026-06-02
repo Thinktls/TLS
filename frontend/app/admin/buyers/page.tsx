@@ -31,6 +31,8 @@ export default function BuyersPage() {
   const [fluffValue, setFluffValue] = useState("");
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState<"ok" | "err">("ok");
+  const [newCredentials, setNewCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [resending, setResending] = useState<number | null>(null);
 
   const [form, setForm] = useState<NewBuyerForm>({
     email: "",
@@ -63,8 +65,8 @@ export default function BuyersPage() {
     e.preventDefault();
     setCreating(true);
     try {
-      await api.post("/auth/buyers", { ...form, role: "buyer" });
-      flash("✓ Buyer created — login credentials emailed automatically");
+      const res = await api.post("/auth/buyers", { ...form, role: "buyer" });
+      setNewCredentials({ email: res.data.email, password: res.data.temp_password });
       setShowForm(false);
       setForm({ email: "", full_name: "", company_name: "", fluff_percentage: 3.5 });
       load();
@@ -72,6 +74,18 @@ export default function BuyersPage() {
       flash(err.response?.data?.detail || "Failed to create buyer", "err");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function resendCredentials(id: number) {
+    setResending(id);
+    try {
+      await api.post(`/auth/buyers/${id}/send-invite`);
+      flash("✓ New credentials sent to buyer's email");
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to resend credentials", "err");
+    } finally {
+      setResending(null);
     }
   }
 
@@ -135,6 +149,40 @@ export default function BuyersPage() {
             color: msgType === "ok" ? "#34d399" : "#f87171",
           }}>
             {msg}
+          </div>
+        )}
+
+        {/* New buyer credentials — always shown until dismissed */}
+        {newCredentials && (
+          <div style={{
+            marginBottom: "20px", padding: "20px 22px", borderRadius: "14px",
+            background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.3)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+              <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#60a5fa", margin: 0 }}>
+                ✓ Buyer created — save these login credentials
+              </p>
+              <button onClick={() => setNewCredentials(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontFamily: "monospace", fontSize: "0.85rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ color: "rgba(255,255,255,0.4)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Email</span>
+                <span style={{ color: "white", background: "rgba(255,255,255,0.07)", padding: "4px 10px", borderRadius: "6px" }}>{newCredentials.email}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ color: "rgba(255,255,255,0.4)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Password</span>
+                <span style={{ color: "#34d399", background: "rgba(52,211,153,0.08)", padding: "4px 10px", borderRadius: "6px", letterSpacing: "0.05em" }}>{newCredentials.password}</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(newCredentials.password).then(() => flash("✓ Password copied"))}
+                  style={{ fontSize: "0.72rem", color: "#60a5fa", background: "none", border: "1px solid rgba(61,129,227,0.3)", borderRadius: "5px", padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: "10px 0 0" }}>
+              Share these credentials with the buyer. An email was also attempted (if email is configured).
+            </p>
           </div>
         )}
 
@@ -282,21 +330,36 @@ export default function BuyersPage() {
                       </span>
                     </td>
 
-                    {/* Toggle action */}
+                    {/* Actions */}
                     <td style={{ textAlign: "center" }}>
-                      <button
-                        aria-label={`${b.is_active ? "Disable" : "Enable"} ${b.full_name}`}
-                        onClick={() => toggleBuyer(b.id)}
-                        disabled={toggling === b.id}
-                        style={{
-                          padding: "4px 14px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
-                          background: b.is_active ? "rgba(239,68,68,0.1)" : "rgba(52,211,153,0.1)",
-                          color: b.is_active ? "#f87171" : "#34d399",
-                          border: `1px solid ${b.is_active ? "rgba(239,68,68,0.2)" : "rgba(52,211,153,0.2)"}`,
-                        }}
-                      >
-                        {toggling === b.id ? "…" : b.is_active ? "Disable" : "Enable"}
-                      </button>
+                      <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                        <button
+                          aria-label={`${b.is_active ? "Disable" : "Enable"} ${b.full_name}`}
+                          onClick={() => toggleBuyer(b.id)}
+                          disabled={toggling === b.id}
+                          style={{
+                            padding: "4px 12px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
+                            background: b.is_active ? "rgba(239,68,68,0.1)" : "rgba(52,211,153,0.1)",
+                            color: b.is_active ? "#f87171" : "#34d399",
+                            border: `1px solid ${b.is_active ? "rgba(239,68,68,0.2)" : "rgba(52,211,153,0.2)"}`,
+                          }}
+                        >
+                          {toggling === b.id ? "…" : b.is_active ? "Disable" : "Enable"}
+                        </button>
+                        <button
+                          aria-label={`Resend login credentials to ${b.full_name}`}
+                          onClick={() => resendCredentials(b.id)}
+                          disabled={resending === b.id}
+                          title="Reset password and resend login credentials"
+                          style={{
+                            padding: "4px 10px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
+                            background: "rgba(61,129,227,0.1)", color: "#60a5fa",
+                            border: "1px solid rgba(61,129,227,0.2)",
+                          }}
+                        >
+                          {resending === b.id ? "…" : "Resend"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

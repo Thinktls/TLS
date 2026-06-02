@@ -457,7 +457,7 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
         buyer = db.query(User).filter(User.id == row.buyer_id).first()
         if not buyer or not buyer.is_active:
             continue
-        won = db.query(Deal).filter(Deal.bid_round_id == round_id, Deal.buyer_id == buyer.id).count()
+        won = db.query(Deal).filter(Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id).count()
         total_lines = db.query(BidLine).filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id, BidLine.match_status == "matched").count()
         lost = max(0, total_lines - won)
         portal_url = f"{frontend_url}/portal/results?round={round_id}"
@@ -678,6 +678,25 @@ def reconstruct_bid_file(round_id: int, file_id: int, db: Session = Depends(get_
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{out_name}"'},
     )
+
+
+@router.delete("/{round_id}/bid-files/{file_id}")
+def delete_bid_file(round_id: int, file_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Delete a buyer's submitted bid file and all its associated bid lines."""
+    bf = db.query(BidFile).filter(BidFile.id == file_id, BidFile.bid_round_id == round_id).first()
+    if not bf:
+        raise HTTPException(404, "File not found")
+    # Remove physical file if it still exists on disk
+    if bf.file_path and os.path.exists(bf.file_path):
+        try:
+            os.remove(bf.file_path)
+        except OSError:
+            pass
+    # Delete associated bid lines first
+    db.query(BidLine).filter(BidLine.bid_file_id == file_id).delete(synchronize_session=False)
+    db.delete(bf)
+    db.commit()
+    return {"deleted": True}
 
 
 @router.get("/{round_id}/master-items/{master_item_id}/bids")

@@ -57,6 +57,8 @@ export default function RoundDetail() {
   const [bidFiles, setBidFiles] = useState<BidFileEntry[]>([]);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<number | null>(null);
+  const [sendingResults, setSendingResults] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
@@ -148,6 +150,27 @@ export default function RoundDetail() {
     } catch (err: any) {
       flash(`Error: ${err.response?.data?.detail || "AI match failed"}`, "err");
     } finally { setAiRunning(false); }
+  }
+
+  async function deleteFile(fileId: number) {
+    if (!confirm("Delete this bid file and all its bid lines? This cannot be undone.")) return;
+    setDeletingFile(fileId);
+    try {
+      await api.delete(`/rounds/${id}/bid-files/${fileId}`);
+      flash("✓ File deleted"); load();
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Delete failed", "err");
+    } finally { setDeletingFile(null); }
+  }
+
+  async function sendResultsNotifications() {
+    setSendingResults(true);
+    try {
+      const res = await api.post(`/rounds/${id}/send-results`);
+      flash(`✓ Loss notices sent to ${res.data.sent} buyer(s)`);
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to send loss notices", "err");
+    } finally { setSendingResults(false); }
   }
 
   async function reopenRound() {
@@ -359,6 +382,16 @@ export default function RoundDetail() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Export Center
               </Link>
+              <button
+                onClick={sendResultsNotifications}
+                disabled={sendingResults}
+                className="btn-ghost"
+                style={{ borderColor: "rgba(16,185,129,0.4)", color: "#34d399" }}
+                title="Send win/loss notice emails to all assigned buyers"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                {sendingResults ? "Sending…" : "Send Loss Notices"}
+              </button>
             </div>
           </div>
         )}
@@ -503,15 +536,29 @@ export default function RoundDetail() {
                       {f.uploaded_at && <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{new Date(f.uploaded_at).toLocaleString()}</span>}
                     </div>
                   </div>
-                  {f.has_file ? (
-                    <button onClick={() => downloadFile(`/rounds/${id}/bid-files/${f.id}/download`, f.filename)} className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px", whiteSpace: "nowrap" }}>
-                      ↓ Download
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    {f.has_file ? (
+                      <button onClick={() => downloadFile(`/rounds/${id}/bid-files/${f.id}/download`, f.filename)} className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px", whiteSpace: "nowrap" }}>
+                        ↓ Download
+                      </button>
+                    ) : (
+                      <button onClick={() => downloadFile(`/rounds/${id}/bid-files/${f.id}/reconstruct`, f.filename.replace(/\.[^.]+$/, "_reconstructed.xlsx"))} className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px", whiteSpace: "nowrap", borderColor: "rgba(251,191,36,0.3)", color: "#fbbf24" }} title="Original file not on disk — reconstructed from parsed bid line data">
+                        ↓ Reconstructed
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteFile(f.id)}
+                      disabled={deletingFile === f.id}
+                      title="Delete this bid file and its bid lines"
+                      style={{
+                        padding: "6px 12px", fontSize: "0.75rem", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit",
+                        background: "rgba(239,68,68,0.08)", color: "#f87171",
+                        border: "1px solid rgba(239,68,68,0.2)", borderRadius: "8px",
+                      }}
+                    >
+                      {deletingFile === f.id ? "…" : "Delete"}
                     </button>
-                  ) : (
-                    <button onClick={() => downloadFile(`/rounds/${id}/bid-files/${f.id}/reconstruct`, f.filename.replace(/\.[^.]+$/, "_reconstructed.xlsx"))} className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px", whiteSpace: "nowrap", borderColor: "rgba(251,191,36,0.3)", color: "#fbbf24" }} title="Original file not on disk — reconstructed from parsed bid line data">
-                      ↓ Reconstructed
-                    </button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
