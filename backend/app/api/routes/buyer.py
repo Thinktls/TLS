@@ -293,8 +293,12 @@ def download_my_award_sheet(round_id: int, db: Session = Depends(get_db), buyer=
     if r.status not in ("complete",):
         raise HTTPException(400, "Results not yet available for this round")
 
-    data = export_buyer_award_sheet(db, round_id, buyer.id)
-    filename = f"my_results_{r.name.replace(' ', '_')}_{round_id}.xlsx"
+    try:
+        data = export_buyer_award_sheet(db, round_id, buyer.id)
+    except Exception as exc:
+        import traceback
+        raise HTTPException(500, detail=f"Export error: {type(exc).__name__}: {exc}\n{traceback.format_exc()}")
+    filename = f"my_results_{round_id}.xlsx"
     return StreamingResponse(
         iter([data]),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -311,8 +315,12 @@ def download_template(round_id: int, db: Session = Depends(get_db), buyer=Depend
         raise HTTPException(404, "Round not found")
     if not r.master_file_uploaded:
         raise HTTPException(400, "Template not yet available — master file not uploaded")
-    data = generate_bid_template(db, round_id)
-    filename = f"bid_template_{r.name.replace(' ', '_')}.xlsx"
+    try:
+        data = generate_bid_template(db, round_id)
+    except Exception as exc:
+        import traceback
+        raise HTTPException(500, detail=f"Template error: {type(exc).__name__}: {exc}\n{traceback.format_exc()}")
+    filename = f"bid_template_{round_id}.xlsx"
     return StreamingResponse(
         iter([data]),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
