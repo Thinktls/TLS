@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// CSP connect-src needs the origin only (no path) — a path without trailing slash
+// only matches that exact path, not sub-paths like /api/auth/login
+const apiOrigin = (() => { try { return new URL(apiUrl).origin; } catch { return apiUrl; } })();
 
 const CSP = [
   "default-src 'self'",
@@ -9,7 +12,7 @@ const CSP = [
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob:",
   "media-src 'self' https://d8j0ntlcm91z4.cloudfront.net",
-  `connect-src 'self' ${apiUrl} ws://localhost:3000`,
+  `connect-src 'self' ${apiOrigin} ws://localhost:3000 wss://localhost:3000`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
