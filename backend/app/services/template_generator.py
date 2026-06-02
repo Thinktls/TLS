@@ -10,7 +10,6 @@ from openpyxl.styles import (
     PatternFill, Font, Alignment, Border, Side, Protection
 )
 from openpyxl.utils import get_column_letter
-from openpyxl.worksheet.protection import SheetProtection
 from sqlalchemy.orm import Session
 from app.models.master_item import MasterItem
 from app.models.bid_round import BidRound
@@ -134,21 +133,19 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
                 cell.alignment = LEFT if col_idx == 4 else CENTER
 
     # Protect sheet — only unlocked cells can be edited
-    ws.protection = SheetProtection(
-        sheet=True,
-        password="thinktls",
-        selectLockedCells=False,
-        selectUnlockedCells=False,
-        formatCells=False,
-        formatColumns=False,
-        formatRows=False,
-        insertColumns=False,
-        insertRows=False,
-        deleteColumns=False,
-        deleteRows=False,
-        sort=False,
-        autoFilter=False,
-    )
+    ws.protection.sheet = True
+    ws.protection.password = "thinktls"
+    ws.protection.selectLockedCells = False
+    ws.protection.selectUnlockedCells = False
+    ws.protection.formatCells = False
+    ws.protection.formatColumns = False
+    ws.protection.formatRows = False
+    ws.protection.insertColumns = False
+    ws.protection.insertRows = False
+    ws.protection.deleteColumns = False
+    ws.protection.deleteRows = False
+    ws.protection.sort = False
+    ws.protection.autoFilter = False
 
     buf = io.BytesIO()
     wb.save(buf)
