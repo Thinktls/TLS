@@ -392,8 +392,7 @@ def download_template(round_id: int, db: Session = Depends(get_db), _=Depends(re
     try:
         data = generate_bid_template(db, round_id)
     except Exception as exc:
-        import traceback
-        raise HTTPException(500, detail=f"Template error: {type(exc).__name__}: {exc}\n{traceback.format_exc()}")
+        raise HTTPException(500, detail=f"Template generation failed: {type(exc).__name__}: {exc}")
     filename = f"bid_template_{round_id}.xlsx"
     return StreamingResponse(
         iter([data]),

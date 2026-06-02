@@ -296,8 +296,7 @@ def download_my_award_sheet(round_id: int, db: Session = Depends(get_db), buyer=
     try:
         data = export_buyer_award_sheet(db, round_id, buyer.id)
     except Exception as exc:
-        import traceback
-        raise HTTPException(500, detail=f"Export error: {type(exc).__name__}: {exc}\n{traceback.format_exc()}")
+        raise HTTPException(500, detail=f"Export failed: {type(exc).__name__}: {exc}")
     filename = f"my_results_{round_id}.xlsx"
     return StreamingResponse(
         iter([data]),
@@ -318,8 +317,7 @@ def download_template(round_id: int, db: Session = Depends(get_db), buyer=Depend
     try:
         data = generate_bid_template(db, round_id)
     except Exception as exc:
-        import traceback
-        raise HTTPException(500, detail=f"Template error: {type(exc).__name__}: {exc}\n{traceback.format_exc()}")
+        raise HTTPException(500, detail=f"Template generation failed: {type(exc).__name__}: {exc}")
     filename = f"bid_template_{round_id}.xlsx"
     return StreamingResponse(
         iter([data]),
