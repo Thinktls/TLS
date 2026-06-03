@@ -18,6 +18,7 @@ interface NewBuyerForm {
   full_name: string;
   company_name: string;
   fluff_percentage: number;
+  password: string;
 }
 
 export default function BuyersPage() {
@@ -39,7 +40,9 @@ export default function BuyersPage() {
     full_name: "",
     company_name: "",
     fluff_percentage: 3.5,
+    password: "",
   });
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   async function load() {
     setLoadError(false);
@@ -68,12 +71,26 @@ export default function BuyersPage() {
       const res = await api.post("/auth/buyers", { ...form, role: "buyer" });
       setNewCredentials({ email: res.data.email, password: res.data.temp_password });
       setShowForm(false);
-      setForm({ email: "", full_name: "", company_name: "", fluff_percentage: 3.5 });
+      setForm({ email: "", full_name: "", company_name: "", fluff_percentage: 3.5, password: "" });
       load();
     } catch (err: any) {
       flash(err.response?.data?.detail || "Failed to create buyer", "err");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function deleteBuyer(id: number, name: string) {
+    if (!confirm(`Delete buyer "${name}"? This cannot be undone.`)) return;
+    setDeleting(id);
+    try {
+      await api.delete(`/auth/buyers/${id}`);
+      flash(`✓ Buyer "${name}" deleted`);
+      load();
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to delete buyer", "err");
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -227,6 +244,22 @@ export default function BuyersPage() {
                   className="glass-input"
                 />
               </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStyle}>
+                  Password&nbsp;
+                  <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                    — leave blank to auto-generate · buyer can change it from Profile
+                  </span>
+                </label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Set a temporary password (optional)"
+                  minLength={form.password ? 8 : undefined}
+                  className="glass-input"
+                />
+              </div>
             </div>
             <div style={{ display: "flex", gap: "10px", marginTop: "18px" }}>
               <button type="submit" disabled={creating} className="btn-brand">
@@ -358,6 +391,19 @@ export default function BuyersPage() {
                           }}
                         >
                           {resending === b.id ? "…" : "Resend"}
+                        </button>
+                        <button
+                          aria-label={`Delete ${b.full_name}`}
+                          onClick={() => deleteBuyer(b.id, b.full_name)}
+                          disabled={deleting === b.id}
+                          title="Permanently delete this buyer"
+                          style={{
+                            padding: "4px 10px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
+                            background: "rgba(239,68,68,0.08)", color: "#f87171",
+                            border: "1px solid rgba(239,68,68,0.2)",
+                          }}
+                        >
+                          {deleting === b.id ? "…" : "Delete"}
                         </button>
                       </div>
                     </td>

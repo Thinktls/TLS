@@ -130,6 +130,16 @@ def list_buyers(db: Session = Depends(get_db), _=Depends(require_admin)):
     return db.query(User).filter(User.role == "buyer").all()
 
 
+@router.delete("/buyers/{user_id}")
+def delete_buyer(user_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    user = db.query(User).filter(User.id == user_id, User.role == "buyer").first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Buyer not found")
+    db.delete(user)
+    db.commit()
+    return {"deleted": True}
+
+
 @router.patch("/buyers/{user_id}/toggle", response_model=UserOut)
 def toggle_buyer(user_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     user = db.query(User).filter(User.id == user_id).first()
