@@ -97,8 +97,8 @@ export default function BuyersPage() {
   async function resendCredentials(id: number) {
     setResending(id);
     try {
-      await api.post(`/auth/buyers/${id}/send-invite`);
-      flash("✓ New credentials sent to buyer's email");
+      const res = await api.post(`/auth/buyers/${id}/send-invite`);
+      setNewCredentials({ email: res.data.email, password: res.data.temp_password });
     } catch (err: any) {
       flash(err.response?.data?.detail || "Failed to resend credentials", "err");
     } finally {
@@ -177,7 +177,7 @@ export default function BuyersPage() {
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
               <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#60a5fa", margin: 0 }}>
-                ✓ Buyer created — save these login credentials
+                ✓ Credentials ready — share these with the buyer
               </p>
               <button onClick={() => setNewCredentials(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>✕</button>
             </div>

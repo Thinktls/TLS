@@ -210,7 +210,7 @@ def send_invite(user_id: int, background_tasks: BackgroundTasks, db: Session = D
         send_email, user.email, user.full_name,
         "ThinkTLS Bid Desk — Your Login Details", _email_html,
     )
-    return {"message": f"Credentials sent to {user.email}"}
+    return {"message": f"Credentials sent to {user.email}", "temp_password": temp_password, "email": user.email}
 
 
 @router.post("/setup-password")
