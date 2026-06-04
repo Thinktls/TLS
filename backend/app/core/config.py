@@ -14,12 +14,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
+    BREVO_API_KEY: str = ""        # preferred — HTTPS, works on Render
     SENDGRID_API_KEY: str = ""
     SENDGRID_WEBHOOK_KEY: str = ""
     FROM_EMAIL: str = "bids@thinktls.com"
     FROM_NAME: str = "ThinkTLS Bid Desk"
 
-    # SMTP fallback — used when SENDGRID_API_KEY is blank
+    # SMTP fallback — used when neither BREVO_API_KEY nor SENDGRID_API_KEY is set
     # Gmail example: SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=you@gmail.com SMTP_PASSWORD=<app-password>
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587

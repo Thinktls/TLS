@@ -1,12 +1,15 @@
 """
-Email delivery — three backends tried in order:
-  1. SendGrid  (SENDGRID_API_KEY set)
-  2. SMTP      (SMTP_HOST + SMTP_USER + SMTP_PASSWORD set)  ← works with Gmail, Resend, Mailgun, etc.
-  3. Console   (dev fallback — logs to stdout)
+Email delivery — backends tried in order:
+  1. Brevo API  (BREVO_API_KEY set)       ← HTTPS, works on all platforms
+  2. SendGrid   (SENDGRID_API_KEY set)
+  3. SMTP       (SMTP_HOST + SMTP_USER + SMTP_PASSWORD)
+  4. Console    (dev fallback)
 """
+import json
 import logging
 import smtplib
 import ssl
+import urllib.request
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -16,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 def _send(to_email: str, to_name: str, subject: str, html_body: str):
-    if settings.SENDGRID_API_KEY:
+    if settings.BREVO_API_KEY:
+        _send_brevo_api(to_email, to_name, subject, html_body)
+    elif settings.SENDGRID_API_KEY:
         _send_sendgrid(to_email, to_name, subject, html_body)
     elif settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD:
         _send_smtp(to_email, to_name, subject, html_body)
@@ -25,8 +30,30 @@ def _send(to_email: str, to_name: str, subject: str, html_body: str):
             f"[EMAIL MOCK] No email provider configured.\n"
             f"  To: {to_email} ({to_name})\n"
             f"  Subject: {subject}\n"
-            f"  Set SENDGRID_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASSWORD in .env to enable real emails."
+            f"  Set BREVO_API_KEY in Render environment to enable real emails."
         )
+
+
+def _send_brevo_api(to_email: str, to_name: str, subject: str, html_body: str):
+    try:
+        payload = json.dumps({
+            "sender": {"name": settings.FROM_NAME, "email": settings.FROM_EMAIL},
+            "to": [{"email": to_email, "name": to_name}],
+            "subject": subject,
+            "htmlContent": html_body,
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/smtp/email",
+            data=payload,
+            method="POST",
+        )
+        req.add_header("accept", "application/json")
+        req.add_header("api-key", settings.BREVO_API_KEY)
+        req.add_header("content-type", "application/json")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            logger.info(f"[EMAIL Brevo API] Sent to {to_email}: {subject} (status {resp.status})")
+    except Exception as e:
+        logger.error(f"[EMAIL Brevo API] Failed for {to_email}: {e}")
 
 
 def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str):
@@ -116,7 +143,7 @@ def send_approval_ready_email(admin_email: str, round_name: str, deal_count: int
       <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Deals Ready</strong></td><td style="padding:8px;border:1px solid #ddd;color:green;">{deal_count}</td></tr>
     </table>
     <p>All bid lines have been matched and winners selected. You may now review and approve the deals.</p>
-    <p><a href="{round_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Review &amp; Approve</a></p>
+    <p><a href="{round_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">Review &amp; Approve</a></p>
     <hr/>
     <p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
     """
