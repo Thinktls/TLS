@@ -14,19 +14,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
-    RESEND_API_KEY: str = ""       # simplest — sign up free at resend.com
-    BREVO_API_KEY: str = ""        # fallback — HTTPS Brevo API
     SENDGRID_API_KEY: str = ""
     SENDGRID_WEBHOOK_KEY: str = ""
     FROM_EMAIL: str = "bids@thinktls.com"
     FROM_NAME: str = "ThinkTLS Bid Desk"
-
-    # SMTP fallback — used when neither BREVO_API_KEY nor SENDGRID_API_KEY is set
-    # Gmail example: SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=you@gmail.com SMTP_PASSWORD=<app-password>
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
 
     ANTHROPIC_API_KEY: str = ""
 
