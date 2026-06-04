@@ -2,7 +2,7 @@ import secrets
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -68,7 +68,7 @@ def change_password(req: ChangePasswordRequest, db: Session = Depends(get_db), c
 
 
 @router.post("/buyers")
-def create_buyer(req: UserCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+def create_buyer(req: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), _=Depends(require_admin)):
     if db.query(User).filter(User.email == req.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -87,12 +87,8 @@ def create_buyer(req: UserCreate, db: Session = Depends(get_db), _=Depends(requi
     db.commit()
     db.refresh(user)
 
-    # Send welcome email with login credentials immediately
-    send_email(
-        user.email,
-        user.full_name,
-        "Welcome to ThinkTLS Bid Desk — Your Login Details",
-        f"""
+    # Send welcome email in background — never blocks the response
+    _email_html = f"""
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
           <h2 style="color:#1a1a2e;">Welcome to ThinkTLS Bid Desk</h2>
           <p>Hello {user.full_name},</p>
@@ -109,7 +105,10 @@ def create_buyer(req: UserCreate, db: Session = Depends(get_db), _=Depends(requi
           <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
           <p style="color:#999;font-size:11px;">ThinkTLS Bid Desk — Confidential. If you did not expect this email, please ignore it.</p>
         </div>
-        """,
+        """
+    background_tasks.add_task(
+        send_email, user.email, user.full_name,
+        "Welcome to ThinkTLS Bid Desk — Your Login Details", _email_html,
     )
 
     return {
@@ -179,7 +178,7 @@ class PasswordSetup(BaseModel):
 
 
 @router.post("/buyers/{user_id}/send-invite")
-def send_invite(user_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+def send_invite(user_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), _=Depends(require_admin)):
     """Reset buyer's password to a new temp one and email their credentials."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -189,11 +188,7 @@ def send_invite(user_id: int, db: Session = Depends(get_db), _=Depends(require_a
     user.hashed_password = hash_password(temp_password)
     db.commit()
 
-    send_email(
-        user.email,
-        user.full_name,
-        "ThinkTLS Bid Desk — Your Login Details",
-        f"""
+    _email_html = f"""
         <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
           <h2 style="color:#1a1a2e;">Your ThinkTLS Bid Desk Credentials</h2>
           <p>Hello {user.full_name},</p>
@@ -210,7 +205,10 @@ def send_invite(user_id: int, db: Session = Depends(get_db), _=Depends(require_a
           <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
           <p style="color:#999;font-size:11px;">ThinkTLS Bid Desk — Confidential. If you did not expect this email, please ignore it.</p>
         </div>
-        """,
+        """
+    background_tasks.add_task(
+        send_email, user.email, user.full_name,
+        "ThinkTLS Bid Desk — Your Login Details", _email_html,
     )
     return {"message": f"Credentials sent to {user.email}"}
 
