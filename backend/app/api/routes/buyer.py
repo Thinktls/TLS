@@ -161,14 +161,10 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
         db.commit()
         raise HTTPException(400, str(e))
 
-    for row in rows:
-        line = BidLine(
-            bid_file_id=bid_file.id,
-            bid_round_id=round_id,
-            buyer_id=buyer.id,
-            **row,
-        )
-        db.add(line)
+    db.add_all([
+        BidLine(bid_file_id=bid_file.id, bid_round_id=round_id, buyer_id=buyer.id, **row)
+        for row in rows
+    ])
 
     bid_file.status = "processed"
     bid_file.lines_parsed = len(rows)
