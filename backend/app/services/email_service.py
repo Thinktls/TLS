@@ -1,9 +1,10 @@
 """
 Email delivery — backends tried in order:
-  1. Brevo API  (BREVO_API_KEY set)       ← HTTPS, works on all platforms
-  2. SendGrid   (SENDGRID_API_KEY set)
-  3. SMTP       (SMTP_HOST + SMTP_USER + SMTP_PASSWORD)
-  4. Console    (dev fallback)
+  1. Resend     (RESEND_API_KEY set)       ← simplest, HTTPS, free 3k/month
+  2. Brevo API  (BREVO_API_KEY set)        ← HTTPS, works on all platforms
+  3. SendGrid   (SENDGRID_API_KEY set)
+  4. SMTP       (SMTP_HOST + SMTP_USER + SMTP_PASSWORD)
+  5. Console    (dev fallback)
 """
 import json
 import logging
@@ -19,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 def _send(to_email: str, to_name: str, subject: str, html_body: str):
-    if settings.BREVO_API_KEY:
+    if settings.RESEND_API_KEY:
+        _send_resend(to_email, to_name, subject, html_body)
+    elif settings.BREVO_API_KEY:
         _send_brevo_api(to_email, to_name, subject, html_body)
     elif settings.SENDGRID_API_KEY:
         _send_sendgrid(to_email, to_name, subject, html_body)
@@ -30,8 +33,35 @@ def _send(to_email: str, to_name: str, subject: str, html_body: str):
             f"[EMAIL MOCK] No email provider configured.\n"
             f"  To: {to_email} ({to_name})\n"
             f"  Subject: {subject}\n"
-            f"  Set BREVO_API_KEY in Render environment to enable real emails."
+            f"  Set RESEND_API_KEY in Render environment to enable real emails."
         )
+
+
+def _send_resend(to_email: str, to_name: str, subject: str, html_body: str):
+    try:
+        # Use verified domain sender if FROM_EMAIL domain is configured,
+        # otherwise fall back to Resend's shared onboarding domain for testing.
+        from_addr = f"{settings.FROM_NAME} <{settings.FROM_EMAIL}>"
+        payload = json.dumps({
+            "from": from_addr,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_body,
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            method="POST",
+        )
+        req.add_header("Authorization", f"Bearer {settings.RESEND_API_KEY}")
+        req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            logger.info(f"[EMAIL Resend] Sent to {to_email}: {subject} (status {resp.status})")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        logger.error(f"[EMAIL Resend] Failed for {to_email}: HTTP {e.code} — {body}")
+    except Exception as e:
+        logger.error(f"[EMAIL Resend] Failed for {to_email}: {e}")
 
 
 def _send_brevo_api(to_email: str, to_name: str, subject: str, html_body: str):

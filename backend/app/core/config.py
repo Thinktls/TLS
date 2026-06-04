@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
-    BREVO_API_KEY: str = ""        # preferred — HTTPS, works on Render
+    RESEND_API_KEY: str = ""       # simplest — sign up free at resend.com
+    BREVO_API_KEY: str = ""        # fallback — HTTPS Brevo API
     SENDGRID_API_KEY: str = ""
     SENDGRID_WEBHOOK_KEY: str = ""
     FROM_EMAIL: str = "bids@thinktls.com"
