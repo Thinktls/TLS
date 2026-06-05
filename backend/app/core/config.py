@@ -16,6 +16,11 @@ class Settings(BaseSettings):
 
     SENDGRID_API_KEY: str = ""
     SENDGRID_WEBHOOK_KEY: str = ""
+
+    # Gmail SMTP (App Password — requires 2FA on the Google account)
+    GMAIL_USER: str = ""        # e.g. yourname@gmail.com
+    GMAIL_APP_PASSWORD: str = ""  # 16-char App Password from myaccount.google.com/apppasswords
+
     FROM_EMAIL: str = "bids@thinktls.com"
     FROM_NAME: str = "ThinkTLS Bid Desk"
 

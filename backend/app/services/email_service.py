@@ -1,9 +1,13 @@
 """
-Email delivery:
-  1. SendGrid  (SENDGRID_API_KEY set)  ← primary
-  2. Console   (dev fallback — logs to stdout)
+Email delivery priority:
+  1. SendGrid  (SENDGRID_API_KEY set)      ← preferred transactional API
+  2. Gmail     (GMAIL_USER + GMAIL_APP_PASSWORD set)  ← SMTP via port 465 SSL
+  3. Console   (dev fallback — logs to stdout)
 """
 import logging
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from app.core.config import settings
 
@@ -13,11 +17,13 @@ logger = logging.getLogger(__name__)
 def _send(to_email: str, to_name: str, subject: str, html_body: str):
     if settings.SENDGRID_API_KEY:
         _send_sendgrid(to_email, to_name, subject, html_body)
+    elif settings.GMAIL_USER and settings.GMAIL_APP_PASSWORD:
+        _send_gmail(to_email, to_name, subject, html_body)
     else:
         logger.info(
             f"[EMAIL MOCK] No provider configured.\n"
             f"  To: {to_email}\n  Subject: {subject}\n"
-            f"  Set SENDGRID_API_KEY in Render to enable emails."
+            f"  Set SENDGRID_API_KEY or GMAIL_USER+GMAIL_APP_PASSWORD in Render."
         )
 
 
@@ -35,6 +41,23 @@ def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str):
         logger.info(f"[EMAIL SendGrid] Sent to {to_email}: {subject}")
     except Exception as e:
         logger.error(f"[EMAIL SendGrid] Failed for {to_email}: {e}")
+
+
+def _send_gmail(to_email: str, to_name: str, subject: str, html_body: str):
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{settings.FROM_NAME} <{settings.GMAIL_USER}>"
+        msg["To"] = f"{to_name} <{to_email}>"
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as smtp:
+            smtp.login(settings.GMAIL_USER, settings.GMAIL_APP_PASSWORD)
+            smtp.sendmail(settings.GMAIL_USER, to_email, msg.as_string())
+
+        logger.info(f"[EMAIL Gmail] Sent to {to_email}: {subject}")
+    except Exception as e:
+        logger.error(f"[EMAIL Gmail] Failed for {to_email}: {e}")
 
 
 def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, deadline: str, upload_url: str):
