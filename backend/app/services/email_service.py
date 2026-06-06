@@ -56,29 +56,16 @@ def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str):
         logger.error(f"[EMAIL SendGrid] Failed for {to_email}: {e}")
 
 
-def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, deadline: str, upload_url: str):
-    _send(buyer_email, buyer_name, f"ThinkTLS Bid Invitation: {round_name}", f"""
-    <h2>You've been invited to bid</h2>
-    <p>Hello {buyer_name},</p>
-    <p>ThinkTLS has opened a new bid round: <strong>{round_name}</strong></p>
-    <p><strong>Submission deadline:</strong> {deadline}</p>
-    <p><a href="{upload_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Upload My Bid</a></p>
-    <hr/><p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
-    """)
+def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, commodity: str, deadline: str, upload_url: str):
+    from app.services.email_templates import bid_invitation_email
+    subject, html = bid_invitation_email(buyer_name, round_name, commodity, deadline, upload_url)
+    _send(buyer_email, buyer_name, subject, html)
 
 
 def send_round_results(buyer_email: str, buyer_name: str, round_name: str, won_count: int, lost_count: int, portal_url: str):
-    _send(buyer_email, buyer_name, f"ThinkTLS Bid Results: {round_name}", f"""
-    <h2>Your bid results are ready</h2>
-    <p>Hello {buyer_name},</p>
-    <p>Results for <strong>{round_name}</strong> are now available.</p>
-    <table style="border-collapse:collapse;width:300px;">
-      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Items Won</strong></td><td style="padding:8px;border:1px solid #ddd;color:green;">{won_count}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Items Lost</strong></td><td style="padding:8px;border:1px solid #ddd;color:red;">{lost_count}</td></tr>
-    </table>
-    <br/><p><a href="{portal_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">View My Results</a></p>
-    <hr/><p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
-    """)
+    from app.services.email_templates import results_email
+    subject, html = results_email(buyer_name, round_name, won_count, lost_count, portal_url)
+    _send(buyer_email, buyer_name, subject, html)
 
 
 def send_exception_alert(admin_email: str, round_name: str, exception_count: int, review_url: str):
@@ -102,22 +89,6 @@ def send_approval_ready_email(admin_email: str, round_name: str, deal_count: int
 
 
 def send_password_reset(to_email: str, to_name: str, reset_url: str):
-    _send(to_email, to_name, "ThinkTLS: Reset your password", f"""
-    <h2>Password Reset Request</h2>
-    <p>Hello {to_name},</p>
-    <p>Click below to reset your password. This link expires in 2 hours.</p>
-    <p><a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Reset Password</a></p>
-    <p>If you didn't request this, ignore this email.</p>
-    <hr/><p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
-    """)
-
-
-def send_buyer_invite(to_email: str, to_name: str, setup_url: str):
-    _send(to_email, to_name, "Welcome to ThinkTLS Bid Desk — Set up your account", f"""
-    <h2>Welcome to ThinkTLS Bid Desk</h2>
-    <p>Hello {to_name},</p>
-    <p>Your buyer account has been created. Click below to set your password.</p>
-    <p><a href="{setup_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Set Up My Account</a></p>
-    <p>This link expires in 72 hours.</p>
-    <hr/><p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
-    """)
+    from app.services.email_templates import password_reset_email
+    subject, html = password_reset_email(to_name, reset_url)
+    _send(to_email, to_name, subject, html)

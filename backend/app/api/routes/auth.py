@@ -87,29 +87,9 @@ def create_buyer(req: UserCreate, background_tasks: BackgroundTasks, db: Session
     db.commit()
     db.refresh(user)
 
-    # Send welcome email in background — never blocks the response
-    _email_html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
-          <h2 style="color:#1a1a2e;">Welcome to ThinkTLS Bid Desk</h2>
-          <p>Hello {user.full_name},</p>
-          <p>Your buyer account has been created. Use the credentials below to log in:</p>
-          <div style="background:#f4f6fa;border-radius:8px;padding:18px 22px;margin:18px 0;">
-            <p style="margin:0 0 8px;"><strong>Login URL:</strong> <a href="{settings.FRONTEND_URL}/login">{settings.FRONTEND_URL}/login</a></p>
-            <p style="margin:0 0 8px;"><strong>Email:</strong> {user.email}</p>
-            <p style="margin:0;"><strong>Temporary Password:</strong> <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">{temp_password}</code></p>
-          </div>
-          <p>Once logged in, go to <strong>Profile</strong> to set a new password.</p>
-          <p><a href="{settings.FRONTEND_URL}/login" style="background:#3D81E3;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">
-            Log In Now →
-          </a></p>
-          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
-          <p style="color:#999;font-size:11px;">ThinkTLS Bid Desk — Confidential. If you did not expect this email, please ignore it.</p>
-        </div>
-        """
-    background_tasks.add_task(
-        send_email, user.email, user.full_name,
-        "Welcome to ThinkTLS Bid Desk — Your Login Details", _email_html,
-    )
+    from app.services.email_templates import welcome_email
+    _subject, _html = welcome_email(user.full_name, user.email, temp_password, f"{settings.FRONTEND_URL}/login")
+    background_tasks.add_task(send_email, user.email, user.full_name, _subject, _html)
 
     return {
         "id": user.id,
@@ -188,28 +168,9 @@ def send_invite(user_id: int, background_tasks: BackgroundTasks, db: Session = D
     user.hashed_password = hash_password(temp_password)
     db.commit()
 
-    _email_html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
-          <h2 style="color:#1a1a2e;">Your ThinkTLS Bid Desk Credentials</h2>
-          <p>Hello {user.full_name},</p>
-          <p>Here are your updated login credentials:</p>
-          <div style="background:#f4f6fa;border-radius:8px;padding:18px 22px;margin:18px 0;">
-            <p style="margin:0 0 8px;"><strong>Login URL:</strong> <a href="{settings.FRONTEND_URL}/login">{settings.FRONTEND_URL}/login</a></p>
-            <p style="margin:0 0 8px;"><strong>Email:</strong> {user.email}</p>
-            <p style="margin:0;"><strong>Temporary Password:</strong> <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">{temp_password}</code></p>
-          </div>
-          <p>Once logged in, go to <strong>Profile</strong> to set a new password.</p>
-          <p><a href="{settings.FRONTEND_URL}/login" style="background:#3D81E3;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">
-            Log In Now →
-          </a></p>
-          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
-          <p style="color:#999;font-size:11px;">ThinkTLS Bid Desk — Confidential. If you did not expect this email, please ignore it.</p>
-        </div>
-        """
-    background_tasks.add_task(
-        send_email, user.email, user.full_name,
-        "ThinkTLS Bid Desk — Your Login Details", _email_html,
-    )
+    from app.services.email_templates import resend_credentials_email
+    _subject, _html = resend_credentials_email(user.full_name, user.email, temp_password, f"{settings.FRONTEND_URL}/login")
+    background_tasks.add_task(send_email, user.email, user.full_name, _subject, _html)
     return {"message": f"Credentials sent to {user.email}", "temp_password": temp_password, "email": user.email}
 
 
@@ -278,20 +239,9 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
         db.add(token)
         db.commit()
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_str}"
-        send_email(
-            user.email,
-            user.full_name,
-            "ThinkTLS Bid Desk — Password Reset",
-            f"""
-            <h2>Password Reset Request</h2>
-            <p>Hello {user.full_name},</p>
-            <p>Click below to reset your password. This link expires in 2 hours.</p>
-            <p><a href="{reset_url}" style="background:#3D81E3;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;">
-              Reset Password →
-            </a></p>
-            <p style="color:#999;font-size:12px;">If you did not request this, ignore this email — your password won't change.</p>
-            """,
-        )
+        from app.services.email_templates import password_reset_email
+        _subject, _html = password_reset_email(user.full_name, reset_url)
+        send_email(user.email, user.full_name, _subject, _html)
     return {"message": "If that email is registered, a reset link has been sent."}
 
 
