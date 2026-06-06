@@ -424,7 +424,7 @@ def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Sessi
         buyer = db.query(User).filter(User.id == row.buyer_id).first()
         if not buyer or not buyer.is_active:
             continue
-        background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, deadline_str, upload_url)
+        background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url)
         db.execute(
             text("UPDATE round_buyers SET invite_status='sent', invited_at=now() WHERE round_id=:rid AND buyer_id=:bid"),
             {"rid": round_id, "bid": buyer.id},
