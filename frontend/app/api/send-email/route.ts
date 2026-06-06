@@ -3,6 +3,16 @@ import nodemailer from "nodemailer";
 
 export const runtime = "nodejs";
 
+export async function GET() {
+  const user = process.env.GMAIL_USER || "";
+  const pass = process.env.GMAIL_APP_PASSWORD || "";
+  return NextResponse.json({
+    gmail_user: user || "NOT SET",
+    gmail_pass_length: pass.length,
+    gmail_pass_preview: pass ? pass.slice(0, 4) + "****" + pass.slice(-4) : "NOT SET",
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const secret = req.headers.get("x-email-secret");
