@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     GMAIL_USER: str = ""        # e.g. yourname@gmail.com
     GMAIL_APP_PASSWORD: str = ""  # 16-char App Password from myaccount.google.com/apppasswords
 
+    # Vercel email relay (set when using the Next.js /api/send-email route as relay)
+    EMAIL_RELAY_URL: str = ""   # e.g. https://thinktls-bid-desk.vercel.app
+    EMAIL_RELAY_SECRET: str = "" # shared secret — set same value in Vercel env
+
     FROM_EMAIL: str = "bids@thinktls.com"
     FROM_NAME: str = "ThinkTLS Bid Desk"
 
