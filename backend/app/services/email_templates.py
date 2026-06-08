@@ -236,6 +236,11 @@ def results_email(
     total = won_count + lost_count
     win_pct = round((won_count / total) * 100) if total > 0 else 0
 
+    win_rate_row = (
+        f"<p style='font-size:14px;color:#64748b;text-align:center;margin:8px 0 20px;'>"
+        f"Win rate this round: <strong style='color:#0f172a;'>{win_pct}%</strong></p>"
+    ) if total > 0 else ""
+
     content = f"""
       <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">Your Bid Results Are Ready</h1>
       <p style="margin:0 0 20px;font-size:13px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">{round_name}</p>
@@ -259,7 +264,7 @@ def results_email(
         </tr>
       </table>
 
-      {"<p style='font-size:14px;color:#64748b;text-align:center;margin:8px 0 20px;'>Win rate this round: <strong style=\"color:#0f172a;\">" + str(win_pct) + "%</strong></p>" if total > 0 else ""}
+      {win_rate_row}
 
       {_cta_button("View My Full Results", portal_url, _BRAND_GREEN)}
 
