@@ -192,7 +192,25 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
             "total_price": round(unit_price * qty, 4) if unit_price else None,
             "row_number": int(idx) + 2,
         })
-    return rows
+
+    # Consolidate duplicate part numbers: sum quantities, keep the lowest (most competitive) price
+    consolidated: dict[str, dict] = {}
+    for row in rows:
+        key = row["normalized_part_number"]
+        if key in consolidated:
+            existing = consolidated[key]
+            existing["quantity"] = (existing["quantity"] or 0) + (row["quantity"] or 0)
+            if row["unit_price"] is not None:
+                if existing["unit_price"] is None or row["unit_price"] < existing["unit_price"]:
+                    existing["unit_price"] = row["unit_price"]
+            existing["total_price"] = (
+                round(existing["unit_price"] * existing["quantity"], 4)
+                if existing["unit_price"] is not None else None
+            )
+        else:
+            consolidated[key] = row.copy()
+
+    return list(consolidated.values())
 
 
 # ── internal helpers ──────────────────────────────────────────────────────────

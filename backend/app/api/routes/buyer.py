@@ -110,6 +110,34 @@ def my_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
     return result
 
 
+@router.post("/rounds/{round_id}/parse-preview")
+async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """Parse a bid file without saving — returns preview rows so buyer can review before confirming."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status != "open":
+        raise HTTPException(400, "This round is not accepting bids")
+    assigned = db.execute(
+        text("SELECT 1 FROM round_buyers WHERE round_id=:rid AND buyer_id=:bid"),
+        {"rid": round_id, "bid": buyer.id},
+    ).fetchone()
+    if not assigned:
+        raise HTTPException(403, "You are not assigned to this round")
+    content = await file.read()
+    try:
+        rows = parse_buyer_file(content, file.filename)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    total_qty = sum(r["quantity"] or 0 for r in rows)
+    return {
+        "filename": file.filename,
+        "total_lines": len(rows),
+        "total_quantity": total_qty,
+        "rows": rows,
+    }
+
+
 @router.post("/rounds/{round_id}/bid")
 async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), buyer=Depends(require_buyer)):
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
@@ -241,6 +269,50 @@ def my_submission(round_id: int, db: Session = Depends(get_db), buyer=Depends(re
             for l in lines
         ],
     }
+
+
+@router.get("/rounds/{round_id}/my-submission/download")
+def download_my_submission(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """Download the buyer's own submitted bid file (or reconstruct from DB if original is gone)."""
+    import os, io, mimetypes, openpyxl
+    bid_file = (
+        db.query(BidFile)
+        .filter(BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id)
+        .order_by(BidFile.uploaded_at.desc())
+        .first()
+    )
+    if not bid_file:
+        raise HTTPException(404, "No submission found for this round")
+
+    if bid_file.file_path and os.path.exists(bid_file.file_path):
+        mime, _ = mimetypes.guess_type(bid_file.filename)
+        mime = mime or "application/octet-stream"
+        def _iter():
+            with open(bid_file.file_path, "rb") as fh:
+                yield from iter(lambda: fh.read(65536), b"")
+        return StreamingResponse(
+            _iter(),
+            media_type=mime,
+            headers={"Content-Disposition": f'attachment; filename="{bid_file.filename}"'},
+        )
+
+    # Reconstruct from parsed bid lines if original file is gone
+    lines = db.query(BidLine).filter(BidLine.bid_file_id == bid_file.id).order_by(BidLine.id).all()
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "My Bid"
+    ws.append(["Part Number", "Description", "Unit Price", "Quantity"])
+    for line in lines:
+        ws.append([line.raw_part_number, line.description,
+                   float(line.unit_price) if line.unit_price else None, line.quantity])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.read()]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="my_bid_{round_id}.xlsx"'},
+    )
 
 
 @router.get("/my-results")

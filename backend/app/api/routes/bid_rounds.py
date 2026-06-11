@@ -410,10 +410,10 @@ def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Sessi
         raise HTTPException(400, "Upload master file before sending invitations")
 
     assigned = db.execute(
-        text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
+        text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid AND invite_status = 'pending'"), {"rid": round_id}
     ).fetchall()
     if not assigned:
-        raise HTTPException(400, "Assign buyers to this round before sending invitations")
+        raise HTTPException(400, "No new buyers pending invitation — all assigned buyers have already been invited")
 
     from app.core.config import settings as _settings
     deadline_str = r.submission_deadline.strftime("%B %d, %Y") if r.submission_deadline else "See admin for deadline"
