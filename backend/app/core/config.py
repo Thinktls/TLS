@@ -46,10 +46,6 @@ class Settings(BaseSettings):
 
     ANTHROPIC_API_KEY: str = ""
 
-    # OpenRouter — unified API gateway for 200+ models (OpenAI-compatible)
-    OPENROUTER_API_KEY: str = ""
-    OPENROUTER_MODEL: str = "google/gemini-flash-1.5"  # fast + cheap for structured extraction
-
     # Open-source / cloud LLM via any OpenAI-compatible endpoint
     # Local Ollama:  OLLAMA_BASE_URL=http://localhost:11434, OLLAMA_MODEL=llama3.2
     # Groq (free):   OLLAMA_BASE_URL=https://api.groq.com/openai, OLLAMA_MODEL=llama-3.1-8b-instant, OLLAMA_API_KEY=gsk_...

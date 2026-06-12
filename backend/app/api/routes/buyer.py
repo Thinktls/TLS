@@ -136,10 +136,10 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
     try:
         rows = parse_buyer_file(content, file.filename)
     except ValueError as e:
-        if settings.OPENROUTER_API_KEY:
+        if settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL:
             try:
                 from app.services.ai_file_parser import ai_parse_buyer_file
-                rows = ai_parse_buyer_file(content, file.filename, settings.OPENROUTER_API_KEY, settings.OPENROUTER_MODEL)
+                rows = ai_parse_buyer_file(content, file.filename)
             except ValueError as ai_e:
                 raise HTTPException(400, str(ai_e))
         else:
@@ -210,10 +210,10 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     try:
         rows = parse_buyer_file(content, file.filename)
     except ValueError as e:
-        if settings.OPENROUTER_API_KEY:
+        if settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL:
             try:
                 from app.services.ai_file_parser import ai_parse_buyer_file
-                rows = ai_parse_buyer_file(content, file.filename, settings.OPENROUTER_API_KEY, settings.OPENROUTER_MODEL)
+                rows = ai_parse_buyer_file(content, file.filename)
             except ValueError as ai_e:
                 bid_file.status = "error"
                 bid_file.error_message = str(ai_e)
