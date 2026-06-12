@@ -5,7 +5,20 @@ import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
 
-const COMMODITIES = ["laptops", "desktops", "servers", "networking", "storage", "peripherals", "other"];
+const COMMODITIES = [
+  "laptops",
+  "desktops",
+  "servers",
+  "networking",
+  "storage",
+  "monitors",
+  "peripherals",
+  "mobile devices",
+  "printers",
+  "software licenses",
+  "other",
+];
+const CUSTOM_VALUE = "__custom__";
 
 const labelStyle: React.CSSProperties = {
   display: "block",
@@ -78,6 +91,7 @@ export default function NewRound() {
     submission_deadline: "",
     reserve_price_enabled: false,
   });
+  const [customCommodity, setCustomCommodity] = useState("");
 
   // Step 2 state
   const [masterFile, setMasterFile] = useState<File | null>(null);
@@ -100,11 +114,17 @@ export default function NewRound() {
   // Step 1: Create round
   async function handleStep1(e: React.FormEvent) {
     e.preventDefault();
+    if (form.commodity === CUSTOM_VALUE && !customCommodity.trim()) {
+      setError("Please enter a commodity name.");
+      return;
+    }
     setWorking(true);
     clearError();
     try {
+      const resolvedCommodity = form.commodity === CUSTOM_VALUE ? customCommodity.trim() : form.commodity;
       const payload = {
         ...form,
+        commodity: resolvedCommodity,
         customer: form.customer || null,
         notes: form.notes || null,
         submission_deadline: form.submission_deadline ? new Date(form.submission_deadline).toISOString() : null,
@@ -241,13 +261,27 @@ export default function NewRound() {
                 <label style={labelStyle}>Commodity *</label>
                 <select
                   value={form.commodity}
-                  onChange={(e) => setForm({ ...form, commodity: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, commodity: e.target.value });
+                    if (e.target.value !== CUSTOM_VALUE) setCustomCommodity("");
+                  }}
                   className="glass-input"
                 >
                   {COMMODITIES.map((c) => (
-                    <option key={c} value={c} style={{ textTransform: "capitalize" }}>{c}</option>
+                    <option key={c} value={c} style={{ textTransform: "capitalize" }}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                   ))}
+                  <option value={CUSTOM_VALUE}>+ Enter custom...</option>
                 </select>
+                {form.commodity === CUSTOM_VALUE && (
+                  <input
+                    value={customCommodity}
+                    onChange={(e) => setCustomCommodity(e.target.value)}
+                    placeholder="e.g. Rugged tablets, Smart TVs..."
+                    className="glass-input"
+                    style={{ marginTop: "8px" }}
+                    autoFocus
+                  />
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Customer (optional)</label>
@@ -483,7 +517,7 @@ export default function NewRound() {
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {[
                 { label: "Round Name", value: roundName },
-                { label: "Commodity", value: form.commodity },
+                { label: "Commodity", value: form.commodity === CUSTOM_VALUE ? customCommodity.trim() || "—" : form.commodity },
                 { label: "Customer", value: form.customer || "—" },
                 { label: "Deadline", value: form.submission_deadline ? new Date(form.submission_deadline).toLocaleString() : "None" },
                 { label: "Master Items", value: masterCount != null ? `${masterCount.toLocaleString()} line items` : "—" },
