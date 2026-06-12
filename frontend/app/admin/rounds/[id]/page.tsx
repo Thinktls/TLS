@@ -10,6 +10,12 @@ interface Round {
   id: number; name: string; commodity: string; customer: string | null;
   status: string; total_line_items: number; master_file_uploaded: boolean;
   submission_deadline: string | null;
+  created_at: string | null;
+  master_file_uploaded_at: string | null;
+  opened_at: string | null;
+  closed_at: string | null;
+  processing_started_at: string | null;
+  completed_at: string | null;
 }
 interface Summary {
   total_bid_lines: number; matched: number; exceptions: number;
@@ -46,6 +52,116 @@ const COMMODITY_ICON: Record<string, string> = {
 
 function initials(name: string) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function fmtTs(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit", hour12: true,
+  });
+}
+
+function RoundTimeline({ round }: { round: Round }) {
+  const steps: { label: string; sub: string; ts: string | null; done: boolean; active: boolean }[] = [
+    {
+      label: "Round Created",
+      sub: "Admin created the bid round",
+      ts: round.created_at,
+      done: true,
+      active: round.status === "draft",
+    },
+    {
+      label: "Master File Uploaded",
+      sub: `${round.total_line_items.toLocaleString()} line items loaded`,
+      ts: round.master_file_uploaded_at,
+      done: !!round.master_file_uploaded_at,
+      active: false,
+    },
+    {
+      label: "Round Opened",
+      sub: "Buyers invited and bidding began",
+      ts: round.opened_at,
+      done: !!round.opened_at,
+      active: round.status === "open",
+    },
+    {
+      label: "Bidding Closed",
+      sub: "No further submissions accepted",
+      ts: round.closed_at,
+      done: !!round.closed_at,
+      active: round.status === "closed",
+    },
+    {
+      label: "Processing Started",
+      sub: "Matching engine and winner selection running",
+      ts: round.processing_started_at,
+      done: !!round.processing_started_at,
+      active: round.status === "processing",
+    },
+    {
+      label: "Round Complete",
+      sub: "Winners selected, deals ready for approval",
+      ts: round.completed_at,
+      done: !!round.completed_at,
+      active: round.status === "complete",
+    },
+  ];
+
+  return (
+    <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+      <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 20px" }}>Round Timeline</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+        {steps.map((step, i) => {
+          const isLast = i === steps.length - 1;
+          const dotColor = step.done ? "var(--green)" : step.active ? "var(--brand)" : "var(--border-mid)";
+          const lineColor = step.done ? "var(--green)" : "var(--border)";
+          return (
+            <div key={step.label} style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+              {/* Spine */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                <div style={{
+                  width: "20px", height: "20px", borderRadius: "50%", flexShrink: 0,
+                  background: step.done ? "rgba(16,185,129,0.15)" : step.active ? "rgba(61,129,227,0.15)" : "var(--surface)",
+                  border: `2px solid ${dotColor}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  marginTop: "2px",
+                  transition: "all 0.2s",
+                }}>
+                  {step.done && (
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  )}
+                  {step.active && !step.done && (
+                    <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--brand)" }} />
+                  )}
+                </div>
+                {!isLast && (
+                  <div style={{ width: "2px", flex: 1, minHeight: "24px", background: lineColor, opacity: step.done ? 0.5 : 0.25, margin: "3px 0" }} />
+                )}
+              </div>
+              {/* Content */}
+              <div style={{ paddingBottom: isLast ? 0 : "20px", flex: 1, minWidth: 0 }}>
+                <p style={{
+                  fontSize: "0.85rem", fontWeight: step.done || step.active ? 600 : 400,
+                  color: step.done ? "var(--text-1)" : step.active ? "var(--brand)" : "var(--text-4)",
+                  margin: "0 0 2px",
+                }}>{step.label}</p>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "0 0 2px" }}>{step.sub}</p>
+                {step.ts ? (
+                  <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: 0, fontFamily: "monospace" }}>{fmtTs(step.ts)}</p>
+                ) : step.active ? (
+                  <p style={{ fontSize: "0.7rem", color: "var(--brand)", margin: 0 }}>In progress…</p>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function RoundDetail() {
@@ -239,7 +355,7 @@ export default function RoundDetail() {
               {COMMODITY_ICON[round.commodity] || "📦"}
             </div>
             <div>
-              <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 6px", lineHeight: 1.1 }}>
+              <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 6px", lineHeight: 1.1 }}>
                 {round.name}
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -269,7 +385,7 @@ export default function RoundDetail() {
         {summary && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "20px" }}>
             {[
-              { label: "Bid Lines",   val: summary.total_bid_lines.toLocaleString(), color: "white",   bg: "rgba(255,255,255,0.03)" },
+              { label: "Bid Lines",   val: summary.total_bid_lines.toLocaleString(), color: "var(--text-1)",   bg: "rgba(255,255,255,0.03)" },
               { label: "Matched",     val: summary.matched.toLocaleString(),          color: "#34d399", bg: "rgba(16,185,129,0.06)" },
               { label: "Exceptions",  val: summary.exceptions.toLocaleString(),       color: summary.exceptions > 0 ? "#fb923c" : "var(--text-3)", bg: summary.exceptions > 0 ? "rgba(251,146,60,0.06)" : "rgba(255,255,255,0.03)" },
               { label: "Winners",     val: summary.winners.toLocaleString(),          color: "#a78bfa", bg: "rgba(139,92,246,0.06)" },
@@ -347,7 +463,7 @@ export default function RoundDetail() {
                 <div style={{ display: "flex", gap: "24px", marginTop: "14px", flexWrap: "wrap" }}>
                   {[["Lines", processingStatus.total_lines], ["Matched", processingStatus.matched], ["Exceptions", processingStatus.exceptions], ["Deals", processingStatus.deals]].map(([label, val]) => (
                     <div key={label as string}>
-                      <p style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "white", letterSpacing: "-0.03em" }}>{(val as number).toLocaleString()}</p>
+                      <p style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.03em" }}>{(val as number).toLocaleString()}</p>
                       <p style={{ margin: 0, fontSize: "0.68rem", color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
                     </div>
                   ))}
@@ -431,7 +547,7 @@ export default function RoundDetail() {
             <div>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 2px" }}>Assigned Buyers</p>
               <div style={{ display: "flex", gap: "14px" }}>
-                <span style={{ fontSize: "0.8rem", color: "white", fontWeight: 600 }}>{assignedBuyers.length} total</span>
+                <span style={{ fontSize: "0.8rem", color: "var(--text-1)", fontWeight: 600 }}>{assignedBuyers.length} total</span>
                 {assignedBuyers.length > 0 && (
                   <>
                     <span style={{ fontSize: "0.8rem", color: "#34d399" }}>{uploadedCount} submitted</span>
@@ -474,7 +590,7 @@ export default function RoundDetail() {
                     <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "rgba(61,129,227,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>
                       {initials(b.full_name)}
                     </div>
-                    <span style={{ fontSize: "0.83rem", color: "white", fontWeight: 500 }}>{b.full_name}</span>
+                    <span style={{ fontSize: "0.83rem", color: "var(--text-1)", fontWeight: 500 }}>{b.full_name}</span>
                     <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{b.company_name || b.email}</span>
                   </label>
                 ))}
@@ -496,7 +612,7 @@ export default function RoundDetail() {
                       {initials(b.full_name)}
                     </div>
                     <div>
-                      <Link href={`/admin/rounds/${id}/buyers/${b.id}`} style={{ fontSize: "0.85rem", fontWeight: 600, color: "white", textDecoration: "none", display: "block" }}
+                      <Link href={`/admin/rounds/${id}/buyers/${b.id}`} style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-1)", textDecoration: "none", display: "block" }}
                         onMouseEnter={e => { e.currentTarget.style.color = "#60a5fa"; }}
                         onMouseLeave={e => { e.currentTarget.style.color = "white"; }}>
                         {b.full_name}
@@ -564,6 +680,9 @@ export default function RoundDetail() {
             </div>
           </div>
         )}
+
+        {/* ── Round Timeline ── */}
+        <RoundTimeline round={round} />
 
         {/* ── Buyer Participation ── */}
         {assignedBuyers.length > 0 && (

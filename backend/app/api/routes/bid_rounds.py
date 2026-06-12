@@ -1,6 +1,6 @@
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
@@ -51,6 +51,14 @@ class RoundOut(BaseModel):
     total_line_items: int
     master_file_uploaded: bool
     submission_deadline: Optional[datetime] = None
+    notes: Optional[str] = None
+    reserve_price_enabled: bool = False
+    created_at: Optional[datetime] = None
+    master_file_uploaded_at: Optional[datetime] = None
+    opened_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+    processing_started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -214,6 +222,7 @@ async def upload_master_file(round_id: int, file: UploadFile = File(...), db: Se
     r.master_file_uploaded = True
     r.total_line_items = len(rows)
     r.master_file_path = file.filename
+    r.master_file_uploaded_at = datetime.now(timezone.utc)
     db.commit()
 
     return {"message": f"Uploaded {len(rows)} line items", "total": len(rows)}
@@ -249,6 +258,7 @@ def open_round(round_id: int, db: Session = Depends(get_db), _=Depends(require_a
     if not r.master_file_uploaded:
         raise HTTPException(400, "Upload master file before opening round")
     r.status = "open"
+    r.opened_at = datetime.now(timezone.utc)
     db.commit()
     return {"status": "open"}
 
@@ -262,6 +272,7 @@ def reopen_round(round_id: int, db: Session = Depends(get_db), _=Depends(require
     if r.status not in ("closed", "error"):
         raise HTTPException(400, f"Cannot reopen a round with status '{r.status}'")
     r.status = "open"
+    r.opened_at = datetime.now(timezone.utc)
     db.commit()
     return {"status": "open"}
 
@@ -272,6 +283,7 @@ def close_round(round_id: int, db: Session = Depends(get_db), _=Depends(require_
     if not r:
         raise HTTPException(404, "Round not found")
     r.status = "closed"
+    r.closed_at = datetime.now(timezone.utc)
     db.commit()
     return {"status": "closed"}
 
@@ -477,6 +489,7 @@ def process_round(round_id: int, background_tasks: BackgroundTasks, db: Session 
         raise HTTPException(400, "Round must be closed before processing")
 
     r.status = "processing"
+    r.processing_started_at = datetime.now(timezone.utc)
     db.commit()
 
     background_tasks.add_task(_run_processing, round_id)
@@ -510,6 +523,7 @@ def _run_processing(round_id: int):
         r = db.query(BidRound).filter(BidRound.id == round_id).first()
         if r:
             r.status = "complete"
+            r.completed_at = datetime.now(timezone.utc)
             db.commit()
 
             # Notify admin about processing completion

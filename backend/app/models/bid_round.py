@@ -55,6 +55,13 @@ class BidRound(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Lifecycle timestamps — set when admin performs each action
+    master_file_uploaded_at = Column(DateTime(timezone=True), nullable=True)
+    opened_at               = Column(DateTime(timezone=True), nullable=True)
+    closed_at               = Column(DateTime(timezone=True), nullable=True)
+    processing_started_at   = Column(DateTime(timezone=True), nullable=True)
+    completed_at            = Column(DateTime(timezone=True), nullable=True)
+
     bid_files = relationship("BidFile", back_populates="bid_round")
     master_items = relationship("MasterItem", back_populates="bid_round")
     deals = relationship("Deal", back_populates="bid_round")
