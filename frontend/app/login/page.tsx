@@ -58,21 +58,6 @@ export default function LoginPage() {
   return (
     <>
       <style>{`
-        @keyframes shiny {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
-        .shiny-text {
-          background-image: linear-gradient(to right,
-            #091020 0%, #0B2551 12%, #A4F4FD 33%,
-            #00d2ff 50%, #0B2551 68%, #091020 88%, #091020 100%);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          -webkit-text-fill-color: transparent;
-          animation: shiny 5s linear infinite;
-        }
         .glass-card {
           background: rgba(10, 10, 10, 0.55);
           border: 1px solid rgba(255,255,255,0.12);
@@ -99,14 +84,14 @@ export default function LoginPage() {
           width: 100%;
           padding: 14px;
           border-radius: 14px;
-          background: linear-gradient(135deg, #3D81E3 0%, #00c6fb 100%);
+          background: linear-gradient(135deg, #3D81E3 0%, #5a6cf5 100%);
           color: white;
           font-weight: 700;
           font-size: 0.95rem;
           border: none;
           cursor: pointer;
           letter-spacing: -0.01em;
-          box-shadow: 0 4px 28px rgba(61,129,227,0.35);
+          box-shadow: 0 2px 12px rgba(61,129,227,0.2);
           transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
           font-family: Inter, system-ui, sans-serif;
           margin-top: 8px;
@@ -114,12 +99,12 @@ export default function LoginPage() {
         .submit-btn:hover:not(:disabled) {
           opacity: 0.92;
           transform: translateY(-1px);
-          box-shadow: 0 8px 36px rgba(61,129,227,0.45);
+          box-shadow: 0 4px 20px rgba(61,129,227,0.28);
         }
         .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
 
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0c0c0c", overflow: "hidden", position: "relative" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0a0a0f", overflow: "hidden", position: "relative" }}>
 
         {/* Same fullscreen video as landing page */}
         <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
@@ -131,7 +116,7 @@ export default function LoginPage() {
           {/* Dark gradient overlay so card is readable */}
           <div style={{
             position: "absolute", inset: 0,
-            background: "linear-gradient(to bottom, rgba(12,12,12,0.5) 0%, rgba(12,12,12,0.7) 100%)",
+            background: "linear-gradient(to bottom, rgba(10,10,15,0.5) 0%, rgba(10,10,15,0.7) 100%)",
           }} />
         </div>
 
@@ -166,15 +151,15 @@ export default function LoginPage() {
               <div style={{
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
                 width: "56px", height: "56px", borderRadius: "18px",
-                background: "linear-gradient(135deg, rgba(61,129,227,0.9), rgba(0,210,255,0.9))",
+                background: "linear-gradient(135deg, #3D81E3, #5a6cf5)",
                 marginBottom: "20px",
-                boxShadow: "0 0 48px rgba(61,129,227,0.4)",
+                boxShadow: "0 4px 16px rgba(61,129,227,0.2)",
               }}>
                 <LogoMark size={28} />
               </div>
 
               <h1 style={{ fontSize: "2.6rem", fontWeight: 700, letterSpacing: "-0.05em", margin: 0, lineHeight: 1, color: "white" }}>
-                Think<span className="shiny-text">TLS</span>
+                ThinkTLS
               </h1>
               <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.35)", marginTop: "10px", letterSpacing: "0.01em" }}>
                 Bid Desk · Sign in to continue

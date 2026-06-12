@@ -47,7 +47,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         background: "var(--bg-1)", borderRight: "1px solid var(--border)",
       }}>
         {/* Accent line */}
-        <div style={{ height: "2px", background: "linear-gradient(90deg, #3D81E3, #8b5cf6, transparent)" }} />
+        <div style={{ height: "2px", background: "linear-gradient(90deg, var(--brand), transparent)" }} />
 
         {/* Logo */}
         <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid var(--border)" }}>
@@ -56,7 +56,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
               width: "32px", height: "32px", borderRadius: "9px",
               background: "linear-gradient(135deg, #3D81E3, #6366f1)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 16px rgba(61,129,227,0.35)",
+              boxShadow: "0 2px 8px rgba(61,129,227,0.15)",
             }}><LogoMark /></div>
             <div>
               <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>ThinkTLS</div>
@@ -80,7 +80,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
 
         {/* Help callout */}
         <div style={{ margin: "0 10px 10px", padding: "12px 14px", background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px" }}>
-          <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "#60a5fa", margin: "0 0 3px" }}>Need help?</p>
+          <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 3px" }}>Need help?</p>
           <p style={{ fontSize: "0.68rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>
             Email <span style={{ color: "rgba(255,255,255,0.5)" }}>bids@thinktls.com</span>
           </p>
@@ -90,10 +90,10 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         <div style={{ padding: "14px 16px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{
             width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0,
-            background: "linear-gradient(135deg, rgba(16,185,129,0.25), rgba(61,129,227,0.25))",
-            border: "1px solid rgba(16,185,129,0.25)",
+            background: "linear-gradient(135deg, rgba(61,129,227,0.3), rgba(99,102,241,0.3))",
+            border: "1px solid rgba(61,129,227,0.3)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "0.72rem", fontWeight: 700, color: "#6ee7b7",
+            fontSize: "0.72rem", fontWeight: 700, color: "#a0bfff",
           }}>{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text-2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name || "Buyer"}</p>

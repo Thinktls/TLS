@@ -13,7 +13,7 @@
 
   --brand:       #3D81E3;
   --brand-dim:   rgba(61,129,227,0.18);
-  --brand-glow:  rgba(61,129,227,0.35);
+  --brand-glow:  rgba(61,129,227,0.2);
 
   --indigo:      #6366f1;
   --violet:      #8b5cf6;
@@ -194,7 +194,7 @@ html, body {
   background: rgba(255,255,255,0.06);
   box-shadow: 0 0 0 3px rgba(61,129,227,0.12);
 }
-.glass-input option { background: #1a1a2e; color: white; }
+.glass-input option { background: var(--bg-3); color: white; }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .btn-brand {
@@ -217,7 +217,7 @@ html, body {
 .btn-brand:hover:not(:disabled) {
   background: linear-gradient(135deg, #4d8ef5 0%, #6977f8 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(61,129,227,0.38);
+  box-shadow: 0 4px 16px rgba(61,129,227,0.22);
 }
 .btn-brand:active:not(:disabled) { transform: translateY(0); }
 .btn-brand:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -369,7 +369,7 @@ html, body {
 .progress-bar-fill {
   height: 100%;
   border-radius: 100px;
-  background: linear-gradient(90deg, #3D81E3, #8b5cf6);
+  background: var(--brand);
   transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
 }
 

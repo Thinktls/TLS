@@ -129,7 +129,7 @@ function NotificationBell() {
         {count > 0 && (
           <span style={{
             position: "absolute", top: "-5px", right: "-5px", minWidth: "16px", height: "16px",
-            background: "linear-gradient(135deg, #ef4444, #f87171)", color: "white",
+            background: "var(--red)", color: "white",
             fontSize: "0.58rem", fontWeight: 700, borderRadius: "100px", padding: "0 4px",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>{count > 99 ? "99+" : count}</span>
@@ -198,7 +198,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         background: "var(--bg-1)", borderRight: "1px solid var(--border)", position: "relative",
       }}>
         {/* Top accent line */}
-        <div style={{ height: "2px", background: "linear-gradient(90deg, #3D81E3, #8b5cf6, transparent)", flexShrink: 0 }} />
+        <div style={{ height: "2px", background: "linear-gradient(90deg, var(--brand), transparent)", flexShrink: 0 }} />
 
         {/* Logo */}
         <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid var(--border)" }}>
@@ -207,7 +207,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               width: "32px", height: "32px", borderRadius: "9px", flexShrink: 0,
               background: "linear-gradient(135deg, #3D81E3, #6366f1)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 16px rgba(61,129,227,0.35)",
+              boxShadow: "0 2px 8px rgba(61,129,227,0.15)",
             }}>
               <LogoMark />
             </div>
