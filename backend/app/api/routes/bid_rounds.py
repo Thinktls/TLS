@@ -699,6 +699,35 @@ def delete_bid_file(round_id: int, file_id: int, db: Session = Depends(get_db), 
     return {"deleted": True}
 
 
+@router.delete("/{round_id}")
+def delete_round(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Permanently delete a round and all its data (master items, bids, deals)."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status in ("open", "processing"):
+        raise HTTPException(400, "Cannot delete an active round. Close it first.")
+
+    # Cascade delete in FK order
+    bid_file_ids = [bf.id for bf in db.query(BidFile.id).filter(BidFile.bid_round_id == round_id).all()]
+    if bid_file_ids:
+        db.query(BidLine).filter(BidLine.bid_file_id.in_(bid_file_ids)).delete(synchronize_session=False)
+        # Clean up uploaded files from disk
+        for bf in db.query(BidFile).filter(BidFile.id.in_(bid_file_ids)).all():
+            if bf.file_path and os.path.exists(bf.file_path):
+                try:
+                    os.remove(bf.file_path)
+                except OSError:
+                    pass
+        db.query(BidFile).filter(BidFile.id.in_(bid_file_ids)).delete(synchronize_session=False)
+    db.query(Deal).filter(Deal.bid_round_id == round_id).delete(synchronize_session=False)
+    db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).delete(synchronize_session=False)
+    db.execute(text("DELETE FROM round_buyers WHERE round_id = :rid"), {"rid": round_id})
+    db.delete(r)
+    db.commit()
+    return {"deleted": True}
+
+
 @router.get("/{round_id}/master-items/{master_item_id}/bids")
 def get_item_bids(round_id: int, master_item_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     """All bid lines for a single master item in a round — used by deal approval all-bids panel."""

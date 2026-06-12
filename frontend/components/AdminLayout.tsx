@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { logout, getFullName } from "@/lib/auth";
 import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeProvider";
 
 /* ── Nav icons ──────────────────────────────────────────────── */
 const Icons = {
@@ -114,13 +115,13 @@ function NotificationBell() {
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button onClick={openFeed} style={{
-        position: "relative", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)",
+        position: "relative", background: "var(--control-bg)", border: "1px solid var(--border)",
         borderRadius: "8px", width: "34px", height: "34px", cursor: "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.55)",
+        display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)",
         transition: "all 0.15s",
       }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)"; (e.currentTarget as HTMLElement).style.color = "white"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.55)"; }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--control-hover-bg)"; (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--control-bg)"; (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
         title="Notifications"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -139,8 +140,8 @@ function NotificationBell() {
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 8px)", right: 0, width: "340px", maxHeight: "420px",
-          background: "#0f0f16", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.7)", zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column",
+          background: "var(--bg-1)", border: "1px solid var(--border-mid)", borderRadius: "16px",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.4)", zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "white" }}>Notifications</span>
@@ -150,13 +151,13 @@ function NotificationBell() {
             {items.length === 0 && <p style={{ textAlign: "center", padding: "32px 0", color: "var(--text-4)", fontSize: "0.82rem" }}>All caught up</p>}
             {items.map(n => (
               <div key={n.id} onClick={() => { if (!n.read) markRead(n.id); if (n.link) window.location.href = n.link; }}
-                style={{ padding: "12px 16px", cursor: n.link ? "pointer" : "default", background: n.read ? "transparent" : "rgba(61,129,227,0.04)", borderBottom: "1px solid rgba(255,255,255,0.03)", display: "flex", gap: "10px", alignItems: "flex-start", transition: "background 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = n.read ? "transparent" : "rgba(61,129,227,0.04)"; }}
+                style={{ padding: "12px 16px", cursor: n.link ? "pointer" : "default", background: n.read ? "transparent" : "rgba(61,129,227,0.06)", borderBottom: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "flex-start", transition: "background 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-hover)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = n.read ? "transparent" : "rgba(61,129,227,0.06)"; }}
               >
                 <div style={{ width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, marginTop: "6px", background: n.read ? "rgba(255,255,255,0.1)" : (CATEGORY_COLOR[n.category] || "#60a5fa") }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: "0.8rem", fontWeight: n.read ? 400 : 600, color: n.read ? "var(--text-3)" : "white", margin: "0 0 2px", lineHeight: 1.35 }}>{n.title}</p>
+                  <p style={{ fontSize: "0.8rem", fontWeight: n.read ? 400 : 600, color: n.read ? "var(--text-3)" : "var(--text-1)", margin: "0 0 2px", lineHeight: 1.35 }}>{n.title}</p>
                   {n.body && <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.body}</p>}
                   <p style={{ fontSize: "0.67rem", color: "var(--text-4)", margin: 0 }}>{timeAgo(n.created_at)} ago</p>
                 </div>
@@ -269,9 +270,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{
           height: "52px", display: "flex", alignItems: "center", justifyContent: "flex-end",
           padding: "0 32px", borderBottom: "1px solid var(--border)",
-          background: "rgba(10,10,15,0.8)", backdropFilter: "blur(12px)",
-          position: "sticky", top: 0, zIndex: 40, flexShrink: 0,
+          background: "var(--topbar-bg)", backdropFilter: "blur(12px)",
+          position: "sticky", top: 0, zIndex: 40, flexShrink: 0, gap: "8px",
         }}>
+          <ThemeToggle />
           <NotificationBell />
         </div>
 

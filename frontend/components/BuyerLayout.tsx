@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout, getFullName } from "@/lib/auth";
+import { ThemeToggle } from "@/components/ThemeProvider";
 
 const nav = [
   {
@@ -106,9 +107,19 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, overflowY: "auto", padding: "36px 44px", minWidth: 0, background: "var(--bg)" }}>
-        {children}
-      </main>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+        <div style={{
+          height: "52px", display: "flex", alignItems: "center", justifyContent: "flex-end",
+          padding: "0 32px", borderBottom: "1px solid var(--border)",
+          background: "var(--topbar-bg)", backdropFilter: "blur(12px)",
+          position: "sticky", top: 0, zIndex: 40, flexShrink: 0,
+        }}>
+          <ThemeToggle />
+        </div>
+        <main style={{ flex: 1, overflowY: "auto", padding: "36px 44px", minWidth: 0, background: "var(--bg)" }}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

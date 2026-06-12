@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
@@ -9,9 +9,14 @@ interface Round {
   total_line_items: number; master_file_uploaded: boolean; submission_deadline: string | null;
 }
 
-const COMMODITY_ICON: Record<string, string> = {
-  laptops: "💻", desktops: "🖥", servers: "🖧", networking: "🌐",
-  storage: "💾", peripherals: "🖱", other: "📦",
+const COMMODITY_ICON: Record<string, React.ReactNode> = {
+  laptops:    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>,
+  desktops:   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  servers:    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>,
+  networking: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>,
+  storage:    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>,
+  peripherals:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
+  other:      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
 };
 
 const BADGE_MAP: Record<string, string> = {
@@ -25,6 +30,21 @@ export default function BidRoundsPage() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
+
+  async function handleDelete(id: number) {
+    setDeleting(id);
+    try {
+      await api.delete(`/rounds/${id}`);
+      setRounds(prev => prev.filter(r => r.id !== id));
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Could not delete round.");
+    } finally {
+      setDeleting(null);
+      setConfirmId(null);
+    }
+  }
 
   useEffect(() => {
     api.get("/rounds/").then(r => setRounds(r.data)).finally(() => setLoading(false));
@@ -88,7 +108,7 @@ export default function BidRoundsPage() {
 
         {sorted.length === 0 ? (
           <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "72px", textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🗂</div>
+            <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "var(--surface)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-4)", margin: "0 auto 16px" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
             <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>
               {filter === "all" ? "No bid rounds yet" : `No ${filter} rounds`}
             </p>
@@ -98,49 +118,90 @@ export default function BidRoundsPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {sorted.map((r, i) => (
-              <Link key={r.id} href={`/admin/rounds/${r.id}`} style={{ textDecoration: "none" }}>
-                <div style={{
-                  background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
-                  padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px",
-                  transition: "all 0.15s", animationDelay: `${i * 30}ms`,
-                }}
-                  className="animate-in"
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(61,129,227,0.25)"; el.style.background = "var(--bg-3)"; el.style.transform = "translateX(2px)"; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.background = "var(--bg-2)"; el.style.transform = "translateX(0)"; }}
-                >
-                  {/* Commodity icon */}
+              <div key={r.id} style={{ position: "relative" }} className="animate-in">
+                <Link href={`/admin/rounds/${r.id}`} style={{ textDecoration: "none" }}>
                   <div style={{
-                    width: "42px", height: "42px", borderRadius: "11px", flexShrink: 0,
-                    background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.12)",
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem",
-                  }}>{COMMODITY_ICON[r.commodity] || "📦"}</div>
+                    background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
+                    padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px",
+                    transition: "all 0.15s", animationDelay: `${i * 30}ms`,
+                  }}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(61,129,227,0.25)"; el.style.background = "var(--bg-3)"; }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.background = "var(--bg-2)"; }}
+                  >
+                    {/* Commodity icon */}
+                    <div style={{
+                      width: "42px", height: "42px", borderRadius: "11px", flexShrink: 0,
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "var(--text-3)",
+                    }}>{COMMODITY_ICON[r.commodity] || COMMODITY_ICON.other}</div>
 
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-                      <p style={{ fontWeight: 700, color: "white", margin: 0, fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
-                      {!r.master_file_uploaded && (
-                        <span style={{ fontSize: "0.67rem", color: "#f59e0b", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", padding: "1px 7px", borderRadius: "100px", flexShrink: 0 }}>No master file</span>
-                      )}
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+                        <p style={{ fontWeight: 700, color: "var(--text-1)", margin: 0, fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
+                        {!r.master_file_uploaded && (
+                          <span style={{ fontSize: "0.67rem", color: "#f59e0b", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", padding: "1px 7px", borderRadius: "100px", flexShrink: 0 }}>No master file</span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: 0 }}>
+                        <span style={{ textTransform: "capitalize" }}>{r.commodity}</span>
+                        {" · "}
+                        <span>{r.total_line_items.toLocaleString()} items</span>
+                        {r.submission_deadline && (
+                          <span> · Due {new Date(r.submission_deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                        )}
+                      </p>
                     </div>
-                    <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: 0 }}>
-                      <span style={{ textTransform: "capitalize" }}>{r.commodity}</span>
-                      {" · "}
-                      <span>{r.total_line_items.toLocaleString()} items</span>
-                      {r.submission_deadline && (
-                        <span> · Due {new Date(r.submission_deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                      )}
-                    </p>
-                  </div>
 
-                  {/* Right side */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-                    <span style={{ fontSize: "0.68rem", color: "var(--text-4)", fontFamily: "monospace" }}>#{r.id}</span>
-                    <span className={`badge ${BADGE_MAP[r.status] || "badge-draft"}`}>{r.status}</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-4)", flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                    {/* Right side */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0, paddingRight: "36px" }}>
+                      <span style={{ fontSize: "0.68rem", color: "var(--text-4)", fontFamily: "monospace" }}>#{r.id}</span>
+                      <span className={`badge ${BADGE_MAP[r.status] || "badge-draft"}`}>{r.status}</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-4)", flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+
+                {/* Delete button — shown on hover via CSS, confirmed inline */}
+                {confirmId === r.id ? (
+                  <div style={{
+                    position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                    display: "flex", alignItems: "center", gap: "6px", zIndex: 10,
+                    background: "var(--bg-2)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", padding: "4px 8px",
+                  }}>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>Delete?</span>
+                    <button
+                      onClick={() => handleDelete(r.id)}
+                      disabled={deleting === r.id}
+                      style={{ fontSize: "0.72rem", fontWeight: 600, color: "#f87171", background: "rgba(239,68,68,0.1)", border: "none", borderRadius: "5px", padding: "3px 8px", cursor: "pointer" }}
+                    >{deleting === r.id ? "…" : "Yes"}</button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      style={{ fontSize: "0.72rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: "3px 6px" }}
+                    >No</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={e => { e.stopPropagation(); setConfirmId(r.id); }}
+                    title="Delete round"
+                    disabled={r.status === "open" || r.status === "processing"}
+                    style={{
+                      position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                      background: "none", border: "none", cursor: r.status === "open" || r.status === "processing" ? "not-allowed" : "pointer",
+                      color: "var(--text-4)", padding: "6px", borderRadius: "6px",
+                      opacity: r.status === "open" || r.status === "processing" ? 0.3 : 0.5,
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={e => { if (r.status !== "open" && r.status !== "processing") { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.opacity = "1"; (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"; } }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; (e.currentTarget as HTMLElement).style.opacity = r.status === "open" || r.status === "processing" ? "0.3" : "0.5"; (e.currentTarget as HTMLElement).style.background = "none"; }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}
