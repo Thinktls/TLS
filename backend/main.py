@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.bid_rounds import router as rounds_router
@@ -21,6 +22,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ThinkTLS Bid Desk API", version="1.0.0", lifespan=lifespan)
+
+# Compress JSON/text responses ≥ 1 kB — cuts payload size 50-70%
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 import os as _os
 

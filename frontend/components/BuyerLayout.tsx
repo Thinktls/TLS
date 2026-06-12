@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { logout, getFullName } from "@/lib/auth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeProvider";
 
@@ -59,16 +59,20 @@ function LogoMark() {
 export default function BuyerLayout({ children }: { children: React.ReactNode }) {
   useAuthGuard();
   const path = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const name = getFullName();
   const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "B";
 
+  function closeSidebar() { setSidebarOpen(false); }
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+
+      {/* Mobile overlay */}
+      <div className={`mobile-overlay${sidebarOpen ? " visible" : ""}`} onClick={closeSidebar} aria-hidden />
+
       {/* Sidebar */}
-      <aside style={{
-        width: "210px", flexShrink: 0, display: "flex", flexDirection: "column",
-        background: "var(--bg-1)", borderRight: "1px solid var(--border)",
-      }}>
+      <aside className={`sidebar-panel${sidebarOpen ? " sidebar-open" : ""}`} style={{ width: "210px" }}>
         {/* Accent line */}
         <div style={{ height: "2px", background: "linear-gradient(90deg, var(--brand), transparent)" }} />
 
@@ -94,7 +98,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
           {nav.map(({ href, label, icon }) => {
             const active = path === href || (href !== "/portal" && path.startsWith(href));
             return (
-              <Link key={href} href={href} className={`nav-item${active ? " active" : ""}`}>
+              <Link key={href} href={href} onClick={closeSidebar} className={`nav-item${active ? " active" : ""}`}>
                 {icon}{label}
               </Link>
             );
@@ -105,7 +109,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         <div style={{ margin: "0 10px 10px", padding: "12px 14px", background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px" }}>
           <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 3px" }}>Need help?</p>
           <p style={{ fontSize: "0.68rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>
-            Email <span style={{ color: "rgba(255,255,255,0.5)" }}>bids@thinktls.com</span>
+            Email <span style={{ color: "var(--text-3)" }}>bids@thinktls.com</span>
           </p>
         </div>
 
@@ -131,16 +135,28 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         <div style={{
-          height: "52px", display: "flex", alignItems: "center", justifyContent: "flex-end",
-          padding: "0 32px", borderBottom: "1px solid var(--border)",
+          height: "52px", display: "flex", alignItems: "center",
+          padding: "0 20px", borderBottom: "1px solid var(--border)",
           background: "var(--topbar-bg)", backdropFilter: "blur(12px)",
-          position: "sticky", top: 0, zIndex: 40, flexShrink: 0,
+          position: "sticky", top: 0, zIndex: 40, flexShrink: 0, gap: "8px",
         }}>
+          <button
+            className="hamburger-btn"
+            onClick={() => setSidebarOpen(o => !o)}
+            aria-label="Toggle navigation"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6"  x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div style={{ flex: 1 }} />
           <ThemeToggle />
         </div>
-        <main style={{ flex: 1, overflowY: "auto", padding: "36px 44px", minWidth: 0, background: "var(--bg)" }}>
+        <div className="page-content" style={{ minWidth: 0, background: "var(--bg)" }}>
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );

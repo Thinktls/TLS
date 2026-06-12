@@ -212,21 +212,25 @@ function LogoMark() {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   useAuthGuard();
   const path = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const initials = getFullName().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "A";
+
+  function closeSidebar() { setSidebarOpen(false); }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+
+      {/* Mobile overlay — closes sidebar on tap */}
+      <div className={`mobile-overlay${sidebarOpen ? " visible" : ""}`} onClick={closeSidebar} aria-hidden />
+
       {/* ── Sidebar ── */}
-      <aside style={{
-        width: "220px", flexShrink: 0, display: "flex", flexDirection: "column",
-        background: "var(--bg-1)", borderRight: "1px solid var(--border)", position: "relative",
-      }}>
+      <aside className={`sidebar-panel${sidebarOpen ? " sidebar-open" : ""}`}>
         {/* Top accent line */}
         <div style={{ height: "2px", background: "linear-gradient(90deg, var(--brand), transparent)", flexShrink: 0 }} />
 
         {/* Logo */}
         <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid var(--border)" }}>
-          <Link href="/admin" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
+          <Link href="/admin" onClick={closeSidebar} style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
             <div style={{
               width: "32px", height: "32px", borderRadius: "9px", flexShrink: 0,
               background: "linear-gradient(135deg, #3D81E3, #6366f1)",
@@ -246,21 +250,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: "1px", overflowY: "auto" }}>
           <div className="section-label" style={{ marginTop: "4px" }}>Overview</div>
           {nav.slice(0, 2).map(({ href, label, Icon }) => (
-            <Link key={href} href={href} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
+            <Link key={href} href={href} onClick={closeSidebar} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
               <Icon />{label}
             </Link>
           ))}
 
           <div className="section-label">People</div>
           {nav.slice(2, 5).map(({ href, label, Icon }) => (
-            <Link key={href} href={href} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
+            <Link key={href} href={href} onClick={closeSidebar} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
               <Icon />{label}
             </Link>
           ))}
 
           <div className="section-label">Tools</div>
           {nav.slice(5).map(({ href, label, Icon }) => (
-            <Link key={href} href={href} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
+            <Link key={href} href={href} onClick={closeSidebar} className={`nav-item${isNavActive(href, path) ? " active" : ""}`}>
               <Icon />{label}
             </Link>
           ))}
@@ -288,23 +292,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* ── Main ── */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         {/* Topbar */}
         <div style={{
-          height: "52px", display: "flex", alignItems: "center", justifyContent: "flex-end",
-          padding: "0 32px", borderBottom: "1px solid var(--border)",
+          height: "52px", display: "flex", alignItems: "center",
+          padding: "0 20px", borderBottom: "1px solid var(--border)",
           background: "var(--topbar-bg)", backdropFilter: "blur(12px)",
           position: "sticky", top: 0, zIndex: 40, flexShrink: 0, gap: "8px",
         }}>
+          {/* Hamburger — visible only on mobile via CSS */}
+          <button
+            className="hamburger-btn"
+            onClick={() => setSidebarOpen(o => !o)}
+            aria-label="Toggle navigation"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6"  x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div style={{ flex: 1 }} />
           <ThemeToggle />
           <NotificationBell />
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "32px 40px" }}>
+        <div className="page-content">
           {children}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

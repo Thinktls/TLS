@@ -106,7 +106,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* KPI cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px", marginBottom: "32px" }}>
+        <div className="stat-grid">
           {stats.map(({ label, value, sub, gradient, icon }) => (
             <div key={label} className="stat-card">
               <div style={{ marginBottom: "18px" }}>
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Two-column lower section */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "20px", alignItems: "start" }}>
+        <div className="two-col-layout">
 
           {/* Recent rounds */}
           <div>
