@@ -46,7 +46,7 @@ function ResultsInner() {
     <BuyerLayout>
       <div style={{ maxWidth: "940px" }} className="animate-in">
         <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>My Results</h1>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>My Results</h1>
           <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Bid outcomes for completed rounds.</p>
         </div>
 
@@ -89,7 +89,7 @@ function ResultsInner() {
                     {[
                       { label: "Won",      val: result.won,  bg: "rgba(16,185,129,0.1)",  border: "rgba(16,185,129,0.2)",  color: "#34d399" },
                       { label: "Lost",     val: result.lost, bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.15)", color: "#f87171" },
-                      { label: "Win Rate", val: winRate ? `${winRate}%` : "—", bg: "rgba(255,255,255,0.03)", border: "var(--border)", color: "white" },
+                      { label: "Win Rate", val: winRate ? `${winRate}%` : "—", bg: "rgba(255,255,255,0.03)", border: "var(--border)", color: "var(--text-1)" },
                     ].map(({ label, val, bg, border, color }) => (
                       <div key={label} style={{ padding: "12px 20px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius)" }}>
                         <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 5px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>

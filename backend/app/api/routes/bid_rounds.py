@@ -78,8 +78,13 @@ def create_round(req: RoundCreate, db: Session = Depends(get_db), admin=Depends(
 
 
 @router.get("/", response_model=list[RoundOut])
-def list_rounds(db: Session = Depends(get_db), _=Depends(get_current_user)):
-    return db.query(BidRound).order_by(BidRound.created_at.desc()).all()
+def list_rounds(
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(200, ge=1, le=500),
+):
+    return db.query(BidRound).order_by(BidRound.created_at.desc()).offset(skip).limit(limit).all()
 
 
 @router.get("/report/summary")
@@ -293,64 +298,92 @@ def get_round_buyers(round_id: int, db: Session = Depends(get_db), _=Depends(req
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
+    # Single JOIN query — no N+1
     rows = db.execute(
-        text("SELECT buyer_id, invite_status, invited_at FROM round_buyers WHERE round_id = :rid"),
+        text("""
+            SELECT rb.buyer_id, rb.invite_status, rb.invited_at,
+                   u.full_name, u.email, u.company_name
+            FROM round_buyers rb
+            JOIN users u ON u.id = rb.buyer_id
+            WHERE rb.round_id = :rid
+        """),
         {"rid": round_id},
     ).fetchall()
-    result = []
-    for row in rows:
-        buyer = db.query(User).filter(User.id == row.buyer_id).first()
-        if buyer:
-            result.append({
-                "id": buyer.id,
-                "full_name": buyer.full_name,
-                "email": buyer.email,
-                "company_name": buyer.company_name,
-                "invite_status": row.invite_status,
-                "invited_at": row.invited_at,
-            })
-    return result
+    return [
+        {
+            "id": row.buyer_id,
+            "full_name": row.full_name,
+            "email": row.email,
+            "company_name": row.company_name,
+            "invite_status": row.invite_status,
+            "invited_at": row.invited_at,
+        }
+        for row in rows
+    ]
 
 
 @router.get("/{round_id}/participation")
 def get_round_participation(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     """Real-time buyer participation status for a round."""
+    from sqlalchemy import func as sqlfunc
+
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
 
     rows = db.execute(
-        text("SELECT buyer_id, invite_status, invited_at FROM round_buyers WHERE round_id = :rid"),
+        text("""
+            SELECT rb.buyer_id, rb.invite_status, rb.invited_at,
+                   u.full_name, u.email, u.company_name
+            FROM round_buyers rb
+            JOIN users u ON u.id = rb.buyer_id
+            WHERE rb.round_id = :rid
+        """),
         {"rid": round_id},
     ).fetchall()
 
+    buyer_ids = [row.buyer_id for row in rows]
+
+    # Fetch latest bid file per buyer in one query (subquery approach)
+    if buyer_ids:
+        subq = (
+            db.query(BidFile.buyer_id, sqlfunc.max(BidFile.uploaded_at).label("max_at"))
+            .filter(BidFile.bid_round_id == round_id, BidFile.buyer_id.in_(buyer_ids))
+            .group_by(BidFile.buyer_id)
+            .subquery()
+        )
+        latest_files = (
+            db.query(BidFile)
+            .join(subq, (BidFile.buyer_id == subq.c.buyer_id) & (BidFile.uploaded_at == subq.c.max_at))
+            .filter(BidFile.bid_round_id == round_id)
+            .all()
+        )
+        bid_file_map = {bf.buyer_id: bf for bf in latest_files}
+
+        counts_raw = (
+            db.query(BidLine.buyer_id, sqlfunc.count(BidLine.id).label("cnt"))
+            .filter(BidLine.bid_round_id == round_id, BidLine.buyer_id.in_(buyer_ids))
+            .group_by(BidLine.buyer_id)
+            .all()
+        )
+        count_map: dict[int, int] = {bid_id: cnt for bid_id, cnt in counts_raw}
+    else:
+        bid_file_map = {}
+        count_map = {}
+
     result = []
     for row in rows:
-        buyer = db.query(User).filter(User.id == row.buyer_id).first()
-        if not buyer:
-            continue
-        bid_file = (
-            db.query(BidFile)
-            .filter(BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id)
-            .order_by(BidFile.uploaded_at.desc())
-            .first()
-        )
-        lines_submitted = (
-            db.query(BidLine)
-            .filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id)
-            .count()
-        ) if bid_file else 0
-
+        bf = bid_file_map.get(row.buyer_id)
         result.append({
-            "id": buyer.id,
-            "full_name": buyer.full_name,
-            "email": buyer.email,
-            "company_name": buyer.company_name,
+            "id": row.buyer_id,
+            "full_name": row.full_name,
+            "email": row.email,
+            "company_name": row.company_name,
             "invite_status": row.invite_status,
             "invited_at": row.invited_at.isoformat() if row.invited_at else None,
-            "uploaded_at": bid_file.uploaded_at.isoformat() if bid_file and bid_file.uploaded_at else None,
-            "lines_submitted": lines_submitted,
-            "file_name": bid_file.filename if bid_file else None,
+            "uploaded_at": bf.uploaded_at.isoformat() if bf and bf.uploaded_at else None,
+            "lines_submitted": count_map.get(row.buyer_id, 0) if bf else 0,
+            "file_name": bf.filename if bf else None,
         })
 
     total = len(result)
@@ -375,21 +408,28 @@ def assign_buyers(round_id: int, req: BuyerAssignment, db: Session = Depends(get
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
-    # Remove existing assignments not in the new list
-    db.execute(
-        text("DELETE FROM round_buyers WHERE round_id = :rid AND buyer_id NOT IN :bids"),
-        {"rid": round_id, "bids": tuple(req.buyer_ids) or (0,)},
-    )
-    # Add new ones (upsert via ignore)
-    existing = {row.buyer_id for row in db.execute(
-        text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
-    ).fetchall()}
-    for bid in req.buyer_ids:
-        if bid not in existing:
-            db.execute(
-                text("INSERT INTO round_buyers (round_id, buyer_id, invite_status) VALUES (:rid, :bid, 'pending')"),
-                {"rid": round_id, "bid": bid},
-            )
+
+    new_ids = set(req.buyer_ids)
+    existing_rows = db.execute(
+        text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"),
+        {"rid": round_id},
+    ).fetchall()
+    existing_ids = {row.buyer_id for row in existing_rows}
+
+    # Remove buyers no longer in the list — one DELETE per removed buyer (safe parameterized)
+    for bid_id in existing_ids - new_ids:
+        db.execute(
+            text("DELETE FROM round_buyers WHERE round_id = :rid AND buyer_id = :bid"),
+            {"rid": round_id, "bid": bid_id},
+        )
+
+    # Insert newly added buyers
+    for bid_id in new_ids - existing_ids:
+        db.execute(
+            text("INSERT INTO round_buyers (round_id, buyer_id, invite_status) VALUES (:rid, :bid, 'pending')"),
+            {"rid": round_id, "bid": bid_id},
+        )
+
     db.commit()
     return {"assigned": len(req.buyer_ids)}
 

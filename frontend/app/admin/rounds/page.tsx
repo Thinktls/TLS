@@ -30,6 +30,7 @@ export default function BidRoundsPage() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
 
@@ -51,7 +52,16 @@ export default function BidRoundsPage() {
   }, []);
 
   const statuses = ["all", ...STATUS_ORDER.filter(s => rounds.some(r => r.status === s))];
-  const filtered = filter === "all" ? rounds : rounds.filter(r => r.status === filter);
+
+  const searched = search.trim()
+    ? rounds.filter(r =>
+        r.name.toLowerCase().includes(search.toLowerCase()) ||
+        String(r.id) === search.trim() ||
+        r.commodity.toLowerCase().includes(search.toLowerCase())
+      )
+    : rounds;
+
+  const filtered = filter === "all" ? searched : searched.filter(r => r.status === filter);
   const sorted   = [...filtered].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
 
   const counts = {
@@ -74,9 +84,9 @@ export default function BidRoundsPage() {
       <div style={{ maxWidth: "880px" }} className="animate-in">
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Bid Rounds</h1>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Bid Rounds</h1>
             <p style={{ fontSize: "0.8rem", color: "var(--text-4)", margin: 0 }}>
               {counts.total} total &nbsp;·&nbsp;
               <span style={{ color: "#34d399" }}>{counts.open} open</span> &nbsp;·&nbsp;
@@ -89,14 +99,35 @@ export default function BidRoundsPage() {
           </Link>
         </div>
 
+        {/* Search bar */}
+        <div style={{ position: "relative", marginBottom: "16px" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-4)", pointerEvents: "none" }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, ID, or commodity..."
+            className="glass-input"
+            style={{ width: "100%", paddingLeft: "36px", paddingRight: search ? "36px" : "12px", boxSizing: "border-box" }}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-4)", padding: "4px", display: "flex" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          )}
+        </div>
+
         {/* Filter tabs */}
         {rounds.length > 0 && (
           <div style={{ display: "flex", gap: "4px", marginBottom: "20px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "4px" }}>
             {statuses.map(s => (
               <button key={s} onClick={() => setFilter(s)} style={{
                 padding: "6px 14px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none",
-                background: filter === s ? "rgba(61,129,227,0.2)" : "transparent",
-                color: filter === s ? "white" : "var(--text-4)",
+                background: filter === s ? "var(--brand)" : "transparent",
+                color: filter === s ? "#ffffff" : "var(--text-4)",
                 fontWeight: filter === s ? 600 : 400,
                 transition: "all 0.15s", fontFamily: "inherit",
               }}>
@@ -106,23 +137,33 @@ export default function BidRoundsPage() {
           </div>
         )}
 
-        {sorted.length === 0 ? (
+        {/* Search no results */}
+        {search && sorted.length === 0 && rounds.length > 0 && (
+          <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-4)" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--text-3)", margin: "0 0 4px" }}>No rounds match "{search}"</p>
+            <p style={{ fontSize: "0.8rem", margin: 0 }}>Try searching by round name, ID number, or commodity type.</p>
+          </div>
+        )}
+
+        {sorted.length === 0 && !search ? (
           <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "72px", textAlign: "center" }}>
-            <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "var(--surface)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-4)", margin: "0 auto 16px" }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "var(--surface)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-4)", margin: "0 auto 16px" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
             <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>
               {filter === "all" ? "No bid rounds yet" : `No ${filter} rounds`}
             </p>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: "0 0 20px" }}>Create your first round to start collecting bids.</p>
             <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none" }}>Create First Round</Link>
           </div>
-        ) : (
+        ) : sorted.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {sorted.map((r, i) => (
               <div key={r.id} style={{ position: "relative" }} className="animate-in">
                 <Link href={`/admin/rounds/${r.id}`} style={{ textDecoration: "none" }}>
                   <div style={{
                     background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
-                    padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px",
+                    padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px",
                     transition: "all 0.15s", animationDelay: `${i * 30}ms`,
                   }}
                     onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(61,129,227,0.25)"; el.style.background = "var(--bg-3)"; }}
@@ -130,7 +171,7 @@ export default function BidRoundsPage() {
                   >
                     {/* Commodity icon */}
                     <div style={{
-                      width: "42px", height: "42px", borderRadius: "11px", flexShrink: 0,
+                      width: "38px", height: "38px", borderRadius: "10px", flexShrink: 0,
                       background: "var(--surface)", border: "1px solid var(--border)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       color: "var(--text-3)",
@@ -138,13 +179,13 @@ export default function BidRoundsPage() {
 
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-                        <p style={{ fontWeight: 700, color: "var(--text-1)", margin: 0, fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "2px" }}>
+                        <p style={{ fontWeight: 700, color: "var(--text-1)", margin: 0, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
                         {!r.master_file_uploaded && (
                           <span style={{ fontSize: "0.67rem", color: "#f59e0b", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", padding: "1px 7px", borderRadius: "100px", flexShrink: 0 }}>No master file</span>
                         )}
                       </div>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: 0 }}>
+                      <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>
                         <span style={{ textTransform: "capitalize" }}>{r.commodity}</span>
                         {" · "}
                         <span>{r.total_line_items.toLocaleString()} items</span>
@@ -154,57 +195,65 @@ export default function BidRoundsPage() {
                       </p>
                     </div>
 
-                    {/* Right side */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0, paddingRight: "36px" }}>
-                      <span style={{ fontSize: "0.68rem", color: "var(--text-4)", fontFamily: "monospace" }}>#{r.id}</span>
+                    {/* Right side — ID + badge + chevron (leave room for delete button) */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, marginRight: "44px" }}>
+                      <span style={{
+                        fontSize: "0.7rem", color: "var(--brand)", fontWeight: 700, fontFamily: "monospace",
+                        background: "rgba(61,129,227,0.1)", border: "1px solid rgba(61,129,227,0.2)",
+                        padding: "2px 8px", borderRadius: "5px",
+                      }}>#{r.id}</span>
                       <span className={`badge ${BADGE_MAP[r.status] || "badge-draft"}`}>{r.status}</span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-4)", flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-4)", flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
                     </div>
                   </div>
                 </Link>
 
-                {/* Delete button — shown on hover via CSS, confirmed inline */}
-                {confirmId === r.id ? (
-                  <div style={{
-                    position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
-                    display: "flex", alignItems: "center", gap: "6px", zIndex: 10,
-                    background: "var(--bg-2)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", padding: "4px 8px",
-                  }}>
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>Delete?</span>
+                {/* Delete / Confirm — always visible, separate from the link */}
+                <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", zIndex: 2 }}>
+                  {confirmId === r.id ? (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: "4px",
+                      background: "var(--bg-1)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: "8px", padding: "4px 8px",
+                    }}>
+                      <span style={{ fontSize: "0.71rem", color: "var(--text-3)", whiteSpace: "nowrap", marginRight: "2px" }}>Delete?</span>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDelete(r.id); }}
+                        disabled={deleting === r.id}
+                        style={{ fontSize: "0.71rem", fontWeight: 700, color: "#fff", background: "#ef4444", border: "none", borderRadius: "5px", padding: "3px 10px", cursor: "pointer" }}
+                      >{deleting === r.id ? "…" : "Yes"}</button>
+                      <button
+                        onClick={e => { e.stopPropagation(); setConfirmId(null); }}
+                        style={{ fontSize: "0.71rem", color: "var(--text-4)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "5px", padding: "3px 8px", cursor: "pointer" }}
+                      >No</button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => handleDelete(r.id)}
-                      disabled={deleting === r.id}
-                      style={{ fontSize: "0.72rem", fontWeight: 600, color: "#f87171", background: "rgba(239,68,68,0.1)", border: "none", borderRadius: "5px", padding: "3px 8px", cursor: "pointer" }}
-                    >{deleting === r.id ? "…" : "Yes"}</button>
-                    <button
-                      onClick={() => setConfirmId(null)}
-                      style={{ fontSize: "0.72rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: "3px 6px" }}
-                    >No</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={e => { e.stopPropagation(); setConfirmId(r.id); }}
-                    title="Delete round"
-                    disabled={r.status === "open" || r.status === "processing"}
-                    style={{
-                      position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
-                      background: "none", border: "none", cursor: r.status === "open" || r.status === "processing" ? "not-allowed" : "pointer",
-                      color: "var(--text-4)", padding: "6px", borderRadius: "6px",
-                      opacity: r.status === "open" || r.status === "processing" ? 0.3 : 0.5,
-                      transition: "all 0.15s",
-                    }}
-                    onMouseEnter={e => { if (r.status !== "open" && r.status !== "processing") { (e.currentTarget as HTMLElement).style.color = "#f87171"; (e.currentTarget as HTMLElement).style.opacity = "1"; (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"; } }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; (e.currentTarget as HTMLElement).style.opacity = r.status === "open" || r.status === "processing" ? "0.3" : "0.5"; (e.currentTarget as HTMLElement).style.background = "none"; }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                    </svg>
-                  </button>
-                )}
+                      onClick={e => { e.stopPropagation(); if (r.status !== "open" && r.status !== "processing") setConfirmId(r.id); }}
+                      title={r.status === "open" || r.status === "processing" ? "Cannot delete an active round" : "Delete round"}
+                      disabled={r.status === "open" || r.status === "processing"}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: "30px", height: "30px", borderRadius: "7px",
+                        background: r.status === "open" || r.status === "processing" ? "transparent" : "rgba(239,68,68,0.1)",
+                        border: r.status === "open" || r.status === "processing" ? "1px solid transparent" : "1px solid rgba(239,68,68,0.25)",
+                        color: r.status === "open" || r.status === "processing" ? "var(--text-4)" : "#f87171",
+                        cursor: r.status === "open" || r.status === "processing" ? "not-allowed" : "pointer",
+                        opacity: r.status === "open" || r.status === "processing" ? 0.35 : 1,
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={e => { if (r.status !== "open" && r.status !== "processing") { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(239,68,68,0.18)"; el.style.borderColor = "rgba(239,68,68,0.4)"; } }}
+                      onMouseLeave={e => { if (r.status !== "open" && r.status !== "processing") { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(239,68,68,0.1)"; el.style.borderColor = "rgba(239,68,68,0.25)"; } }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </AdminLayout>
   );

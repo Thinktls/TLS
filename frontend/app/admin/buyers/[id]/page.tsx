@@ -103,7 +103,7 @@ export default function BuyerProfilePage() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               {profile.full_name}
             </h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
@@ -187,7 +187,7 @@ export default function BuyerProfilePage() {
           padding: "24px",
           marginBottom: "16px",
         }}>
-          <p style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.9rem" }}>Performance</p>
+          <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 16px", fontSize: "0.9rem" }}>Performance</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
             {stats.map(([label, value, color]) => (
               <div key={label} style={{
@@ -210,7 +210,7 @@ export default function BuyerProfilePage() {
           borderRadius: "var(--radius-xl)",
           padding: "24px",
         }}>
-          <p style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.9rem" }}>Activity</p>
+          <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 16px", fontSize: "0.9rem" }}>Activity</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {[
               ["Last Bid", fmt(profile.last_bid_at)],

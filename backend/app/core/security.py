@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+# auto_error=False so we can fall back to cookie when Authorization header is absent
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -32,8 +34,16 @@ def decode_token(token: str) -> dict:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(
+    request: Request,
+    bearer_token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
     from app.models.user import User
+    # Prefer httpOnly cookie; fall back to Authorization: Bearer header
+    token = request.cookies.get("token") or bearer_token
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_token(token)
     user_id = payload.get("sub")
     if not user_id:

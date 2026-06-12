@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python --version 2>$null)",
+      "PowerShell(python3 --version 2>$null)",
+      "PowerShell(node --version 2>$null)",
+      "PowerShell(npm --version 2>$null)",
+      "PowerShell(pip --version 2>$null)",
+      "PowerShell(python --version)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\\" -ErrorAction SilentlyContinue | Select-Object Name; Get-ChildItem \"C:\\\\Users\\\\saiko\\\\AppData\\\\Local\\\\\" -ErrorAction SilentlyContinue | Where-Object { $_.Name -match \"Docker|node|python\" } | Select-Object Name)"
+    ]
+  }
+}

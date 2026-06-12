@@ -2,7 +2,7 @@ import secrets
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -32,7 +32,7 @@ def _check_rate_limit(client_ip: str):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(client_ip)
     user = db.query(User).filter(User.email == req.email).first()
@@ -40,10 +40,26 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is disabled")
-    # Clear rate limit on successful login
     _login_attempts.pop(client_ip, None)
     token = create_access_token({"sub": str(user.id), "role": user.role})
+    # Set httpOnly cookie — JS cannot read it (XSS-safe)
+    is_secure = request.url.scheme == "https"
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,
+        secure=is_secure,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
     return TokenResponse(access_token=token, role=user.role, user_id=user.id, full_name=user.full_name)
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key="token", path="/")
+    return {"message": "Logged out"}
 
 
 @router.get("/me", response_model=UserOut)

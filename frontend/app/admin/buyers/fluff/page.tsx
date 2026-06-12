@@ -40,7 +40,7 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
   return (
     <tr>
       <td style={{ padding: "14px 16px" }}>
-        <div style={{ fontWeight: 600, color: "white", fontSize: "0.88rem" }}>{buyer.company_name || buyer.full_name}</div>
+        <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.88rem" }}>{buyer.company_name || buyer.full_name}</div>
         <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.75rem" }}>{buyer.email}</div>
       </td>
       <td style={{ padding: "14px 16px" }}>
@@ -191,7 +191,7 @@ export default function FluffSettingsPage() {
       <div style={{ maxWidth: "1100px" }} className="animate-in">
         {/* Header */}
         <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+          <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>
             Fluff Engine Settings
           </h1>
           <p style={{ color: "var(--text-4)", fontSize: "0.875rem", margin: 0 }}>
@@ -215,7 +215,7 @@ export default function FluffSettingsPage() {
         }}>
           <span style={{ fontSize: "1rem", flexShrink: 0 }}>ℹ️</span>
           <div>
-            <strong style={{ color: "white" }}>How it works:</strong> When a buyer loses, their award sheet shows
+            <strong style={{ color: "var(--text-1)" }}>How it works:</strong> When a buyer loses, their award sheet shows
             <em> fluffed_loss_price = winner_price × (1 + fluff%) </em>
             instead of the real winning price. This protects pricing intelligence while still informing the loser how far off they were.
           </div>
@@ -240,7 +240,7 @@ export default function FluffSettingsPage() {
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: "8px",
-                color: "white",
+                color: "var(--text-1)",
                 padding: "7px 10px",
                 fontSize: "0.875rem",
                 outline: "none",

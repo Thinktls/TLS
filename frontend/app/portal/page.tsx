@@ -74,7 +74,7 @@ export default function MyDeals() {
         {/* Header */}
         <div style={{ marginBottom: "28px" }}>
           <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: "0 0 4px" }}>{greeting()},</p>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.1 }}>
             {name} <span style={{ fontSize: "1rem" }}>👋</span>
           </h1>
           <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
@@ -145,7 +145,7 @@ export default function MyDeals() {
                     }}>{COMMODITY_ICON[r.commodity] || "📦"}</div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 700, color: "white", margin: "0 0 3px", fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
+                      <p style={{ fontWeight: 700, color: "var(--text-1)", margin: "0 0 3px", fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
                       <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>
                         <span style={{ textTransform: "capitalize" }}>{r.commodity}</span>
                         {r.deadline && ` · Deadline ${new Date(r.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}

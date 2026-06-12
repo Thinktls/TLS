@@ -119,7 +119,7 @@ export default function BuyerRoundBidsPage() {
               {initials(buyer.full_name)}
             </div>
             <div>
-              <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 3px" }}>{buyer.full_name}</h1>
+              <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 3px" }}>{buyer.full_name}</h1>
               <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
                 {buyer.company_name && <span style={{ color: "var(--text-3)" }}>{buyer.company_name} · </span>}
                 {buyer.email}
@@ -134,7 +134,7 @@ export default function BuyerRoundBidsPage() {
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
           {[
-            { label: "Lines Submitted", val: lines.length,     color: "white",   bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
+            { label: "Lines Submitted", val: lines.length,     color: "var(--text-1)",   bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
             { label: "Matched",         val: matchedCount,     color: "#34d399", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
             { label: "Exceptions",      val: exceptionCount,   color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "rgba(255,255,255,0.03)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
             { label: "Lines Won",       val: winnerCount,      color: "#a78bfa", bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)" },
@@ -158,7 +158,7 @@ export default function BuyerRoundBidsPage() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
                 <div>
-                  <p style={{ fontSize: "0.88rem", fontWeight: 600, color: "white", margin: "0 0 3px", fontFamily: "monospace" }}>{bidFile.filename}</p>
+                  <p style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-1)", margin: "0 0 3px", fontFamily: "monospace" }}>{bidFile.filename}</p>
                   <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>
                     {bidFile.lines_parsed} lines parsed
                     {bidFile.uploaded_at && ` · Uploaded ${new Date(bidFile.uploaded_at).toLocaleString()}`}

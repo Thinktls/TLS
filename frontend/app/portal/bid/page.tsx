@@ -94,7 +94,7 @@ function SubmitBidInner() {
 
         {/* Header */}
         <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Submit a Bid</h1>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Submit a Bid</h1>
           <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Upload your priced Excel or CSV for an open round.</p>
         </div>
 
@@ -191,7 +191,7 @@ function SubmitBidInner() {
                 {/* Preview header */}
                 <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                   <div>
-                    <p style={{ margin: "0 0 2px", fontSize: "0.9rem", fontWeight: 700, color: "white" }}>Review Before Submitting</p>
+                    <p style={{ margin: "0 0 2px", fontSize: "0.9rem", fontWeight: 700, color: "var(--text-1)" }}>Review Before Submitting</p>
                     <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-4)" }}>
                       {preview.filename} — <strong style={{ color: "var(--text-2)" }}>{preview.total_lines} lines</strong>, <strong style={{ color: "var(--text-2)" }}>{preview.total_quantity.toLocaleString()} units</strong> total
                     </p>

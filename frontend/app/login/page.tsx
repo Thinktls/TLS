@@ -158,7 +158,7 @@ export default function LoginPage() {
                 <LogoMark size={28} />
               </div>
 
-              <h1 style={{ fontSize: "2.6rem", fontWeight: 700, letterSpacing: "-0.05em", margin: 0, lineHeight: 1, color: "white" }}>
+              <h1 style={{ fontSize: "2.6rem", fontWeight: 700, letterSpacing: "-0.05em", margin: 0, lineHeight: 1, color: "var(--text-1)" }}>
                 ThinkTLS
               </h1>
               <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.35)", marginTop: "10px", letterSpacing: "0.01em" }}>

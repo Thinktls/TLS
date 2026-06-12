@@ -41,7 +41,7 @@ export default function ProfilePage() {
   return (
     <BuyerLayout>
       <div style={{ maxWidth: "520px" }} className="animate-in">
-        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
           My Profile
         </h1>
         <p style={{ fontSize: "0.82rem", color: "var(--text-4)", marginBottom: "28px" }}>
@@ -60,7 +60,7 @@ export default function ProfilePage() {
               ].map(({ label, value }) => (
                 <div key={label} style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: "12px", alignItems: "center" }}>
                   <span style={{ fontSize: "0.75rem", color: "var(--text-4)", fontWeight: 600 }}>{label}</span>
-                  <span style={{ fontSize: "0.88rem", color: "white" }}>{value}</span>
+                  <span style={{ fontSize: "0.88rem", color: "var(--text-1)" }}>{value}</span>
                 </div>
               ))}
             </div>

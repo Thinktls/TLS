@@ -247,7 +247,7 @@ export default function DealsPage() {
           marginBottom: "24px",
         }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Deal Approval
             </h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
@@ -323,12 +323,12 @@ export default function DealsPage() {
                         {d.description}
                       </td>
                       <td style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                        <div style={{ fontWeight: 500, color: "white" }}>{d.winner_company || "—"}</div>
+                        <div style={{ fontWeight: 500, color: "var(--text-1)" }}>{d.winner_company || "—"}</div>
                         <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>{d.winner_email}</div>
                       </td>
                       <td style={{ textAlign: "right" }}>{d.quantity}</td>
                       <td style={{ textAlign: "right", fontFamily: "monospace", whiteSpace: "nowrap" }}>${d.winning_price.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: 600, color: "white", whiteSpace: "nowrap" }}>
+                      <td style={{ textAlign: "right", fontWeight: 600, color: "var(--text-1)", whiteSpace: "nowrap" }}>
                         ${d.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td style={{ textAlign: "center" }}>
@@ -416,7 +416,7 @@ export default function DealsPage() {
                 width: "40px", height: "4px", borderRadius: "2px",
                 background: "rgba(255,255,255,0.12)", margin: "0 auto 20px",
               }} />
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "white", margin: "0 0 6px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 6px" }}>
                 Override Deal
               </h3>
               <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", margin: "0 0 24px" }}>

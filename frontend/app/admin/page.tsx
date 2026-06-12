@@ -114,7 +114,7 @@ export default function AdminDashboard() {
                   width: "42px", height: "42px", borderRadius: "12px",
                   background: gradient,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "white",
+                  color: "var(--text-1)",
                   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.22)",
                   border: "1px solid rgba(255,255,255,0.1)",
                 }}>{icon}</div>
@@ -146,7 +146,7 @@ export default function AdminDashboard() {
           {/* Recent rounds */}
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-              <h2 style={{ fontSize: "0.88rem", fontWeight: 700, color: "white", margin: 0, letterSpacing: "-0.01em" }}>Recent Rounds</h2>
+              <h2 style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-1)", margin: 0, letterSpacing: "-0.01em" }}>Recent Rounds</h2>
               <Link href="/admin/rounds" style={{ fontSize: "0.75rem", color: "var(--text-4)", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", transition: "color 0.15s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
                         <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: dot }} />
                         <span style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>{label}</span>
                       </div>
-                      <span style={{ fontSize: "0.75rem", color: "white", fontWeight: 600 }}>{cnt}</span>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-1)", fontWeight: 600 }}>{cnt}</span>
                     </div>
                     <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${pct}%`, background: dot, borderRadius: "100px", transition: "width 0.6s" }} />

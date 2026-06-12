@@ -222,7 +222,7 @@ export default function NewRound() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           Bid Rounds
         </Link>
-        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 28px" }}>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 28px" }}>
           New Bid Round
         </h1>
 
@@ -242,7 +242,7 @@ export default function NewRound() {
         {step === 1 && (
           <form onSubmit={handleStep1} style={{ ...card, display: "flex", flexDirection: "column", gap: "20px" }}>
             <div>
-              <p style={{ fontWeight: 600, color: "white", fontSize: "0.95rem", margin: "0 0 20px" }}>Round Details</p>
+              <p style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.95rem", margin: "0 0 20px" }}>Round Details</p>
             </div>
 
             <div>
@@ -335,7 +335,7 @@ export default function NewRound() {
         {/* STEP 2: Upload master file */}
         {step === 2 && (
           <div style={{ ...card, display: "flex", flexDirection: "column", gap: "20px" }}>
-            <p style={{ fontWeight: 600, color: "white", fontSize: "0.95rem", margin: 0 }}>Upload Master File</p>
+            <p style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.95rem", margin: 0 }}>Upload Master File</p>
             <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
               Upload the Excel/CSV containing all line items buyers will bid on. Required columns: Part Number, Description, Quantity.
             </p>
@@ -431,7 +431,7 @@ export default function NewRound() {
         {step === 3 && (
           <div style={{ ...card, display: "flex", flexDirection: "column", gap: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <p style={{ fontWeight: 600, color: "white", fontSize: "0.95rem", margin: 0 }}>Assign Buyers</p>
+              <p style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.95rem", margin: 0 }}>Assign Buyers</p>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)" }}>
                   {selectedBuyers.size} of {buyers.length} selected
@@ -473,7 +473,7 @@ export default function NewRound() {
                       style={{ width: "15px", height: "15px", accentColor: "#3D81E3", flexShrink: 0 }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 500, color: "white", margin: 0, fontSize: "0.85rem" }}>{b.full_name}</p>
+                      <p style={{ fontWeight: 500, color: "var(--text-1)", margin: 0, fontSize: "0.85rem" }}>{b.full_name}</p>
                       <p style={{ color: "rgba(255,255,255,0.35)", margin: 0, fontSize: "0.75rem" }}>
                         {b.company_name} · {b.email}
                       </p>
@@ -512,7 +512,7 @@ export default function NewRound() {
         {/* STEP 4: Confirm & Open */}
         {step === 4 && (
           <div style={{ ...card, display: "flex", flexDirection: "column", gap: "20px" }}>
-            <p style={{ fontWeight: 600, color: "white", fontSize: "0.95rem", margin: 0 }}>Review & Open</p>
+            <p style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.95rem", margin: 0 }}>Review & Open</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {[
@@ -530,7 +530,7 @@ export default function NewRound() {
                   borderRadius: "8px",
                 }}>
                   <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)" }}>{label}</span>
-                  <span style={{ fontSize: "0.82rem", color: "white", fontWeight: 500 }}>{value}</span>
+                  <span style={{ fontSize: "0.82rem", color: "var(--text-1)", fontWeight: 500 }}>{value}</span>
                 </div>
               ))}
             </div>

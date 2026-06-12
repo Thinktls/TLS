@@ -142,7 +142,7 @@ function MasterSearch({
           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(61,129,227,0.1)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
         >
-          <p style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "white", margin: "0 0 2px" }}>{r.part_number}</p>
+          <p style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "var(--text-1)", margin: "0 0 2px" }}>{r.part_number}</p>
           <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>{r.description}</p>
         </div>
       ))}
@@ -303,7 +303,7 @@ export default function ExceptionsPage() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Exception Queue
             </h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
@@ -403,13 +403,13 @@ export default function ExceptionsPage() {
                         <span style={{ fontSize: "0.7rem", color: "#34d399" }}>✓ Resolved{ex.resolved_by ? ` by ${ex.resolved_by}` : ""}</span>
                       )}
                     </div>
-                    <p style={{ fontFamily: "monospace", fontWeight: 600, color: "white", margin: "0 0 3px", fontSize: "0.92rem" }}>
+                    <p style={{ fontFamily: "monospace", fontWeight: 600, color: "var(--text-1)", margin: "0 0 3px", fontSize: "0.92rem" }}>
                       {ex.raw_part_number}
                     </p>
                     <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>{ex.description}</p>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "16px" }}>
-                    <p style={{ fontWeight: 600, color: "white", margin: "0 0 4px", fontSize: "0.9rem" }}>
+                    <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 4px", fontSize: "0.9rem" }}>
                       {ex.unit_price != null ? `$${ex.unit_price.toFixed(2)}` : "—"}
                     </p>
                     <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>{ex.buyer_company || ex.buyer_name}</p>

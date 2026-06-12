@@ -116,18 +116,18 @@ export default function ReportsDashboard() {
 
   const kpiCards = [
     { label: "Deal Value (30d)", value: `$${kpis.total_deal_value_30d.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#34d399" },
-    { label: "All-Time Deal Value", value: `$${kpis.total_deal_value_all_time.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "white" },
+    { label: "All-Time Deal Value", value: `$${kpis.total_deal_value_all_time.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "var(--text-1)" },
     { label: "Avg Margin %", value: `${kpis.avg_margin_pct.toFixed(1)}%`, color: kpis.avg_margin_pct > 10 ? "#34d399" : "#fbbf24" },
     { label: "Active Buyers", value: kpis.active_buyers, color: "#a78bfa" },
     { label: "Unbid Rate", value: `${kpis.unbid_rate_pct.toFixed(1)}%`, color: kpis.unbid_rate_pct > 20 ? "#f87171" : "#60a5fa" },
-    { label: "Total Rounds", value: kpis.total_rounds, color: "white" },
+    { label: "Total Rounds", value: kpis.total_rounds, color: "var(--text-1)" },
   ];
 
   return (
     <AdminLayout>
       <div style={{ maxWidth: "1100px" }} className="animate-in">
         <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
             Reports
           </h1>
           <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
@@ -161,7 +161,7 @@ export default function ReportsDashboard() {
           marginBottom: "24px",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-            <p style={{ fontWeight: 600, color: "white", margin: 0, fontSize: "0.9rem" }}>
+            <p style={{ fontWeight: 600, color: "var(--text-1)", margin: 0, fontSize: "0.9rem" }}>
               Monthly Deal Value
             </p>
             <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>Last 12 months · approved deals only</p>
@@ -203,7 +203,7 @@ export default function ReportsDashboard() {
             borderRadius: "var(--radius-xl)",
             padding: "24px",
           }}>
-            <p style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.9rem" }}>
+            <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 16px", fontSize: "0.9rem" }}>
               Top Buyers by Margin
             </p>
             {top_buyers.length === 0 ? (
@@ -237,7 +237,7 @@ export default function ReportsDashboard() {
                           {idx + 1}
                         </span>
                         <div>
-                          <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 500, color: "white" }}>
+                          <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 500, color: "var(--text-1)" }}>
                             {b.company_name || b.full_name}
                           </p>
                           <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>
@@ -263,7 +263,7 @@ export default function ReportsDashboard() {
             padding: "24px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-              <p style={{ fontWeight: 600, color: "white", margin: 0, fontSize: "0.9rem" }}>Recent Rounds</p>
+              <p style={{ fontWeight: 600, color: "var(--text-1)", margin: 0, fontSize: "0.9rem" }}>Recent Rounds</p>
               <Link href="/admin/rounds" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", textDecoration: "none" }}>
                 View all →
               </Link>
@@ -284,7 +284,7 @@ export default function ReportsDashboard() {
                       borderRadius: "10px",
                     }}>
                       <div>
-                        <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 500, color: "white" }}>{r.name}</p>
+                        <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 500, color: "var(--text-1)" }}>{r.name}</p>
                         <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>
                           {r.total_line_items.toLocaleString()} items
                         </p>

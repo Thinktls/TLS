@@ -36,7 +36,7 @@ export default function NLQueryPage() {
   return (
     <AdminLayout>
       <div style={{ maxWidth: "900px" }} className="animate-in">
-        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
           AI Query
         </h1>
         <p style={{ fontSize: "0.82rem", color: "var(--text-4)", marginBottom: "28px" }}>

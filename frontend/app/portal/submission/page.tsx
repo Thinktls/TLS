@@ -67,7 +67,7 @@ function SubmissionInner() {
 
         {/* Header */}
         <div style={{ marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>My Submission</h1>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>My Submission</h1>
           <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Review your parsed bid lines and match status.</p>
         </div>
 
@@ -122,7 +122,7 @@ function SubmissionInner() {
             {/* Stats row */}
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
               {[
-                { label: "Total Lines", val: lines.length, color: "white", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
+                { label: "Total Lines", val: lines.length, color: "var(--text-1)", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
                 { label: "Matched",     val: matchedCount, color: "#34d399", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
                 { label: "Exceptions",  val: exceptionCount, color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "rgba(255,255,255,0.03)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
                 { label: "Match Rate",  val: matchRate ? `${matchRate}%` : "—", color: matchRate && Number(matchRate) >= 80 ? "#34d399" : "#fbbf24", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },

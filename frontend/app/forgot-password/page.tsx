@@ -55,9 +55,9 @@ export default function ForgotPasswordPage() {
               justifyContent: "center",
               fontWeight: 800,
               fontSize: "1rem",
-              color: "white",
+              color: "var(--text-1)",
             }}>T</div>
-            <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "white" }}>ThinkTLS Bid Desk</span>
+            <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "var(--text-1)" }}>ThinkTLS Bid Desk</span>
           </div>
         </div>
 
@@ -65,11 +65,11 @@ export default function ForgotPasswordPage() {
           {sent ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📧</div>
-              <h2 style={{ color: "white", fontWeight: 700, marginBottom: "8px", fontSize: "1.15rem" }}>
+              <h2 style={{ color: "var(--text-1)", fontWeight: 700, marginBottom: "8px", fontSize: "1.15rem" }}>
                 Check your email
               </h2>
               <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.875rem", lineHeight: 1.6, marginBottom: "24px" }}>
-                If <strong style={{ color: "white" }}>{email}</strong> is registered, you'll receive a reset link within a few minutes.
+                If <strong style={{ color: "var(--text-1)" }}>{email}</strong> is registered, you'll receive a reset link within a few minutes.
               </p>
               <Link href="/login" style={{
                 color: "#3D81E3",
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <>
               <h1 style={{
-                color: "white",
+                color: "var(--text-1)",
                 fontSize: "1.25rem",
                 fontWeight: 700,
                 marginBottom: "6px",

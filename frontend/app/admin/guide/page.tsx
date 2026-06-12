@@ -94,7 +94,7 @@ export default function AdminGuidePage() {
     <AdminLayout>
       <div style={{ maxWidth: "860px" }} className="animate-in">
         <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 8px" }}>
+          <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 8px" }}>
             Admin Handover Guide
           </h1>
           <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.9rem", lineHeight: 1.6 }}>
@@ -114,7 +114,7 @@ export default function AdminGuidePage() {
                 gap: "10px",
               }}>
                 <span style={{ fontSize: "1.2rem" }}>{sec.icon}</span>
-                <h2 style={{ color: "white", fontWeight: 700, fontSize: "1rem", margin: 0 }}>{sec.title}</h2>
+                <h2 style={{ color: "var(--text-1)", fontWeight: 700, fontSize: "1rem", margin: 0 }}>{sec.title}</h2>
               </div>
               <div style={{ padding: "8px 0" }}>
                 {sec.items.map((item, i) => (
@@ -126,7 +126,7 @@ export default function AdminGuidePage() {
                     gap: "16px",
                     alignItems: "start",
                   }}>
-                    <div style={{ color: "white", fontWeight: 500, fontSize: "0.85rem", paddingTop: "1px" }}>
+                    <div style={{ color: "var(--text-1)", fontWeight: 500, fontSize: "0.85rem", paddingTop: "1px" }}>
                       {item.label}
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.83rem", lineHeight: 1.6 }}>

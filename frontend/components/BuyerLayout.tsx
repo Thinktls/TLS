@@ -60,7 +60,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
               boxShadow: "0 2px 8px rgba(61,129,227,0.15)",
             }}><LogoMark /></div>
             <div>
-              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>ThinkTLS</div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em" }}>ThinkTLS</div>
               <div style={{ fontSize: "0.62rem", color: "var(--text-4)", marginTop: "1px", letterSpacing: "0.04em" }}>BUYER PORTAL</div>
             </div>
           </div>

@@ -1,6 +1,11 @@
+import logging
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from functools import lru_cache
+
+_log = logging.getLogger(__name__)
+
+_DEFAULT_SECRET = "change-me-in-production"
 
 
 class Settings(BaseSettings):
@@ -10,7 +15,18 @@ class Settings(BaseSettings):
     @classmethod
     def strip_database_url(cls, v: str) -> str:
         return v.strip() if isinstance(v, str) else v
-    SECRET_KEY: str = "change-me-in-production"
+
+    SECRET_KEY: str = _DEFAULT_SECRET
+
+    @field_validator("SECRET_KEY", mode="after")
+    @classmethod
+    def warn_weak_secret(cls, v: str) -> str:
+        if v == _DEFAULT_SECRET or len(v) < 32:
+            _log.warning(
+                "⚠️  SECRET_KEY is weak or uses the default — set a strong random value "
+                "(e.g. openssl rand -hex 32) in your environment before going to production!"
+            )
+        return v
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 

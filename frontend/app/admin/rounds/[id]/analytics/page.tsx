@@ -162,7 +162,7 @@ export default function RoundAnalyticsPage() {
         </Link>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
           <div>
-            <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Round Analytics</h1>
+            <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Round Analytics</h1>
             <p style={{ color: "var(--text-4)", fontSize: "0.82rem", margin: 0 }}>
               {round.commodity} · {round.status} {round.submission_deadline ? `· Deadline ${fmtDate(round.submission_deadline)}` : ""}
             </p>
@@ -211,7 +211,7 @@ export default function RoundAnalyticsPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* Match Methods */}
             <div className="glass" style={{ borderRadius: "14px", padding: "22px 24px" }}>
-              <h3 style={{ color: "white", fontWeight: 600, fontSize: "0.95rem", margin: "0 0 18px" }}>Match Method Breakdown</h3>
+              <h3 style={{ color: "var(--text-1)", fontWeight: 600, fontSize: "0.95rem", margin: "0 0 18px" }}>Match Method Breakdown</h3>
               {Object.keys(match_methods).length === 0 ? (
                 <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.85rem" }}>No matched lines yet.</p>
               ) : (
@@ -235,7 +235,7 @@ export default function RoundAnalyticsPage() {
             {/* Exception Breakdown + Anomalies side by side */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div className="glass" style={{ borderRadius: "14px", padding: "22px 24px" }}>
-                <h3 style={{ color: "white", fontWeight: 600, fontSize: "0.95rem", margin: "0 0 18px" }}>Exception Types</h3>
+                <h3 style={{ color: "var(--text-1)", fontWeight: 600, fontSize: "0.95rem", margin: "0 0 18px" }}>Exception Types</h3>
                 {Object.keys(exception_breakdown).length === 0 ? (
                   <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.85rem" }}>No exceptions — clean round!</p>
                 ) : (
@@ -254,7 +254,7 @@ export default function RoundAnalyticsPage() {
               </div>
 
               <div className="glass" style={{ borderRadius: "14px", padding: "22px 24px" }}>
-                <h3 style={{ color: "white", fontWeight: 600, fontSize: "0.95rem", margin: "0 0 18px" }}>Round Health</h3>
+                <h3 style={{ color: "var(--text-1)", fontWeight: 600, fontSize: "0.95rem", margin: "0 0 18px" }}>Round Health</h3>
                 {[
                   { label: "Items covered", pct: overview.coverage_pct, color: "#34d399" },
                   { label: "Lines matched", pct: overview.matched_lines / Math.max(overview.total_bid_lines, 1) * 100, color: "#60a5fa" },
@@ -303,7 +303,7 @@ export default function RoundAnalyticsPage() {
                     <tr key={b.id}>
                       <td>
                         <Link href={`/admin/buyers/${b.id}`} style={{ textDecoration: "none" }}>
-                          <div style={{ fontWeight: 600, color: "white", fontSize: "0.85rem" }}>{b.company_name}</div>
+                          <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.85rem" }}>{b.company_name}</div>
                           <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>{b.email}</div>
                         </Link>
                       </td>
@@ -375,7 +375,7 @@ export default function RoundAnalyticsPage() {
                     {price_distribution.map((row, i) => (
                       <tr key={i}>
                         <td>
-                          <div style={{ fontWeight: 600, color: "white", fontSize: "0.82rem" }}>{row.part_number}</div>
+                          <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.82rem" }}>{row.part_number}</div>
                           <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>{row.description}</div>
                           {row.has_anomaly && <span style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: 700 }}>⚠ ANOMALY</span>}
                         </td>
@@ -432,7 +432,7 @@ export default function RoundAnalyticsPage() {
                     {row.status === "processed" ? "✓" : "⏳"}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, color: "white", fontSize: "0.88rem" }}>{row.buyer_name}</div>
+                    <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.88rem" }}>{row.buyer_name}</div>
                     <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.75rem", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.filename}</div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>

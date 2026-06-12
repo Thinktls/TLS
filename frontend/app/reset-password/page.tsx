@@ -58,9 +58,9 @@ function ResetPasswordForm() {
             <div style={{
               width: "36px", height: "36px", background: "#3D81E3",
               borderRadius: "10px", display: "flex", alignItems: "center",
-              justifyContent: "center", fontWeight: 800, color: "white",
+              justifyContent: "center", fontWeight: 800, color: "var(--text-1)",
             }}>T</div>
-            <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "white" }}>ThinkTLS Bid Desk</span>
+            <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "var(--text-1)" }}>ThinkTLS Bid Desk</span>
           </div>
         </div>
 
@@ -68,7 +68,7 @@ function ResetPasswordForm() {
           {done ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>✅</div>
-              <h2 style={{ color: "white", fontWeight: 700, marginBottom: "8px", fontSize: "1.15rem" }}>
+              <h2 style={{ color: "var(--text-1)", fontWeight: 700, marginBottom: "8px", fontSize: "1.15rem" }}>
                 Password updated!
               </h2>
               <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", marginBottom: "20px" }}>
@@ -80,7 +80,7 @@ function ResetPasswordForm() {
             </div>
           ) : (
             <>
-              <h1 style={{ color: "white", fontSize: "1.25rem", fontWeight: 700, marginBottom: "6px" }}>
+              <h1 style={{ color: "var(--text-1)", fontSize: "1.25rem", fontWeight: 700, marginBottom: "6px" }}>
                 Set new password
               </h1>
               <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", marginBottom: "28px" }}>

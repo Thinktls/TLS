@@ -130,7 +130,7 @@ function NotificationBell() {
         {count > 0 && (
           <span style={{
             position: "absolute", top: "-5px", right: "-5px", minWidth: "16px", height: "16px",
-            background: "var(--red)", color: "white",
+            background: "var(--red)", color: "var(--text-1)",
             fontSize: "0.58rem", fontWeight: 700, borderRadius: "100px", padding: "0 4px",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>{count > 99 ? "99+" : count}</span>
@@ -144,7 +144,7 @@ function NotificationBell() {
           boxShadow: "0 24px 64px rgba(0,0,0,0.4)", zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "white" }}>Notifications</span>
+            <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "var(--text-1)" }}>Notifications</span>
             {count > 0 && <button onClick={markAll} style={{ fontSize: "0.72rem", color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>Mark all read</button>}
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
@@ -213,7 +213,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <LogoMark />
             </div>
             <div>
-              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>ThinkTLS</div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em" }}>ThinkTLS</div>
               <div style={{ fontSize: "0.65rem", color: "var(--text-4)", marginTop: "1px", letterSpacing: "0.03em" }}>BID DESK</div>
             </div>
           </Link>

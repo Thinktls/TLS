@@ -107,7 +107,7 @@ export default function ComparisonPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
               Round Detail
             </Link>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Bid Comparison
             </h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>

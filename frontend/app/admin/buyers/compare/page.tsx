@@ -137,7 +137,7 @@ export default function BuyerComparePage() {
       <div style={{ maxWidth: "1200px" }} className="animate-in">
         {/* Header */}
         <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ color: "white", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyer Comparison</h1>
+          <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyer Comparison</h1>
           <p style={{ color: "var(--text-4)", fontSize: "0.85rem", margin: 0 }}>
             {buyers.length} buyers · Avg win rate {avgWinRate.toFixed(1)}% · Total value awarded {fmt(totalValue)}
           </p>
@@ -230,7 +230,7 @@ export default function BuyerComparePage() {
                     {idx === 0 && <span style={{ fontSize: "0.7rem", background: "rgba(251,191,36,0.15)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "6px", padding: "2px 8px", fontWeight: 700, letterSpacing: "0.04em" }}>TOP</span>}
                     <div>
                       <Link href={`/admin/buyers/${b.id}`} style={{ textDecoration: "none" }}>
-                        <div style={{ fontWeight: 700, color: "white", fontSize: "0.95rem" }}>{b.company_name}</div>
+                        <div style={{ fontWeight: 700, color: "var(--text-1)", fontSize: "0.95rem" }}>{b.company_name}</div>
                       </Link>
                       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.75rem" }}>{b.email}</div>
                     </div>
@@ -332,7 +332,7 @@ export default function BuyerComparePage() {
                     <tr key={b.id}>
                       <td>
                         <Link href={`/admin/buyers/${b.id}`} style={{ textDecoration: "none" }}>
-                          <div style={{ fontWeight: 600, color: "white", fontSize: "0.82rem" }}>{b.company_name}</div>
+                          <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.82rem" }}>{b.company_name}</div>
                           <div style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.7rem" }}>{b.email}</div>
                         </Link>
                       </td>

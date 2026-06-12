@@ -47,7 +47,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             textAlign: "center",
           }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>⚠️</div>
-            <h2 style={{ color: "white", fontSize: "1.25rem", fontWeight: 700, marginBottom: "8px" }}>
+            <h2 style={{ color: "var(--text-1)", fontSize: "1.25rem", fontWeight: 700, marginBottom: "8px" }}>
               Something went wrong
             </h2>
             <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", marginBottom: "24px", lineHeight: 1.6 }}>

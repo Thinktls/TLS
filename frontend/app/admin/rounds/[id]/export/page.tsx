@@ -59,7 +59,7 @@ export default function ExportCenter() {
         </Link>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "4px" }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Export Center
             </h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
@@ -217,7 +217,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       padding: "24px",
       marginBottom: "16px",
     }}>
-      <p style={{ fontWeight: 600, color: "white", margin: "0 0 16px", fontSize: "0.9rem" }}>{title}</p>
+      <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 16px", fontSize: "0.9rem" }}>{title}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {children}
       </div>
@@ -251,7 +251,7 @@ function ExportRow({ label, description, path, filename, ext, internal }: {
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"; }}
     >
       <div>
-        <p style={{ fontWeight: 500, color: "white", margin: "0 0 3px", fontSize: "0.85rem" }}>{label}</p>
+        <p style={{ fontWeight: 500, color: "var(--text-1)", margin: "0 0 3px", fontSize: "0.85rem" }}>{label}</p>
         <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>{description}</p>
       </div>
       <span style={{

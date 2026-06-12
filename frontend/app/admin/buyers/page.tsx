@@ -145,7 +145,7 @@ export default function BuyersPage() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyers</h1>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyers</h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
               {buyers.length} buyer{buyers.length !== 1 ? "s" : ""} · <span style={{ color: "#34d399" }}>{buyers.filter((b) => b.is_active).length} active</span>
             </p>
@@ -184,7 +184,7 @@ export default function BuyersPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontFamily: "monospace", fontSize: "0.85rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ color: "rgba(255,255,255,0.4)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Email</span>
-                <span style={{ color: "white", background: "rgba(255,255,255,0.07)", padding: "4px 10px", borderRadius: "6px" }}>{newCredentials.email}</span>
+                <span style={{ color: "var(--text-1)", background: "rgba(255,255,255,0.07)", padding: "4px 10px", borderRadius: "6px" }}>{newCredentials.email}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ color: "rgba(255,255,255,0.4)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Password</span>
@@ -308,7 +308,7 @@ export default function BuyersPage() {
               <tbody>
                 {buyers.map((b) => (
                   <tr key={b.id}>
-                    <td style={{ fontWeight: 500, color: "white" }}>{b.full_name}</td>
+                    <td style={{ fontWeight: 500, color: "var(--text-1)" }}>{b.full_name}</td>
                     <td>{b.company_name || "—"}</td>
                     <td style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)" }}>{b.email}</td>
 
@@ -329,7 +329,7 @@ export default function BuyersPage() {
                               border: "1px solid rgba(61,129,227,0.4)",
                               borderRadius: "6px",
                               padding: "4px 8px",
-                              color: "white",
+                              color: "var(--text-1)",
                               fontSize: "0.8rem",
                               outline: "none",
                             }}

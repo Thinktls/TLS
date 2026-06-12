@@ -113,7 +113,7 @@ export default function ParticipationTracker() {
 
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "24px" }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "white", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
               Buyer Participation
             </h1>
             <p style={{ fontSize: "0.8rem", color: "var(--text-4)", margin: 0 }}>
@@ -230,7 +230,7 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
           {b.full_name.charAt(0).toUpperCase()}
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 500, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 500, color: "var(--text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {b.full_name}
           </p>
           <p style={{ margin: 0, fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -251,7 +251,7 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
         {b.lines_submitted > 0 && (
           <div style={{ textAlign: "right" }}>
             <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>lines</p>
-            <p style={{ margin: 0, fontSize: "0.78rem", color: "white", fontWeight: 500 }}>
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-1)", fontWeight: 500 }}>
               {b.lines_submitted.toLocaleString()}
             </p>
           </div>
