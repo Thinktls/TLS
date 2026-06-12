@@ -148,7 +148,7 @@ export default function MyDeals() {
                       <p style={{ fontWeight: 700, color: "var(--text-1)", margin: "0 0 3px", fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
                       <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>
                         <span style={{ textTransform: "capitalize" }}>{r.commodity}</span>
-                        {r.deadline && ` · Deadline ${new Date(r.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                        {r.deadline && ` · Due ${new Date(r.deadline).toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" })} EST`}
                         {r.lines_submitted > 0 && ` · ${r.lines_submitted} lines submitted · ${r.lines_won} won`}
                       </p>
                     </div>

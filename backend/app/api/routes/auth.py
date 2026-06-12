@@ -168,6 +168,24 @@ def toggle_fluff(user_id: int, fluff_enabled: bool, db: Session = Depends(get_db
     return user
 
 
+class FluffSettings(BaseModel):
+    fluff_percentage: float
+    fluff_enabled: bool
+
+
+@router.patch("/buyers/{user_id}/fluff-settings", response_model=UserOut)
+def set_fluff_settings(user_id: int, req: FluffSettings, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Single combined endpoint — updates both fluff_percentage and fluff_enabled in one request."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.fluff_percentage = req.fluff_percentage
+    user.fluff_enabled = req.fluff_enabled
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 class PasswordSetup(BaseModel):
     token: str
     new_password: str

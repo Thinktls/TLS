@@ -25,6 +25,7 @@ from app.services.export_service import (
     export_deals_excel, export_deals_csv, export_bid_comparison_excel,
     export_buyer_award_sheet, export_all_award_sheets_zip,
     export_razor_csv, export_margin_report, export_disposition_report,
+    export_erp_line_report,
 )
 from app.services.email_service import send_bid_invitation, send_round_results, send_approval_ready_email
 
@@ -477,7 +478,13 @@ def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Sessi
         raise HTTPException(400, "No new buyers pending invitation — all assigned buyers have already been invited")
 
     from app.core.config import settings as _settings
-    deadline_str = r.submission_deadline.strftime("%B %d, %Y") if r.submission_deadline else "See admin for deadline"
+    from datetime import timezone as _tz, timedelta as _td
+    _EST = _tz(_td(hours=-5))
+    if r.submission_deadline:
+        _dl_est = r.submission_deadline.astimezone(_EST)
+        deadline_str = _dl_est.strftime("%m/%d/%Y %I:%M %p") + " EST"
+    else:
+        deadline_str = "See admin for deadline"
     upload_url = f"{_settings.FRONTEND_URL}/portal/bid?round={round_id}"
 
     sent = 0
@@ -1035,6 +1042,23 @@ def export_margin(round_id: int, db: Session = Depends(get_db), _=Depends(requir
 def export_disposition(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     data = export_disposition_report(db, round_id)
     return StreamingResponse(iter([data]), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f"attachment; filename=disposition_report_round_{round_id}.xlsx"})
+
+
+@router.get("/{round_id}/export/erp-report.xlsx")
+def export_erp_report(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """ERP line-item report: one row per unit with part, serial placeholder, and winning price."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status not in ("complete", "closed"):
+        raise HTTPException(400, "ERP report is only available for completed rounds")
+    data = export_erp_line_report(db, round_id)
+    fname = f"erp_report_round_{round_id}.xlsx"
+    return StreamingResponse(
+        iter([data]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={fname}"},
+    )
 
 
 @router.get("/{round_id}/analytics")

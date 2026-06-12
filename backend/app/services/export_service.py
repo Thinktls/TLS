@@ -371,3 +371,97 @@ def export_margin_report(db: Session, bid_round_id: int) -> bytes:
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Margin Report")
     return buf.getvalue()
+
+
+# ── ERP Line-Item Report ───────────────────────────────────────────────────────
+
+def export_erp_line_report(db: Session, bid_round_id: int) -> bytes:
+    """
+    Consolidated report for broker ERP upload.
+    One row per unit (quantity × deal line), suitable for bulk sales-order import.
+    Columns: Line #, Part Number, Description, Serial # (blank — fill manually),
+             Unit Price, Qty, Total Value, Winning Buyer, Buyer Email, Deal ID.
+    """
+    from app.models.bid_round import BidRound
+    round_ = db.query(BidRound).filter(BidRound.id == bid_round_id).first()
+    deals  = (
+        db.query(Deal)
+        .filter(Deal.bid_round_id == bid_round_id, Deal.status == "approved")
+        .order_by(Deal.id)
+        .all()
+    )
+    buyer_ids = {d.winning_buyer_id for d in deals if d.winning_buyer_id}
+    buyers    = {u.id: u for u in db.query(User).filter(User.id.in_(buyer_ids)).all()}
+
+    wb  = Workbook()
+    ws  = wb.active
+    ws.title = "ERP Upload"
+    ws.sheet_view.showGridLines = False
+
+    # ── Header ────────────────────────────────────────────────────
+    _HDR = PatternFill("solid", fgColor="1F497D")
+    _HDR_F = Font(name="Calibri", bold=True, color="FFFFFF", size=10)
+    _THIN_S = Side(style="thin", color="BFBFBF")
+    _BORDER = Border(left=_THIN_S, right=_THIN_S, top=_THIN_S, bottom=_THIN_S)
+    _CENTER = Alignment(horizontal="center", vertical="center")
+    _LEFT   = Alignment(horizontal="left",   vertical="center")
+
+    headers    = ["Line #", "Part Number", "Description", "Serial # (fill in)", "Unit Price ($)", "Qty", "Total Value ($)", "Winning Buyer", "Buyer Email", "Deal ID"]
+    col_widths = [8,        22,            40,            22,                    15,               6,     16,               24,              28,            8]
+
+    for ci, (h, w) in enumerate(zip(headers, col_widths), start=1):
+        c = ws.cell(row=1, column=ci, value=h)
+        c.font = _HDR_F; c.fill = _HDR; c.alignment = _CENTER; c.border = _BORDER
+        ws.column_dimensions[get_column_letter(ci)].width = w
+    ws.row_dimensions[1].height = 22
+    ws.freeze_panes = "A2"
+
+    # ── Data — one row per unit ────────────────────────────────────
+    _ALT = PatternFill("solid", fgColor="F2F6FC")
+    _NRM = PatternFill("solid", fgColor="FFFFFF")
+    _DAT = Font(name="Calibri", size=10)
+
+    line_num = 1
+    excel_row = 2
+    for deal in deals:
+        buyer = buyers.get(deal.winning_buyer_id)
+        qty   = deal.quantity or 1
+        for _ in range(qty):
+            fill = _ALT if excel_row % 2 == 0 else _NRM
+            row_vals = [
+                line_num,
+                deal.part_number or "",
+                deal.description or "",
+                "",          # Serial # — broker fills manually
+                deal.winning_price,
+                1,           # one unit per row for ERP bulk upload
+                deal.winning_price,
+                buyer.company_name if buyer else "",
+                buyer.email if buyer else "",
+                deal.id,
+            ]
+            for ci, v in enumerate(row_vals, start=1):
+                c = ws.cell(row=excel_row, column=ci, value=v)
+                c.fill = fill; c.font = _DAT; c.border = _BORDER
+                c.alignment = _CENTER if ci in (1, 5, 6, 7, 10) else _LEFT
+            ws.row_dimensions[excel_row].height = 15
+            line_num  += 1
+            excel_row += 1
+
+    # ── Summary row ────────────────────────────────────────────────
+    if deals:
+        total_units = sum(d.quantity or 1 for d in deals)
+        total_val   = sum((d.total_value or 0) for d in deals)
+        _SUM_F = Font(name="Calibri", bold=True, size=10)
+        _SUM_FILL = PatternFill("solid", fgColor="DCE6F1")
+        for ci in range(1, len(headers) + 1):
+            c = ws.cell(row=excel_row, column=ci)
+            c.fill = _SUM_FILL; c.font = _SUM_F; c.border = _BORDER
+        ws.cell(row=excel_row, column=1, value="TOTAL").alignment = _CENTER
+        ws.cell(row=excel_row, column=6, value=total_units).alignment = _CENTER
+        ws.cell(row=excel_row, column=7, value=round(total_val, 2)).alignment = _CENTER
+        ws.row_dimensions[excel_row].height = 18
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()

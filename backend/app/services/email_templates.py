@@ -220,6 +220,9 @@ def bid_invitation_email(
         Submissions are confidential. All pricing is reviewed by the ThinkTLS procurement team only.
         Late submissions will not be accepted.
       </p>
+      <p style="font-size:13px;color:#334155;line-height:1.6;margin:12px 0 0;font-weight:600;">
+        Payment Terms: Net 48 hours upon deal approval.
+      </p>
     """
     return (
         f"ThinkTLS Bid Invitation — {round_name}",

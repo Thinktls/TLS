@@ -176,7 +176,7 @@ function SubmitBidInner() {
                       {round.deadline && (
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <span style={{ fontSize: "0.75rem", color: "#fbbf24", fontWeight: 500 }}>Deadline: {new Date(round.deadline).toLocaleString()}</span>
+                          <span style={{ fontSize: "0.75rem", color: "#fbbf24", fontWeight: 500 }}>Deadline: {new Date(round.deadline).toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" })} EST</span>
                         </div>
                       )}
                       {round.customer && <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>Customer: {round.customer}</p>}

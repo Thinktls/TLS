@@ -167,8 +167,8 @@ export default function FluffSettingsPage() {
   useEffect(() => { load(); }, [load]);
 
   async function saveSingle(id: number, pct: number, enabled: boolean) {
-    await api.patch(`/auth/buyers/${id}/fluff`, null, { params: { fluff_percentage: pct } });
-    await api.patch(`/auth/buyers/${id}/fluff-toggle`, null, { params: { fluff_enabled: enabled } });
+    // Single combined request — was two sequential calls (slow on cold start)
+    await api.patch(`/auth/buyers/${id}/fluff-settings`, { fluff_percentage: pct, fluff_enabled: enabled });
     setBuyers(prev => prev.map(b => b.id === id ? { ...b, fluff_percentage: pct, fluff_enabled: enabled } : b));
   }
 

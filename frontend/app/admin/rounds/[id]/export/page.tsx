@@ -191,6 +191,13 @@ export default function ExportCenter() {
             filename={`disposition_${slug}.xlsx`}
             ext="xlsx"
           />
+          <ExportRow
+            label="ERP Line-Item Report (.xlsx)"
+            description="One row per unit with part number, serial # placeholder, and winning price — ready for broker ERP upload."
+            path={`/rounds/${id}/export/erp-report.xlsx`}
+            filename={`erp_report_${slug}.xlsx`}
+            ext="xlsx"
+          />
         </Section>
 
         <Section title="Analysis">

@@ -1,41 +1,64 @@
 """
 Generate a bid template Excel file for a given round.
+Clean, professional design: white/light backgrounds, thin borders, no dark fills.
 - Sheet 1: Instructions (read-only)
 - Sheet 2: Bid Template — part numbers locked, only Unit Price and Quantity editable
 Returns bytes.
 """
 import io
+from datetime import timezone, timedelta
 from openpyxl import Workbook
-from openpyxl.styles import (
-    PatternFill, Font, Alignment, Border, Side, Protection
-)
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side, Protection
 from openpyxl.utils import get_column_letter
 from sqlalchemy.orm import Session
 from app.models.master_item import MasterItem
 from app.models.bid_round import BidRound
 
+# ── Colour palette (clean / professional) ────────────────────────────────────
+_WHITE    = "FFFFFF"
+_HDR_BG   = "1F497D"   # dark blue header
+_HDR_FONT = "FFFFFF"   # white header text
+_LOCK_BG  = "F2F2F2"   # light gray — locked/read-only cells
+_EDIT_BG  = "FFFFFF"   # white — editable cells
+_ALT_BG   = "F7F9FC"   # very light blue alternate row
+_INSTR_BG = "F0F4FA"   # instructions sheet background
+_ACCENT   = "1F497D"   # dark blue (same as header)
+_BORDER_C = "BFBFBF"   # medium gray for all borders
 
-DARK_FILL   = PatternFill("solid", fgColor="0F1629")
-HEADER_FILL = PatternFill("solid", fgColor="1E3A5F")
-LOCKED_FILL = PatternFill("solid", fgColor="1A2540")
-EDIT_FILL   = PatternFill("solid", fgColor="0D2238")
-WIN_FILL    = PatternFill("solid", fgColor="0A3020")
+def _thin_border():
+    s = Side(style="thin", color=_BORDER_C)
+    return Border(left=s, right=s, top=s, bottom=s)
 
-HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=10)
-LOCK_FONT   = Font(name="Calibri", color="8899AA", size=10)
-EDIT_FONT   = Font(name="Calibri", color="FFFFFF", size=10)
-TITLE_FONT  = Font(name="Calibri", bold=True, color="3D81E3", size=14)
-INSTR_FONT  = Font(name="Calibri", color="CCDDEE", size=10)
+def _hdr_border():
+    s = Side(style="medium", color="1F497D")
+    return Border(left=s, right=s, top=s, bottom=s)
 
-THIN_BORDER = Border(
-    left=Side(style="thin", color="1E3A5F"),
-    right=Side(style="thin", color="1E3A5F"),
-    top=Side(style="thin", color="1E3A5F"),
-    bottom=Side(style="thin", color="1E3A5F"),
-)
+HDR_FILL   = PatternFill("solid", fgColor=_HDR_BG)
+LOCK_FILL  = PatternFill("solid", fgColor=_LOCK_BG)
+EDIT_FILL  = PatternFill("solid", fgColor=_EDIT_BG)
+ALT_FILL   = PatternFill("solid", fgColor=_ALT_BG)
+INSTR_FILL = PatternFill("solid", fgColor=_INSTR_BG)
+WHITE_FILL = PatternFill("solid", fgColor=_WHITE)
 
-CENTER = Alignment(horizontal="center", vertical="center")
+HDR_FONT   = Font(name="Calibri", bold=True,  color=_HDR_FONT, size=10)
+LOCK_FONT  = Font(name="Calibri", bold=False, color="595959",  size=10)
+EDIT_FONT  = Font(name="Calibri", bold=False, color="000000",  size=10)
+TITLE_FONT = Font(name="Calibri", bold=True,  color=_ACCENT,   size=14)
+INSTR_FONT = Font(name="Calibri", bold=False, color="404040",  size=10)
+LABEL_FONT = Font(name="Calibri", bold=True,  color="404040",  size=10)
+
+CENTER = Alignment(horizontal="center", vertical="center", wrap_text=False)
 LEFT   = Alignment(horizontal="left",   vertical="center", wrap_text=True)
+RIGHT  = Alignment(horizontal="right",  vertical="center")
+
+_EST = timezone(timedelta(hours=-5))
+
+
+def _fmt_deadline(dt) -> str:
+    if not dt:
+        return "See invitation email"
+    est = dt.astimezone(_EST)
+    return est.strftime("%m/%d/%Y %I:%M %p") + " EST"
 
 
 def generate_bid_template(db: Session, round_id: int) -> bytes:
@@ -52,100 +75,149 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
 
     wb = Workbook()
 
-    # ── Sheet 1: Instructions ─────────────────────────────────────────────────
-    ws_instr = wb.active
-    ws_instr.title = "Instructions"
-    ws_instr.sheet_view.showGridLines = False
-    ws_instr.sheet_properties.tabColor = "3D81E3"
+    # ══════════════════════════════════════════════════════════════
+    # Sheet 1 — Instructions
+    # ══════════════════════════════════════════════════════════════
+    ws_i = wb.active
+    ws_i.title = "Instructions"
+    ws_i.sheet_view.showGridLines = False
+    ws_i.sheet_properties.tabColor = "1F497D"
+    ws_i.column_dimensions["A"].width = 26
+    ws_i.column_dimensions["B"].width = 70
+    ws_i.row_dimensions[1].height = 8   # top padding
 
-    ws_instr.column_dimensions["A"].width = 4
-    ws_instr.column_dimensions["B"].width = 80
+    # Fill entire sheet with a light background
+    for row in range(1, 25):
+        for col in range(1, 4):
+            ws_i.cell(row=row, column=col).fill = INSTR_FILL
 
-    ws_instr["B2"].value = "ThinkTLS Bid Desk — Pricing Template"
-    ws_instr["B2"].font  = TITLE_FONT
-    ws_instr["B2"].fill  = DARK_FILL
+    def _i_cell(row, col, value, bold=False, label=False):
+        c = ws_i.cell(row=row, column=col, value=value)
+        c.fill = INSTR_FILL
+        c.alignment = LEFT
+        c.font = LABEL_FONT if label else INSTR_FONT
+        if bold:
+            c.font = Font(name="Calibri", bold=True, color="404040", size=10)
+        return c
 
-    instructions = [
-        ("Round",    bid_round.name),
-        ("Commodity",bid_round.commodity),
-        ("Deadline", str(bid_round.submission_deadline or "See invitation email")),
-        ("",         ""),
-        ("How to fill in this template:", ""),
-        ("1.", "Go to the 'Bid Template' tab."),
-        ("2.", "Only the UNIT PRICE and QUANTITY columns are editable (white background)."),
-        ("3.", "Do NOT modify Part Number, Description, or Row # columns."),
-        ("4.", "Leave Unit Price blank if you do not wish to bid on a line."),
-        ("5.", "Save this file and upload it via the buyer portal."),
-        ("",  ""),
-        ("Confidential.", "This file is for authorized ThinkTLS buyers only. Do not share."),
+    # Title
+    title = ws_i.cell(row=2, column=1, value="ThinkTLS Bid Desk — Pricing Template")
+    title.font = TITLE_FONT
+    title.fill = INSTR_FILL
+    title.alignment = LEFT
+    ws_i.row_dimensions[2].height = 28
+
+    # Info fields
+    fields = [
+        ("Round",     bid_round.name),
+        ("Commodity", bid_round.commodity or "—"),
+        ("Customer",  bid_round.customer or "—"),
+        ("Deadline",  _fmt_deadline(bid_round.submission_deadline)),
+        ("Items",     f"{len(items)} line items"),
     ]
-    for row_offset, (label, value) in enumerate(instructions, start=4):
-        cell_a = ws_instr.cell(row=row_offset, column=2, value=f"{label}  {value}")
-        cell_a.font = INSTR_FONT
-        cell_a.fill = DARK_FILL
-        cell_a.alignment = LEFT
+    for r_off, (label, value) in enumerate(fields, start=4):
+        _i_cell(r_off, 1, label, bold=True)
+        _i_cell(r_off, 2, value)
+        ws_i.row_dimensions[r_off].height = 18
 
-    ws_instr.protection.sheet = True
-    ws_instr.protection.password = "thinktls"
+    # Spacer
+    ws_i.row_dimensions[9].height = 6
 
-    # ── Sheet 2: Bid Template ─────────────────────────────────────────────────
+    # How-to instructions
+    instructions = [
+        "How to complete this template:",
+        "1.  Switch to the 'Bid Template' tab below.",
+        "2.  Fill in your Unit Price ($) for each item you wish to bid on.",
+        "3.  You may also adjust Quantity if you want to bid on a partial lot.",
+        "4.  Leave Unit Price blank to opt out of a line — zero means you opt out.",
+        "5.  Do NOT modify Part Number, Description, or Manufacturer columns.",
+        "6.  Save this file and upload it via the buyer portal before the deadline.",
+        "",
+        "Questions? Email bids@thinktls.com and include the round number.",
+        "",
+        "CONFIDENTIAL — for authorised ThinkTLS buyers only. Do not share.",
+    ]
+    for r_off, line in enumerate(instructions, start=10):
+        c = ws_i.cell(row=r_off, column=1, value=line)
+        c.fill = INSTR_FILL
+        c.font = Font(
+            name="Calibri",
+            bold=(line.startswith("How") or line.startswith("CONF")),
+            italic=line.startswith("CONF"),
+            color="1F497D" if line.startswith("How") else ("CC0000" if line.startswith("CONF") else "404040"),
+            size=10,
+        )
+        c.alignment = LEFT
+        ws_i.merge_cells(start_row=r_off, start_column=1, end_row=r_off, end_column=2)
+        ws_i.row_dimensions[r_off].height = 16
+
+    ws_i.protection.sheet = True
+
+    # ══════════════════════════════════════════════════════════════
+    # Sheet 2 — Bid Template
+    # ══════════════════════════════════════════════════════════════
     ws = wb.create_sheet("Bid Template")
     ws.sheet_view.showGridLines = False
-    ws.sheet_properties.tabColor = "059669"
+    ws.sheet_properties.tabColor = "217346"   # green tab
 
-    headers = ["Row #", "Part Number", "Manufacturer", "Description", "Quantity", "Unit Price ($)"]
-    col_widths = [8, 22, 18, 50, 12, 18]
-    editable_cols = {5, 6}  # Quantity and Unit Price (1-indexed)
+    headers   = ["Row #", "Part Number", "Manufacturer", "Description", "Avail Qty", "Unit Price ($)", "Your Qty"]
+    col_widths = [7,       22,            16,             50,            10,           16,               10]
+    # Columns that the buyer can edit (1-indexed): Unit Price=6, Your Qty=7
+    editable = {6, 7}
 
-    for col_idx, (header, width) in enumerate(zip(headers, col_widths), start=1):
+    for col_idx, (hdr, width) in enumerate(zip(headers, col_widths), start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
-        cell = ws.cell(row=1, column=col_idx, value=header)
-        cell.font  = HEADER_FONT
-        cell.fill  = HEADER_FILL
+        cell = ws.cell(row=1, column=col_idx, value=hdr)
+        cell.font      = HDR_FONT
+        cell.fill      = HDR_FILL
         cell.alignment = CENTER
-        cell.border = THIN_BORDER
+        cell.border    = _hdr_border()
         cell.protection = Protection(locked=True)
+    ws.row_dimensions[1].height = 22
 
-    ws.row_dimensions[1].height = 28
+    # Freeze the header row
+    ws.freeze_panes = "A2"
 
-    for item in items:
-        row = item.row_number or (items.index(item) + 2)
+    for seq_row, item in enumerate(items, start=2):
+        alt = (seq_row % 2 == 0)
+        row_fill = ALT_FILL if alt else EDIT_FILL   # alternate rows for readability
+
         values = [
-            item.row_number,
+            seq_row - 1,            # display row #
             item.part_number,
             item.manufacturer or "",
             item.description or "",
             item.quantity,
-            None,  # Unit Price — buyer fills this
+            None,                   # Unit Price — buyer fills this in
+            None,                   # Your Qty — optional override
         ]
         for col_idx, value in enumerate(values, start=1):
-            cell = ws.cell(row=row + 1, column=col_idx, value=value)
-            cell.border = THIN_BORDER
-            if col_idx in editable_cols:
-                cell.fill  = EDIT_FILL
-                cell.font  = EDIT_FONT
+            cell = ws.cell(row=seq_row, column=col_idx, value=value)
+            cell.border = _thin_border()
+            if col_idx in editable:
+                cell.fill       = EDIT_FILL
+                cell.font       = EDIT_FONT
                 cell.protection = Protection(locked=False)
-                cell.alignment = CENTER
+                cell.alignment  = CENTER
             else:
-                cell.fill  = LOCKED_FILL
-                cell.font  = LOCK_FONT
+                cell.fill       = LOCK_FILL if not alt else PatternFill("solid", fgColor="EBEBEB")
+                cell.font       = LOCK_FONT
                 cell.protection = Protection(locked=True)
-                cell.alignment = LEFT if col_idx == 4 else CENTER
+                cell.alignment  = LEFT if col_idx == 4 else CENTER
+        ws.row_dimensions[seq_row].height = 16
 
-    # Protect sheet — only unlocked cells can be edited
+    # Protect sheet so only unlocked cells are editable
     ws.protection.sheet = True
     ws.protection.password = "thinktls"
-    ws.protection.selectLockedCells = False
+    ws.protection.selectLockedCells   = False
     ws.protection.selectUnlockedCells = False
-    ws.protection.formatCells = False
-    ws.protection.formatColumns = False
-    ws.protection.formatRows = False
-    ws.protection.insertColumns = False
-    ws.protection.insertRows = False
-    ws.protection.deleteColumns = False
-    ws.protection.deleteRows = False
-    ws.protection.sort = False
-    ws.protection.autoFilter = False
+    ws.protection.formatCells         = False
+    ws.protection.formatColumns       = False
+    ws.protection.formatRows          = False
+    ws.protection.insertRows          = False
+    ws.protection.deleteRows          = False
+    ws.protection.sort                = False
+    ws.protection.autoFilter          = False
 
     buf = io.BytesIO()
     wb.save(buf)

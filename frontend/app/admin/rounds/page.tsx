@@ -190,7 +190,7 @@ export default function BidRoundsPage() {
                         {" · "}
                         <span>{r.total_line_items.toLocaleString()} items</span>
                         {r.submission_deadline && (
-                          <span> · Due {new Date(r.submission_deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                          <span> · Due {new Date(r.submission_deadline).toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" })} EST</span>
                         )}
                       </p>
                     </div>
