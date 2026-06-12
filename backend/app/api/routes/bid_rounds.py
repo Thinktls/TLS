@@ -225,9 +225,17 @@ async def upload_master_file(round_id: int, file: UploadFile = File(...), db: Se
     for row in rows:
         db.add(MasterItem(bid_round_id=round_id, **row))
 
+    # Save original file to disk so buyers can download it later
+    _upload_dir = f"/app/uploads/rounds/{round_id}/master"
+    os.makedirs(_upload_dir, exist_ok=True)
+    _safe_name = file.filename.replace(" ", "_")
+    _disk_path = f"{_upload_dir}/{_safe_name}"
+    with open(_disk_path, "wb") as fh:
+        fh.write(content)
+
     r.master_file_uploaded = True
     r.total_line_items = len(rows)
-    r.master_file_path = file.filename
+    r.master_file_path = _disk_path
     r.master_file_uploaded_at = datetime.now(timezone.utc)
     db.commit()
 

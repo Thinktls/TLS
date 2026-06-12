@@ -21,11 +21,17 @@ interface Preview {
   rows: PreviewRow[];
 }
 
+interface MasterItem {
+  id: number; row_number: number; part_number: string;
+  description: string; manufacturer: string; quantity: number; category: string;
+}
+
 function SubmitBidInner() {
   const searchParams = useSearchParams();
   const preselect = searchParams.get("round");
   const [rounds, setRounds] = useState<Round[]>([]);
   const [selectedRound, setSelectedRound] = useState<number | null>(preselect ? Number(preselect) : null);
+  const [mode, setMode] = useState<"upload" | "inline">("upload");
   const [step, setStep] = useState<"upload" | "preview" | "done">("upload");
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -37,10 +43,16 @@ function SubmitBidInner() {
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Inline form state
+  const [masterItems, setMasterItems] = useState<MasterItem[]>([]);
+  const [inlinePrices, setInlinePrices] = useState<Record<number, string>>({});
+  const [inlineQtys, setInlineQtys] = useState<Record<number, string>>({});
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [inlineDone, setInlineDone] = useState(false);
+
   useEffect(() => {
     api.get("/buyer/rounds").then(r => {
       setRounds(r.data);
-      if (preselect && !selectedRound) setSelectedRound(Number(preselect));
     });
   }, []);
 
@@ -53,8 +65,21 @@ function SubmitBidInner() {
       setPreview(null);
       setSelectedFile(null);
       setMsg(""); setError("");
+      setInlineDone(false);
+      setInlinePrices({});
+      setInlineQtys({});
     }
   }, [selectedRound]);
+
+  useEffect(() => {
+    if (mode === "inline" && selectedRound && masterItems.length === 0) {
+      setLoadingItems(true);
+      api.get(`/buyer/rounds/${selectedRound}/items`)
+        .then(r => setMasterItems(r.data))
+        .catch(() => setError("Could not load items for this round."))
+        .finally(() => setLoadingItems(false));
+    }
+  }, [mode, selectedRound]);
 
   async function handleFile(file: File) {
     if (!selectedRound) return;
@@ -66,7 +91,7 @@ function SubmitBidInner() {
       setPreview(res.data);
       setStep("preview");
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Could not parse file. Check it matches the template format.");
+      setError(err.response?.data?.detail || "Could not parse file. Try downloading the Bid File and filling in prices.");
       setSelectedFile(null);
     } finally { setUploading(false); }
   }
@@ -86,16 +111,43 @@ function SubmitBidInner() {
     } finally { setSubmitting(false); }
   }
 
+  async function submitInline() {
+    if (!selectedRound) return;
+    const lines = masterItems
+      .filter(item => inlinePrices[item.id] && parseFloat(inlinePrices[item.id]) > 0)
+      .map(item => ({
+        master_item_id: item.id,
+        part_number: item.part_number,
+        description: item.description,
+        unit_price: parseFloat(inlinePrices[item.id]),
+        quantity: inlineQtys[item.id] ? parseInt(inlineQtys[item.id]) : item.quantity,
+      }));
+    if (lines.length === 0) {
+      setError("Enter at least one price before submitting.");
+      return;
+    }
+    setSubmitting(true); setError("");
+    try {
+      const res = await api.post(`/buyer/rounds/${selectedRound}/bid-inline`, lines);
+      setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:#34d399;font-weight:600">View full submission →</a>`);
+      setInlineDone(true);
+      setHasSubmission(true);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Submission failed.");
+    } finally { setSubmitting(false); }
+  }
+
   const round = rounds.find(r => r.id === selectedRound);
+  const pricedCount = Object.values(inlinePrices).filter(v => v && parseFloat(v) > 0).length;
 
   return (
     <BuyerLayout>
-      <div style={{ maxWidth: "680px" }} className="animate-in">
+      <div style={{ maxWidth: "860px" }} className="animate-in">
 
         {/* Header */}
-        <div style={{ marginBottom: "32px" }}>
+        <div style={{ marginBottom: "28px" }}>
           <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Submit a Bid</h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Upload your priced Excel or CSV for an open round.</p>
+          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Upload a priced file or enter prices directly online.</p>
         </div>
 
         {rounds.length === 0 ? (
@@ -130,14 +182,15 @@ function SubmitBidInner() {
                       {round.customer && <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>Customer: {round.customer}</p>}
                     </div>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      <button onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/template`, `bid_template_round_${selectedRound}.xlsx`)}
+                      <button
+                        onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/template`, `bid_file_round_${selectedRound}.xlsx`)}
                         className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px" }}>
-                        ↓ Download Template
+                        ↓ Download Bid File
                       </button>
                       {hasSubmission && (
                         <button onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/my-submission/download`, `my_bid_round_${selectedRound}.xlsx`)}
                           className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px" }}>
-                          ↓ Download My Bid
+                          ↓ My Submitted Bid
                         </button>
                       )}
                     </div>
@@ -146,119 +199,242 @@ function SubmitBidInner() {
               )}
             </div>
 
-            {/* Step 1: Upload zone */}
-            {step === "upload" && (
-              <div
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
-                onClick={() => selectedRound && !uploading && fileRef.current?.click()}
-                style={{
-                  border: `2px dashed ${dragOver ? "rgba(61,129,227,0.7)" : selectedRound ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
-                  borderRadius: "var(--radius-xl)", padding: "56px 32px", textAlign: "center",
-                  cursor: selectedRound && !uploading ? "pointer" : "default",
-                  background: dragOver ? "rgba(61,129,227,0.06)" : "var(--bg-2)",
-                  transition: "all 0.2s", position: "relative", overflow: "hidden",
-                }}
-              >
-                {dragOver && (
-                  <div style={{ position: "absolute", inset: 0, background: "rgba(61,129,227,0.04)", borderRadius: "var(--radius-xl)" }} />
-                )}
-                <div style={{ fontSize: "2.8rem", marginBottom: "14px", filter: uploading ? "grayscale(1)" : "none", transition: "filter 0.3s" }}>
-                  {uploading ? "⏳" : dragOver ? "📂" : "📎"}
-                </div>
-                <p style={{ fontSize: "0.95rem", color: uploading ? "var(--text-4)" : "white", margin: "0 0 6px", fontWeight: 600 }}>
-                  {uploading ? "Parsing your file…" : dragOver ? "Drop to upload" : "Drop your pricing file here"}
-                </p>
-                <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: "0 0 24px", lineHeight: 1.5 }}>
-                  Excel · CSV · PDF · Word · auto-detects Part Number, Unit Price and Quantity
-                </p>
-                <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.pdf,.docx,.doc" style={{ display: "none" }}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-                <button onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}
-                  disabled={!selectedRound || uploading} className="btn-brand" style={{ padding: "10px 28px", fontSize: "0.88rem" }}>
-                  {uploading ? "Parsing…" : "Choose File"}
-                </button>
-                {!selectedRound && (
-                  <p style={{ fontSize: "0.72rem", color: "var(--text-4)", marginTop: "12px", margin: "12px 0 0" }}>Select a round above first</p>
-                )}
+            {/* Mode switcher */}
+            {selectedRound && (
+              <div style={{ display: "flex", gap: "8px" }}>
+                {(["upload", "inline"] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => { setMode(m); setError(""); }}
+                    style={{
+                      padding: "8px 18px", borderRadius: "var(--radius)", fontSize: "0.82rem", fontWeight: 600,
+                      border: mode === m ? "1px solid var(--brand)" : "1px solid var(--border)",
+                      background: mode === m ? "rgba(61,129,227,0.12)" : "var(--bg-2)",
+                      color: mode === m ? "var(--brand)" : "var(--text-3)",
+                      cursor: "pointer", transition: "all 0.15s",
+                    }}>
+                    {m === "upload" ? "📎 Upload File" : "✏️ Enter Prices Online"}
+                  </button>
+                ))}
               </div>
             )}
 
-            {/* Step 2: Preview */}
-            {step === "preview" && preview && (
-              <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
-                {/* Preview header */}
-                <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-                  <div>
-                    <p style={{ margin: "0 0 2px", fontSize: "0.9rem", fontWeight: 700, color: "var(--text-1)" }}>Review Before Submitting</p>
-                    <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-4)" }}>
-                      {preview.filename} — <strong style={{ color: "var(--text-2)" }}>{preview.total_lines} lines</strong>, <strong style={{ color: "var(--text-2)" }}>{preview.total_quantity.toLocaleString()} units</strong> total
+            {/* ── Upload mode ── */}
+            {mode === "upload" && (
+              <>
+                {step === "upload" && (
+                  <div
+                    onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
+                    onClick={() => selectedRound && !uploading && fileRef.current?.click()}
+                    style={{
+                      border: `2px dashed ${dragOver ? "rgba(61,129,227,0.7)" : selectedRound ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
+                      borderRadius: "var(--radius-xl)", padding: "56px 32px", textAlign: "center",
+                      cursor: selectedRound && !uploading ? "pointer" : "default",
+                      background: dragOver ? "rgba(61,129,227,0.06)" : "var(--bg-2)",
+                      transition: "all 0.2s", position: "relative", overflow: "hidden",
+                    }}
+                  >
+                    <div style={{ fontSize: "2.8rem", marginBottom: "14px", filter: uploading ? "grayscale(1)" : "none" }}>
+                      {uploading ? "⏳" : dragOver ? "📂" : "📎"}
+                    </div>
+                    <p style={{ fontSize: "0.95rem", color: uploading ? "var(--text-4)" : "var(--text-1)", margin: "0 0 6px", fontWeight: 600 }}>
+                      {uploading ? "Parsing your file…" : dragOver ? "Drop to upload" : "Drop your pricing file here"}
                     </p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: "0 0 24px", lineHeight: 1.5 }}>
+                      Excel · CSV · PDF · Word · AI-powered parsing — any format accepted
+                    </p>
+                    <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.pdf,.docx,.doc" style={{ display: "none" }}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                    <button onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}
+                      disabled={!selectedRound || uploading} className="btn-brand" style={{ padding: "10px 28px", fontSize: "0.88rem" }}>
+                      {uploading ? "Parsing…" : "Choose File"}
+                    </button>
+                    {!selectedRound && (
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-4)", marginTop: "12px", margin: "12px 0 0" }}>Select a round above first</p>
+                    )}
                   </div>
-                  <button onClick={() => { setStep("upload"); setPreview(null); setSelectedFile(null); fileRef.current && (fileRef.current.value = ""); }}
-                    className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px" }}>
-                    ← Re-upload
-                  </button>
-                </div>
+                )}
 
-                {/* Preview table */}
-                <div style={{ overflowX: "auto", maxHeight: "340px", overflowY: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
-                    <thead>
-                      <tr style={{ position: "sticky", top: 0, background: "var(--bg-2)", zIndex: 1 }}>
-                        {["Part Number", "Description", "Unit Price", "Qty"].map(h => (
-                          <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: "var(--text-4)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)" }}>
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {preview.rows.slice(0, 50).map((row, i) => (
-                        <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                          <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem" }}>{row.raw_part_number}</td>
-                          <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description || "—"}</td>
-                          <td style={{ padding: "7px 12px", color: row.unit_price ? "#34d399" : "var(--text-4)", fontVariantNumeric: "tabular-nums" }}>
-                            {row.unit_price != null ? `$${row.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-                          </td>
-                          <td style={{ padding: "7px 12px", color: "var(--text-2)", fontVariantNumeric: "tabular-nums" }}>{row.quantity}</td>
-                        </tr>
-                      ))}
-                      {preview.rows.length > 50 && (
-                        <tr>
-                          <td colSpan={4} style={{ padding: "10px 12px", color: "var(--text-4)", fontSize: "0.75rem", textAlign: "center" }}>
-                            …and {preview.rows.length - 50} more lines
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                {step === "preview" && preview && (
+                  <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+                    <div style={{ padding: "18px 22px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                      <div>
+                        <p style={{ margin: "0 0 2px", fontSize: "0.9rem", fontWeight: 700, color: "var(--text-1)" }}>Review Before Submitting</p>
+                        <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-4)" }}>
+                          {preview.filename} — <strong style={{ color: "var(--text-2)" }}>{preview.total_lines} lines</strong>, <strong style={{ color: "var(--text-2)" }}>{preview.total_quantity.toLocaleString()} units</strong>
+                        </p>
+                      </div>
+                      <button onClick={() => { setStep("upload"); setPreview(null); setSelectedFile(null); fileRef.current && (fileRef.current.value = ""); }}
+                        className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px" }}>
+                        ← Re-upload
+                      </button>
+                    </div>
+                    <div style={{ overflowX: "auto", maxHeight: "340px", overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                        <thead>
+                          <tr style={{ position: "sticky", top: 0, background: "var(--bg-2)", zIndex: 1 }}>
+                            {["Part Number", "Description", "Unit Price", "Qty"].map(h => (
+                              <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: "var(--text-4)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {preview.rows.slice(0, 50).map((row, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                              <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem" }}>{row.raw_part_number}</td>
+                              <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description || "—"}</td>
+                              <td style={{ padding: "7px 12px", color: row.unit_price ? "#34d399" : "var(--text-4)" }}>
+                                {row.unit_price != null ? `$${row.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                              </td>
+                              <td style={{ padding: "7px 12px", color: "var(--text-2)" }}>{row.quantity}</td>
+                            </tr>
+                          ))}
+                          {preview.rows.length > 50 && (
+                            <tr><td colSpan={4} style={{ padding: "10px 12px", color: "var(--text-4)", fontSize: "0.75rem", textAlign: "center" }}>…and {preview.rows.length - 50} more lines</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ padding: "16px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "center" }}>
+                      <button onClick={confirmSubmit} disabled={submitting} className="btn-brand" style={{ padding: "10px 28px", fontSize: "0.9rem", fontWeight: 700 }}>
+                        {submitting ? "Submitting…" : `Confirm & Submit ${preview.total_lines} lines`}
+                      </button>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-4)" }}>{preview.total_quantity.toLocaleString()} units across {preview.total_lines} part numbers</span>
+                    </div>
+                  </div>
+                )}
 
-                {/* Confirm button */}
-                <div style={{ padding: "16px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "center" }}>
-                  <button onClick={confirmSubmit} disabled={submitting} className="btn-brand" style={{ padding: "10px 28px", fontSize: "0.9rem", fontWeight: 700 }}>
-                    {submitting ? "Submitting…" : `Confirm & Submit ${preview.total_lines} lines`}
+                {step === "done" && msg && (
+                  <div style={{ padding: "14px 18px", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "#34d399", lineHeight: 1.6 }}>
+                    ✓ <span dangerouslySetInnerHTML={{ __html: msg }} />
+                  </div>
+                )}
+                {step === "done" && (
+                  <button onClick={() => { setStep("upload"); setPreview(null); setSelectedFile(null); setMsg(""); fileRef.current && (fileRef.current.value = ""); }}
+                    className="btn-ghost" style={{ fontSize: "0.8rem", alignSelf: "flex-start" }}>
+                    Submit another file
                   </button>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-4)" }}>
-                    {preview.total_quantity.toLocaleString()} units across {preview.total_lines} part numbers
-                  </span>
-                </div>
-              </div>
+                )}
+
+                {step === "upload" && (
+                  <div style={{ background: "rgba(61,129,227,0.05)", border: "1px solid rgba(61,129,227,0.12)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
+                    <p style={{ fontWeight: 700, color: "var(--text-2)", margin: "0 0 12px", fontSize: "0.82rem" }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" style={{ marginRight: "7px", verticalAlign: "middle" }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      Submission Tips
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: "18px", color: "var(--text-4)", fontSize: "0.78rem", lineHeight: 1.8 }}>
+                      <li>Download the <strong style={{ color: "var(--text-3)" }}>Bid File</strong> and fill in the Unit Price column only</li>
+                      <li>Or switch to <strong style={{ color: "var(--text-3)" }}>Enter Prices Online</strong> to type prices directly — no Excel needed</li>
+                      <li>Upload any file format — AI will detect your columns automatically</li>
+                      <li>You can resubmit before the deadline; we use your latest submission</li>
+                    </ul>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Done state */}
-            {step === "done" && msg && (
-              <div style={{ padding: "14px 18px", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "#34d399", lineHeight: 1.6 }}>
-                ✓ <span dangerouslySetInnerHTML={{ __html: msg }} />
-              </div>
-            )}
-            {step === "done" && (
-              <button onClick={() => { setStep("upload"); setPreview(null); setSelectedFile(null); setMsg(""); fileRef.current && (fileRef.current.value = ""); }}
-                className="btn-ghost" style={{ fontSize: "0.8rem", alignSelf: "flex-start" }}>
-                Submit another file
-              </button>
+            {/* ── Inline mode ── */}
+            {mode === "inline" && selectedRound && (
+              <>
+                {inlineDone ? (
+                  <>
+                    <div style={{ padding: "14px 18px", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "#34d399", lineHeight: 1.6 }}>
+                      ✓ <span dangerouslySetInnerHTML={{ __html: msg }} />
+                    </div>
+                    <button onClick={() => { setInlineDone(false); setInlinePrices({}); setInlineQtys({}); setMsg(""); }}
+                      className="btn-ghost" style={{ fontSize: "0.8rem", alignSelf: "flex-start" }}>
+                      Edit prices
+                    </button>
+                  </>
+                ) : loadingItems ? (
+                  <div style={{ padding: "48px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>Loading items…</div>
+                ) : masterItems.length === 0 ? (
+                  <div style={{ padding: "48px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>No items found for this round.</div>
+                ) : (
+                  <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+                    {/* Header bar */}
+                    <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                      <div>
+                        <p style={{ margin: "0 0 2px", fontSize: "0.88rem", fontWeight: 700, color: "var(--text-1)" }}>Enter Your Prices</p>
+                        <p style={{ margin: 0, fontSize: "0.73rem", color: "var(--text-4)" }}>
+                          {masterItems.length} items — {pricedCount} priced so far
+                        </p>
+                      </div>
+                      <button onClick={submitInline} disabled={submitting || pricedCount === 0} className="btn-brand" style={{ padding: "9px 24px", fontSize: "0.85rem", fontWeight: 700, opacity: pricedCount === 0 ? 0.5 : 1 }}>
+                        {submitting ? "Submitting…" : `Submit ${pricedCount} Priced Line${pricedCount !== 1 ? "s" : ""}`}
+                      </button>
+                    </div>
+
+                    {/* Items table */}
+                    <div style={{ overflowX: "auto", maxHeight: "520px", overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                        <thead>
+                          <tr style={{ position: "sticky", top: 0, background: "var(--bg-2)", zIndex: 1 }}>
+                            {["#", "Part Number", "Description", "Avail Qty", "Your Price ($)", "Your Qty"].map(h => (
+                              <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontWeight: 700, color: "var(--text-4)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {masterItems.map((item) => {
+                            const priced = inlinePrices[item.id] && parseFloat(inlinePrices[item.id]) > 0;
+                            return (
+                              <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: priced ? "rgba(52,211,153,0.04)" : "transparent", transition: "background 0.15s" }}>
+                                <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{item.row_number}</td>
+                                <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.part_number}</td>
+                                <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.description}>{item.description || item.manufacturer || "—"}</td>
+                                <td style={{ padding: "7px 12px", color: "var(--text-4)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{item.quantity}</td>
+                                <td style={{ padding: "4px 8px" }}>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={inlinePrices[item.id] ?? ""}
+                                    onChange={e => setInlinePrices(p => ({ ...p, [item.id]: e.target.value }))}
+                                    style={{
+                                      width: "110px", padding: "5px 8px", borderRadius: "6px",
+                                      border: priced ? "1px solid rgba(52,211,153,0.4)" : "1px solid var(--border)",
+                                      background: "var(--bg)", color: priced ? "#34d399" : "var(--text-1)",
+                                      fontSize: "0.82rem", outline: "none", fontVariantNumeric: "tabular-nums",
+                                    }}
+                                  />
+                                </td>
+                                <td style={{ padding: "4px 8px" }}>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    placeholder={String(item.quantity)}
+                                    value={inlineQtys[item.id] ?? ""}
+                                    onChange={e => setInlineQtys(q => ({ ...q, [item.id]: e.target.value }))}
+                                    style={{
+                                      width: "80px", padding: "5px 8px", borderRadius: "6px",
+                                      border: "1px solid var(--border)",
+                                      background: "var(--bg)", color: "var(--text-1)",
+                                      fontSize: "0.82rem", outline: "none",
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Footer submit */}
+                    <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                      <span style={{ fontSize: "0.76rem", color: "var(--text-4)" }}>Leave price blank to opt out of a line</span>
+                      <button onClick={submitInline} disabled={submitting || pricedCount === 0} className="btn-brand" style={{ padding: "9px 24px", fontSize: "0.85rem", fontWeight: 700, opacity: pricedCount === 0 ? 0.5 : 1 }}>
+                        {submitting ? "Submitting…" : `Submit ${pricedCount} Priced Line${pricedCount !== 1 ? "s" : ""}`}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Error */}
@@ -268,22 +444,6 @@ function SubmitBidInner() {
               </div>
             )}
 
-            {/* Tips */}
-            {step === "upload" && (
-              <div style={{ background: "rgba(61,129,227,0.05)", border: "1px solid rgba(61,129,227,0.12)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
-                <p style={{ fontWeight: 700, color: "var(--text-2)", margin: "0 0 12px", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "7px" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  Submission Tips
-                </p>
-                <ul style={{ margin: 0, paddingLeft: "18px", color: "var(--text-4)", fontSize: "0.78rem", lineHeight: 1.8 }}>
-                  <li>Download the bid template and fill in the <strong style={{ color: "var(--text-3)" }}>Unit Price</strong> column only</li>
-                  <li>Include a <strong style={{ color: "var(--text-3)" }}>Quantity</strong> column if bidding on a specific quantity</li>
-                  <li>Leave blank any lines you don't wish to bid on — zero means you opt out</li>
-                  <li>You can resubmit before the deadline; we'll use your latest file</li>
-                  <li>Or email your file to <strong style={{ color: "#60a5fa" }}>bids@thinktls.com</strong> with the round number in the subject</li>
-                </ul>
-              </div>
-            )}
           </div>
         )}
       </div>

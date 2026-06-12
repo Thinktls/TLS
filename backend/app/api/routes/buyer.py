@@ -1,21 +1,29 @@
 """
 Buyer-facing routes:
-  - GET  /buyer/rounds                     — list open rounds assigned to this buyer
-  - POST /buyer/rounds/{id}/bid            — upload a bid file
-  - GET  /buyer/rounds/{id}/template       — download the bid template Excel
-  - GET  /buyer/my-results                 — view won/lost results with fluffed prices
-  - GET  /buyer/my-results/{round_id}      — results for a specific round
-  - GET  /buyer/my-deals                   — all won deals
-  - GET  /buyer/my-rounds                  — all rounds this buyer has been invited to
-  - GET  /buyer/rounds/{id}/award-sheet    — download personal award sheet
+  - GET  /buyer/rounds                       — list open rounds assigned to this buyer
+  - POST /buyer/rounds/{id}/bid              — upload a bid file
+  - POST /buyer/rounds/{id}/bid-inline       — submit bid via inline JSON (no file upload)
+  - GET  /buyer/rounds/{id}/items            — list master items for inline price editor
+  - GET  /buyer/rounds/{id}/template         — download the bid template Excel
+  - GET  /buyer/rounds/{id}/master-file      — download the original admin-uploaded file
+  - GET  /buyer/my-results                   — view won/lost results with fluffed prices
+  - GET  /buyer/my-results/{round_id}        — results for a specific round
+  - GET  /buyer/my-deals                     — all won deals
+  - GET  /buyer/my-rounds                    — all rounds this buyer has been invited to
+  - GET  /buyer/rounds/{id}/award-sheet      — download personal award sheet
 """
+import os
+import mimetypes
 from datetime import datetime, timezone
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.core.config import settings
 from app.core.security import require_buyer
 from app.models.bid_round import BidRound
 from app.models.bid_file import BidFile
@@ -128,7 +136,14 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
     try:
         rows = parse_buyer_file(content, file.filename)
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        if settings.OPENROUTER_API_KEY:
+            try:
+                from app.services.ai_file_parser import ai_parse_buyer_file
+                rows = ai_parse_buyer_file(content, file.filename, settings.OPENROUTER_API_KEY, settings.OPENROUTER_MODEL)
+            except ValueError as ai_e:
+                raise HTTPException(400, str(ai_e))
+        else:
+            raise HTTPException(400, str(e))
     total_qty = sum(r["quantity"] or 0 for r in rows)
     return {
         "filename": file.filename,
@@ -195,10 +210,20 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     try:
         rows = parse_buyer_file(content, file.filename)
     except ValueError as e:
-        bid_file.status = "error"
-        bid_file.error_message = str(e)
-        db.commit()
-        raise HTTPException(400, str(e))
+        if settings.OPENROUTER_API_KEY:
+            try:
+                from app.services.ai_file_parser import ai_parse_buyer_file
+                rows = ai_parse_buyer_file(content, file.filename, settings.OPENROUTER_API_KEY, settings.OPENROUTER_MODEL)
+            except ValueError as ai_e:
+                bid_file.status = "error"
+                bid_file.error_message = str(ai_e)
+                db.commit()
+                raise HTTPException(400, str(ai_e))
+        else:
+            bid_file.status = "error"
+            bid_file.error_message = str(e)
+            db.commit()
+            raise HTTPException(400, str(e))
 
     db.add_all([
         BidLine(bid_file_id=bid_file.id, bid_round_id=round_id, buyer_id=buyer.id, **row)
@@ -452,3 +477,167 @@ def my_deals(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
         }
         for d in deals
     ]
+
+
+@router.get("/rounds/{round_id}/master-file")
+def download_master_file(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """Download the original file admin uploaded for this round."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r or not r.master_file_uploaded:
+        raise HTTPException(404, "No master file available for this round")
+    assigned = db.execute(
+        text("SELECT 1 FROM round_buyers WHERE round_id=:rid AND buyer_id=:bid"),
+        {"rid": round_id, "bid": buyer.id},
+    ).fetchone()
+    if not assigned:
+        raise HTTPException(403, "Not assigned to this round")
+
+    if r.master_file_path and os.path.exists(r.master_file_path):
+        fname = os.path.basename(r.master_file_path)
+        mime, _ = mimetypes.guess_type(fname)
+        mime = mime or "application/octet-stream"
+        def _iter_file():
+            with open(r.master_file_path, "rb") as fh:
+                yield from iter(lambda: fh.read(65536), b"")
+        return StreamingResponse(
+            _iter_file(),
+            media_type=mime,
+            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        )
+
+    # Fallback: serve the generated template if original file is missing
+    from app.services.template_generator import generate_bid_template
+    data = generate_bid_template(db, round_id)
+    return StreamingResponse(
+        iter([data]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="bid_file_round_{round_id}.xlsx"'},
+    )
+
+
+@router.get("/rounds/{round_id}/items")
+def get_round_items(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    """List master items for a round — used by inline price editor."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status != "open":
+        raise HTTPException(400, "This round is not open")
+    assigned = db.execute(
+        text("SELECT 1 FROM round_buyers WHERE round_id=:rid AND buyer_id=:bid"),
+        {"rid": round_id, "bid": buyer.id},
+    ).fetchone()
+    if not assigned:
+        raise HTTPException(403, "Not assigned to this round")
+
+    items = (
+        db.query(MasterItem)
+        .filter(MasterItem.bid_round_id == round_id)
+        .order_by(MasterItem.row_number)
+        .all()
+    )
+    return [
+        {
+            "id": item.id,
+            "row_number": item.row_number,
+            "part_number": item.part_number,
+            "description": item.description,
+            "manufacturer": item.manufacturer,
+            "quantity": item.quantity,
+            "category": item.category,
+        }
+        for item in items
+    ]
+
+
+class InlineBidLine(BaseModel):
+    master_item_id: int
+    part_number: str
+    description: Optional[str] = ""
+    unit_price: Optional[float] = None
+    quantity: Optional[int] = None
+
+
+@router.post("/rounds/{round_id}/bid-inline")
+def submit_bid_inline(
+    round_id: int,
+    lines: List[InlineBidLine],
+    db: Session = Depends(get_db),
+    buyer=Depends(require_buyer),
+):
+    """Submit a bid directly from the inline form (no file upload required)."""
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if not r:
+        raise HTTPException(404, "Round not found")
+    if r.status != "open":
+        raise HTTPException(400, "This round is not accepting bids")
+    if r.submission_deadline and datetime.now(timezone.utc) > r.submission_deadline:
+        raise HTTPException(400, "Submission deadline has passed")
+    assigned = db.execute(
+        text("SELECT 1 FROM round_buyers WHERE round_id=:rid AND buyer_id=:bid"),
+        {"rid": round_id, "bid": buyer.id},
+    ).fetchone()
+    if not assigned:
+        raise HTTPException(403, "Not assigned to this round")
+
+    priced = [l for l in lines if l.unit_price is not None and l.unit_price > 0]
+    if not priced:
+        raise HTTPException(400, "No priced lines — enter at least one Unit Price before submitting")
+
+    # Supersede previous pending submissions
+    prev_files = db.query(BidFile).filter(
+        BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id
+    ).all()
+    for pf in prev_files:
+        db.query(BidLine).filter(
+            BidLine.bid_file_id == pf.id, BidLine.match_status == "pending"
+        ).delete(synchronize_session="fetch")
+        pf.status = "superseded"
+
+    # Create a virtual BidFile to hold these lines
+    bid_file = BidFile(
+        bid_round_id=round_id,
+        buyer_id=buyer.id,
+        filename="inline_submission.csv",
+        file_path=None,
+        file_size_bytes=0,
+        status="processing",
+    )
+    db.add(bid_file)
+    db.flush()
+
+    from app.services.normalizer import normalize_part_number
+    for i, line in enumerate(priced, start=1):
+        db.add(BidLine(
+            bid_file_id=bid_file.id,
+            bid_round_id=round_id,
+            buyer_id=buyer.id,
+            raw_part_number=line.part_number,
+            normalized_part_number=normalize_part_number(line.part_number),
+            description=line.description or "",
+            unit_price=line.unit_price,
+            quantity=line.quantity or 1,
+            total_price=round(line.unit_price * (line.quantity or 1), 4),
+            row_number=i,
+        ))
+
+    bid_file.status = "processed"
+    bid_file.lines_parsed = len(priced)
+    bid_file.processed_at = datetime.now(timezone.utc)
+
+    buyer.last_bid_at = datetime.now(timezone.utc)
+    buyer.total_rounds_participated += 1
+    db.execute(
+        text("UPDATE round_buyers SET invite_status='uploaded' WHERE round_id=:rid AND buyer_id=:bid"),
+        {"rid": round_id, "bid": buyer.id},
+    )
+    db.commit()
+
+    create_notification(
+        db,
+        title=f"New bid received from {buyer.company_name or buyer.full_name}",
+        body=f"{len(priced)} lines submitted for round #{round_id} (inline form)",
+        category="info",
+        link=f"/admin/rounds/{round_id}",
+    )
+    return {"message": f"Submitted {len(priced)} line items", "bid_file_id": bid_file.id}
