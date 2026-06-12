@@ -161,6 +161,17 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     content = await file.read()
     file_size = len(content)
 
+    # Resubmission: remove previous PENDING bid lines so the matcher only sees
+    # the latest file. Lines already processed (matched/exception) are left alone.
+    prev_files = db.query(BidFile).filter(
+        BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id
+    ).all()
+    for pf in prev_files:
+        db.query(BidLine).filter(
+            BidLine.bid_file_id == pf.id, BidLine.match_status == "pending"
+        ).delete(synchronize_session="fetch")
+        pf.status = "superseded"
+
     # Persist file to the uploads volume so admin can download it later
     import os as _os
     upload_dir = f"/app/uploads/rounds/{round_id}"

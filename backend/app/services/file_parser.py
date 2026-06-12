@@ -104,7 +104,21 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
             "category": str(row.get(mapping.get("category", ""), "")).strip(),
             "row_number": int(idx) + 2,
         })
-    return rows
+
+    # Consolidate duplicate normalized part numbers: sum quantities, keep lowest reserve price
+    consolidated: dict[str, dict] = {}
+    for row in rows:
+        key = row["part_number_normalized"]
+        if key in consolidated:
+            existing = consolidated[key]
+            existing["quantity"] = (existing["quantity"] or 0) + (row["quantity"] or 0)
+            if row["reserve_price"] is not None:
+                if existing["reserve_price"] is None or row["reserve_price"] < existing["reserve_price"]:
+                    existing["reserve_price"] = row["reserve_price"]
+        else:
+            consolidated[key] = row.copy()
+
+    return list(consolidated.values())
 
 
 def _is_unit_level(df: pd.DataFrame) -> bool:
