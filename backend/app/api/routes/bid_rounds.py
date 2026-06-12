@@ -15,6 +15,7 @@ from app.models.master_item import MasterItem
 from app.models.bid_file import BidFile
 from app.models.bid_line import BidLine
 from app.models.deal import Deal
+from app.models.approval_override import ApprovalOverride
 from app.models.user import User
 from app.services.file_parser import parse_master_file
 from app.services.matcher import match_bid_lines
@@ -762,8 +763,15 @@ def delete_round(round_id: int, db: Session = Depends(get_db), _=Depends(require
     if r.status in ("open", "processing"):
         raise HTTPException(400, "Cannot delete an active round. Close it first.")
 
-    # Cascade delete in FK order
+    # Cascade delete in FK order (must respect foreign key dependencies):
+    # approval_overrides.deal_id → deals.id → bid_lines.id
     bid_file_ids = [bf.id for bf in db.query(BidFile.id).filter(BidFile.bid_round_id == round_id).all()]
+
+    # 1. ApprovalOverrides reference deals
+    db.query(ApprovalOverride).filter(ApprovalOverride.bid_round_id == round_id).delete(synchronize_session=False)
+    # 2. Deals reference bid_lines (winning_bid_line_id FK) — must go before BidLines
+    db.query(Deal).filter(Deal.bid_round_id == round_id).delete(synchronize_session=False)
+    # 3. BidLines (safe now that Deals are gone)
     if bid_file_ids:
         db.query(BidLine).filter(BidLine.bid_file_id.in_(bid_file_ids)).delete(synchronize_session=False)
         # Clean up uploaded files from disk
@@ -774,7 +782,7 @@ def delete_round(round_id: int, db: Session = Depends(get_db), _=Depends(require
                 except OSError:
                     pass
         db.query(BidFile).filter(BidFile.id.in_(bid_file_ids)).delete(synchronize_session=False)
-    db.query(Deal).filter(Deal.bid_round_id == round_id).delete(synchronize_session=False)
+    # 4. MasterItems, round_buyers, then the round itself
     db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).delete(synchronize_session=False)
     db.execute(text("DELETE FROM round_buyers WHERE round_id = :rid"), {"rid": round_id})
     db.delete(r)

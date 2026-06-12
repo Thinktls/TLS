@@ -62,6 +62,7 @@ BUYER_COLUMN_ALIASES = {
         "unit price", "price", "unit cost", "cost", "your price",
         "bid price", "unit_price", "offer", "offer price", "your bid",
         "bid", "quote", "quoted price",
+        "unit price ($)", "price ($)", "unit price(usd)", "unit price (usd)",
     ],
     "quantity": ["quantity", "qty", "units", "unit count"],
 }
@@ -156,7 +157,7 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         groups[key]["count"] += 1
 
     rows = []
-    for (model, grade), g in groups.items():
+    for row_idx, ((model, grade), g) in enumerate(groups.items(), start=1):
         # Synthesise a part number from model + grade so each group is uniquely addressable
         pn_raw = f"{model}-{grade}" if grade else model
         pn_norm = normalize_part_number(pn_raw)
@@ -168,7 +169,7 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             "quantity": g["count"],
             "reserve_price": g["reserve_price"],
             "category": g["grade"],
-            "row_number": 1,
+            "row_number": row_idx,  # sequential — was hardcoded 1 (caused template to overwrite all rows at row 2)
         })
 
     logger.info("[file_parser] unit-level aggregation: %d units → %d master items", sum(g["count"] for g in groups.values()), len(rows))
