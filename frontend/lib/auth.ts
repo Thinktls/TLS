@@ -9,8 +9,7 @@ const isBrowser = typeof window !== "undefined";
 
 export function saveAuth(data: AuthUser) {
   if (!isBrowser) return;
-  // Do NOT store the JWT in localStorage — it lives in an httpOnly cookie set by the server.
-  // We only keep non-sensitive UI hints here.
+  localStorage.setItem("token", data.access_token);
   localStorage.setItem("role", data.role);
   localStorage.setItem("user_id", String(data.user_id));
   localStorage.setItem("full_name", data.full_name);

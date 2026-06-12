@@ -1,10 +1,32 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { logout, getFullName } from "@/lib/auth";
 import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeProvider";
+
+/* ── Auth guard ──────────────────────────────────────────────── */
+function useAuthGuard() {
+  const router = useRouter();
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role  = localStorage.getItem("role");
+    // Fast path: valid session already in localStorage
+    if (token && role === "admin") return;
+    // Slow path: token missing or stale — verify via API (works with httpOnly cookie too)
+    api.get("/auth/me")
+      .then(res => {
+        if (res.data.role !== "admin") { router.replace("/login"); return; }
+        // Repopulate UI fields so the layout renders correctly
+        localStorage.setItem("role",     res.data.role);
+        localStorage.setItem("user_id",  String(res.data.id));
+        localStorage.setItem("full_name", res.data.full_name);
+      })
+      .catch(() => router.replace("/login"));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
 
 /* ── Nav icons ──────────────────────────────────────────────── */
 const Icons = {
@@ -188,6 +210,7 @@ function LogoMark() {
 
 /* ── Layout ──────────────────────────────────────────────────── */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  useAuthGuard();
   const path = usePathname();
   const initials = getFullName().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "A";
 

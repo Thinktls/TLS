@@ -1,8 +1,29 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { logout, getFullName } from "@/lib/auth";
+import { useEffect } from "react";
+import api from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeProvider";
+
+/* ── Auth guard ──────────────────────────────────────────────── */
+function useAuthGuard() {
+  const router = useRouter();
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role  = localStorage.getItem("role");
+    if (token && (role === "buyer" || role === "admin")) return;
+    api.get("/auth/me")
+      .then(res => {
+        if (!["buyer", "admin"].includes(res.data.role)) { router.replace("/login"); return; }
+        localStorage.setItem("role",     res.data.role);
+        localStorage.setItem("user_id",  String(res.data.id));
+        localStorage.setItem("full_name", res.data.full_name);
+      })
+      .catch(() => router.replace("/login"));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
 
 const nav = [
   {
@@ -36,6 +57,7 @@ function LogoMark() {
 }
 
 export default function BuyerLayout({ children }: { children: React.ReactNode }) {
+  useAuthGuard();
   const path = usePathname();
   const name = getFullName();
   const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "B";
