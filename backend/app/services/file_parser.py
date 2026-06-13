@@ -5,6 +5,10 @@ Supports: .xlsx, .xls, .csv, .pdf, .docx, .doc
 Auto-decodes column names via alias matching + rapidfuzz fuzzy fallback.
 Tries every sheet (Excel) and every header row (all formats) so files
 that don't match the standard template still parse correctly.
+
+Designed to handle any IT hardware bid/inventory file from any company —
+from tidy templates to ad-hoc spreadsheets with merged cells, leading notes,
+pivot tables, and non-standard column names.
 """
 import io
 import logging
@@ -14,76 +18,161 @@ from app.services.normalizer import normalize_part_number, normalize_description
 
 logger = logging.getLogger(__name__)
 
+# ── Column alias maps ─────────────────────────────────────────────────────────
+# Comprehensive coverage of naming conventions across enterprise IT resellers,
+# brokers, OEMs, and custom spreadsheets.
+
 MASTER_COLUMN_ALIASES = {
     "part_number": [
-        "part number", "part#", "part no", "partno", "part_number",
-        "sku", "item number", "item#", "part", "model number", "model#",
-        "p/n", "pn", "mfr part#", "mfr part number",
-        # ThinkTLS drive/memory/laptop/server formats
-        "drive part#", "drive part number", "model",
+        # Standard
+        "part number", "part#", "part no", "partno", "part_number", "part no.",
+        "part num", "part num.", "part id",
+        # SKU / item codes
+        "sku", "item number", "item#", "item no", "item no.", "item id",
+        "item code", "product code", "product id", "product#", "product number",
+        # Model / catalog
+        "model", "model number", "model#", "model no", "model no.", "model id",
+        "catalog number", "catalog#", "cat#", "cat no", "catalogue number",
+        "reference", "ref#", "ref no", "reference number",
+        # Manufacturer part
+        "mfr part#", "mfr part number", "mfr part no", "mfr#",
+        "manufacturer part", "manufacturer part#", "manufacturer part number",
+        "oem part", "oem part#", "oem part number",
+        "vendor part", "vendor part#", "vendor part number",
+        # Shorthand
+        "p/n", "pn", "p.n.", "mpn", "mfpn",
+        # Barcode / asset
+        "upc", "gtin", "ean", "isbn", "asset number", "asset#", "asset id", "asset tag",
+        # ThinkTLS / industry-specific
+        "drive part#", "drive part number",
     ],
     "description": [
         "description", "desc", "item description", "product name", "name",
-        "product description", "item name", "product",
-        # ThinkTLS laptop/inventory formats
+        "product description", "item name", "product", "item",
         "model title", "model name", "item title", "title",
+        "part description", "part name", "product title",
+        "specification", "spec", "specs", "specifications",
+        "details", "info", "information", "notes",
+        "long description", "short description", "product details",
+        "line description", "line item", "line item description",
+        "commodity description",
     ],
-    "manufacturer": ["manufacturer", "mfr", "mfg", "brand", "vendor", "make", "oem"],
+    "manufacturer": [
+        "manufacturer", "mfr", "mfg", "brand", "vendor", "make", "oem",
+        "mfr name", "manufacturer name", "brand name", "supplier",
+        "maker", "producer", "origin", "country of origin",
+        "original equipment manufacturer",
+    ],
     "quantity": [
         "quantity", "qty", "units", "count", "unit count",
-        "total qty", "total quantity",
+        "total qty", "total quantity", "total units",
+        "pieces", "pcs", "pc", "each", "no of units",
+        "number of units", "number of items", "num units",
+        "avail qty", "available qty", "available quantity",
+        "stock qty", "stock", "inventory", "on hand",
+        "lot size", "lot qty",
     ],
     "reserve_price": [
         "reserve price", "reserve", "floor price", "minimum price",
         "min price", "floor", "reserve_price",
+        "minimum bid", "min bid", "starting price", "start price",
+        "asking price", "list price", "msrp",
     ],
     "category": [
         "category", "cat", "type", "commodity", "product type",
-        # ThinkTLS graded inventory
         "grade", "final grade", "condition", "condition grade",
         "grading description", "grading notes", "grade description",
+        "quality", "quality grade", "cosmetic grade",
+        "r2v3", "r2 grade", "cosmetic",
     ],
 }
 
 BUYER_COLUMN_ALIASES = {
     "part_number": [
-        "part number", "part#", "part no", "partno", "part_number",
-        "sku", "mfr part#", "part", "model number", "model#",
-        "p/n", "pn", "item number", "item#",
-        # ThinkTLS drive/memory/laptop/server formats
-        "drive part#", "drive part number", "model",
+        # Standard
+        "part number", "part#", "part no", "partno", "part_number", "part no.",
+        "part num", "part id",
+        # SKU / item codes
+        "sku", "item number", "item#", "item no", "item no.", "item id",
+        "item code", "product code", "product id", "product#", "product number",
+        # Model / catalog
+        "model", "model number", "model#", "model no", "model no.", "model id",
+        "catalog number", "catalog#", "cat#", "reference", "ref#", "ref no",
+        # Manufacturer part
+        "mfr part#", "mfr part number", "mfr part no", "mfr#",
+        "manufacturer part", "manufacturer part#", "manufacturer part number",
+        "oem part#", "oem part number", "vendor part#",
+        # Shorthand
+        "p/n", "pn", "p.n.", "mpn",
+        # ThinkTLS / industry-specific
+        "drive part#", "drive part number",
     ],
     "description": [
-        "description", "desc", "item description", "product",
-        "product description", "item name", "name",
-        # ThinkTLS laptop/inventory formats
+        "description", "desc", "item description", "product", "product name",
+        "product description", "item name", "name", "item",
         "model title", "model name", "item title", "title",
+        "part description", "part name", "product title",
+        "specification", "spec", "specs",
+        "details", "notes", "long description",
+        "line description", "line item description",
     ],
     "unit_price": [
-        "unit price", "price", "unit cost", "cost", "your price",
-        "bid price", "unit_price", "offer", "offer price", "your bid",
-        "bid", "quote", "quoted price",
+        # Generic price
+        "unit price", "price", "unit cost", "cost", "unit_price",
+        # Bid / offer terminology
+        "offer", "offer price", "your offer", "bid", "bid price",
+        "your bid", "your price", "quote", "quoted price", "quote price",
+        # Per-unit qualifiers
+        "each", "ea", "per unit", "price per unit", "cost per unit",
+        "price/unit", "cost/unit", "$/unit", "unit bid", "unit offer",
+        # With currency/symbol
         "unit price ($)", "price ($)", "unit price(usd)", "unit price (usd)",
+        "price (usd)", "cost ($)", "offer ($)",
+        # Sales terminology
+        "sell price", "selling price", "sale price", "net price",
+        "buy price", "purchase price",
     ],
-    "quantity": ["quantity", "qty", "units", "unit count"],
-    # Grade/condition column — used when buyer submits a unit-level file (laptops, servers)
-    # so we can aggregate by (model, grade) to match master items.
+    "quantity": [
+        "quantity", "qty", "units", "unit count", "total units",
+        "pieces", "pcs", "count", "no of units",
+        "your qty", "your quantity", "bid qty", "order qty",
+        "requested qty", "demand", "volume", "amount",
+    ],
+    # Grade/condition — used when buyer submits a unit-level file (laptops, servers)
+    # so we aggregate by (model, grade) and match master items exactly.
     "category": [
         "grade", "final grade", "condition", "condition grade",
         "grading description", "grading notes", "grade description",
+        "quality", "quality grade", "cosmetic", "cosmetic grade",
+        "r2v3", "r2 grade",
     ],
 }
 
 FUZZY_THRESHOLD = 72   # minimum rapidfuzz score for a column name to match
-MAX_HEADER_SCAN = 6    # try up to this many rows as the header row
+MAX_HEADER_SCAN = 12   # try up to this many rows as the header — covers files with title/notes blocks
 
 # Columns that signal a unit-level (one-row-per-unit) inventory file
-_SERIAL_ALIASES = ["serial", "serial number", "serial#", "serialno", "uid", "asset id", "asset#", "barcode"]
+_SERIAL_ALIASES = [
+    "serial", "serial number", "serial#", "serial no", "serial no.", "serialno",
+    "uid", "uuid", "asset id", "asset#", "asset tag", "asset number",
+    "barcode", "upc", "device id", "unit id",
+]
 
-# Sheet name keywords — Summary/bid tabs get a score bonus so they beat verbose Detail tabs.
-# ThinkTLS uses "Drive Summary" / "Memory Summary" for the aggregated bid input sheet.
-_SHEET_BONUS_KEYWORDS = ["summary", "overview", "bid", "quote", "price list"]
-_SHEET_PENALTY_KEYWORDS = ["detail", "unit list", "serial list", "inventory detail"]
+# Rows that look like totals/footers — filter them out so they don't become bid lines
+_JUNK_ROW_PREFIXES = (
+    "total", "subtotal", "grand total", "sum", "totals", "sub total",
+    "n/a", "na", "none", "tbd", "tbc", "see below", "continued",
+)
+
+# Sheet name keywords — aggregated/summary tabs preferred; raw unit/detail tabs penalised.
+_SHEET_BONUS_KEYWORDS = [
+    "summary", "overview", "bid", "quote", "price list", "pricing",
+    "offer", "rfq", "items", "products", "parts", "catalog", "catalogue",
+]
+_SHEET_PENALTY_KEYWORDS = [
+    "detail", "unit list", "serial list", "inventory detail",
+    "raw data", "raw", "units", "serials", "individual",
+]
 
 
 def _sheet_score_bonus(sheet_name: str) -> int:
@@ -93,6 +182,12 @@ def _sheet_score_bonus(sheet_name: str) -> int:
     if any(k in name for k in _SHEET_PENALTY_KEYWORDS):
         return -2
     return 0
+
+
+def _is_junk_row(pn_val: str) -> bool:
+    """Return True for total/footer rows that should be skipped."""
+    v = pn_val.lower().strip().rstrip(":")
+    return v in _JUNK_ROW_PREFIXES or v.startswith(("total", "grand total", "subtotal"))
 
 
 # ── public API ────────────────────────────────────────────────────────────────
@@ -114,7 +209,7 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
     rows = []
     for idx, row in df.iterrows():
         raw_pn = str(row.get(mapping["part_number"], "")).strip()
-        if not raw_pn or raw_pn.lower() in ("nan", "none", ""):
+        if not raw_pn or raw_pn.lower() in ("nan", "none", "") or _is_junk_row(raw_pn):
             continue
         rows.append({
             "part_number": raw_pn,
@@ -172,12 +267,12 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     for _, row in df.iterrows():
         if pn_col:
             pn_val = str(row.get(pn_col, "")).strip()
-            if not pn_val or pn_val.lower() in ("nan", "none", ""):
+            if not pn_val or pn_val.lower() in ("nan", "none", "") or _is_junk_row(pn_val):
                 continue
             label = pn_val
         else:
             label = normalize_description(str(row.get(desc_col, "")).strip())
-            if not label or label.lower() in ("nan", "none", ""):
+            if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
                 continue
 
         desc_val = normalize_description(str(row.get(desc_col, "")).strip()) if desc_col else label
@@ -239,7 +334,7 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
     rows = []
     for idx, row in df.iterrows():
         raw_pn = str(row.get(mapping["part_number"], "")).strip()
-        if not raw_pn or raw_pn.lower() in ("nan", "none", ""):
+        if not raw_pn or raw_pn.lower() in ("nan", "none", "") or _is_junk_row(raw_pn):
             continue
         unit_price = _safe_float(row.get(mapping["unit_price"]))
         qty = _safe_int(row.get(mapping.get("quantity", ""), 1))
@@ -290,7 +385,7 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     groups: dict[tuple, dict] = {}
     for _, row in df.iterrows():
         label = str(row.get(pn_col, "")).strip()
-        if not label or label.lower() in ("nan", "none", ""):
+        if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
             continue
         grade = str(row.get(grade_col, "") if grade_col else "").strip()
         if grade.lower() in ("nan", "none", ""):

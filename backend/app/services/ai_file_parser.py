@@ -77,20 +77,24 @@ def ai_parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
     sample_csv = df.head(8).to_csv(index=False)
 
     prompt = (
-        "You are a file-parsing assistant. Analyse this spreadsheet excerpt "
-        "and identify the best column for each field.\n\n"
+        "You are a file-parsing assistant for an IT hardware procurement platform. "
+        "A buyer has uploaded a bid file. Identify which column serves each role.\n\n"
         f"Columns: {columns}\n\n"
         f"Sample rows (first 8):\n{sample_csv}\n\n"
-        "Return JSON only — no explanation, no markdown:\n"
+        "Return JSON only — no explanation, no markdown fences:\n"
         '{"part_number_col": "exact column name or null", '
         '"unit_price_col": "exact column name or null", '
         '"description_col": "exact column name or null", '
         '"quantity_col": "exact column name or null"}\n\n'
         "Rules:\n"
-        "- part_number_col: item identifier, SKU, model #, part #, serial (REQUIRED)\n"
-        "- unit_price_col: price per unit; may be blank/empty — return null if absent\n"
-        "- description_col: product description or model name\n"
-        "- quantity_col: qty / units / count"
+        "- part_number_col: item identifier — Part#, SKU, Model, MPN, Model Number, "
+        "  P/N, Item#, Catalog#, Reference, Asset# — pick the most specific identifier (REQUIRED)\n"
+        "- unit_price_col: buyer's offered price per unit — Offer, Bid, Quote, Price, "
+        "  Unit Price, Cost, Each, EA — return null if all values are blank/zero\n"
+        "- description_col: human-readable product name or description\n"
+        "- quantity_col: number of units — Qty, Quantity, Units, Count, Pieces\n"
+        "Note: the file may come from any company with any layout. "
+        "Focus on semantics, not column position."
     )
 
     try:
