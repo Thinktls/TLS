@@ -19,8 +19,8 @@ MASTER_COLUMN_ALIASES = {
         "part number", "part#", "part no", "partno", "part_number",
         "sku", "item number", "item#", "part", "model number", "model#",
         "p/n", "pn", "mfr part#", "mfr part number",
-        # ThinkTLS drive format
-        "drive part#", "drive part number",
+        # ThinkTLS drive/memory/laptop/server formats
+        "drive part#", "drive part number", "model",
     ],
     "description": [
         "description", "desc", "item description", "product name", "name",
@@ -28,7 +28,7 @@ MASTER_COLUMN_ALIASES = {
         # ThinkTLS laptop/inventory formats
         "model title", "model name", "item title", "title",
     ],
-    "manufacturer": ["manufacturer", "mfr", "brand", "vendor", "make", "oem"],
+    "manufacturer": ["manufacturer", "mfr", "mfg", "brand", "vendor", "make", "oem"],
     "quantity": [
         "quantity", "qty", "units", "count", "unit count",
         "total qty", "total quantity",
@@ -41,6 +41,7 @@ MASTER_COLUMN_ALIASES = {
         "category", "cat", "type", "commodity", "product type",
         # ThinkTLS graded inventory
         "grade", "final grade", "condition", "condition grade",
+        "grading description", "grading notes", "grade description",
     ],
 }
 
@@ -49,8 +50,8 @@ BUYER_COLUMN_ALIASES = {
         "part number", "part#", "part no", "partno", "part_number",
         "sku", "mfr part#", "part", "model number", "model#",
         "p/n", "pn", "item number", "item#",
-        # ThinkTLS drive format
-        "drive part#", "drive part number",
+        # ThinkTLS drive/memory/laptop/server formats
+        "drive part#", "drive part number", "model",
     ],
     "description": [
         "description", "desc", "item description", "product",
@@ -73,6 +74,20 @@ MAX_HEADER_SCAN = 6    # try up to this many rows as the header row
 # Columns that signal a unit-level (one-row-per-unit) inventory file
 _SERIAL_ALIASES = ["serial", "serial number", "serial#", "serialno", "uid", "asset id", "asset#", "barcode"]
 
+# Sheet name keywords — Summary/bid tabs get a score bonus so they beat verbose Detail tabs.
+# ThinkTLS uses "Drive Summary" / "Memory Summary" for the aggregated bid input sheet.
+_SHEET_BONUS_KEYWORDS = ["summary", "overview", "bid", "quote", "price list"]
+_SHEET_PENALTY_KEYWORDS = ["detail", "unit list", "serial list", "inventory detail"]
+
+
+def _sheet_score_bonus(sheet_name: str) -> int:
+    name = sheet_name.lower()
+    if any(k in name for k in _SHEET_BONUS_KEYWORDS):
+        return 3
+    if any(k in name for k in _SHEET_PENALTY_KEYWORDS):
+        return -2
+    return 0
+
 
 # ── public API ────────────────────────────────────────────────────────────────
 
@@ -80,8 +95,8 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
     df = _load_dataframe(file_bytes, filename, MASTER_COLUMN_ALIASES)
     mapping = _map_columns(df, MASTER_COLUMN_ALIASES)
 
-    # Unit-level laptop/inventory files: group by (model, grade) → synthesise master items
-    if _is_unit_level(df) and "description" in mapping:
+    # Unit-level laptop/inventory files: group by (part_number_or_description, grade) → synthesise master items
+    if _is_unit_level(df) and ("part_number" in mapping or "description" in mapping):
         return _aggregate_unit_level(df, mapping)
 
     if "part_number" not in mapping:
@@ -129,26 +144,47 @@ def _is_unit_level(df: pd.DataFrame) -> bool:
 
 def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     """
-    Group a unit-level inventory file by (model_title, grade) and return one
-    master-item row per group with quantity = count of units.
+    Group a unit-level inventory file by (part_number_or_description, grade) and return
+    one master-item row per group with quantity = count of units.
+
+    When the file has an explicit part_number column (e.g. ThinkTLS drive Detail tab has
+    "Part Number"), that value becomes the group key and the stored pn — giving clean,
+    short part numbers like "AL14SEB120N-USED" instead of synthesising from the full
+    description.  Without an explicit pn column we fall back to grouping by description.
     """
-    desc_col = mapping["description"]
-    grade_col = mapping.get("category")  # "grade" / "final grade" maps to category
+    pn_col = mapping.get("part_number")
+    desc_col = mapping.get("description")
+    grade_col = mapping.get("category")  # "grade" / "final grade" / "condition" maps to category
     mfr_col = mapping.get("manufacturer")
     reserve_col = mapping.get("reserve_price")
 
+    # Need at least one of: part_number or description column to group on
+    if not pn_col and not desc_col:
+        raise ValueError("Unit-level file has no part number or description column to group on.")
+
     groups: dict[tuple, dict] = {}
     for _, row in df.iterrows():
-        model = normalize_description(str(row.get(desc_col, "")).strip())
-        if not model or model.lower() in ("nan", "none", ""):
-            continue
+        if pn_col:
+            pn_val = str(row.get(pn_col, "")).strip()
+            if not pn_val or pn_val.lower() in ("nan", "none", ""):
+                continue
+            label = pn_val
+        else:
+            label = normalize_description(str(row.get(desc_col, "")).strip())
+            if not label or label.lower() in ("nan", "none", ""):
+                continue
+
+        desc_val = normalize_description(str(row.get(desc_col, "")).strip()) if desc_col else label
+
         grade = str(row.get(grade_col, "")).strip() if grade_col else ""
         if grade.lower() in ("nan", "none", ""):
             grade = ""
-        key = (model, grade)
+
+        key = (label, grade)
         if key not in groups:
             groups[key] = {
-                "description": model,
+                "pn_label": label,
+                "description": desc_val,
                 "grade": grade,
                 "manufacturer": str(row.get(mfr_col, "")).strip() if mfr_col else "",
                 "reserve_price": _safe_float(row.get(reserve_col)) if reserve_col else None,
@@ -157,19 +193,17 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         groups[key]["count"] += 1
 
     rows = []
-    for row_idx, ((model, grade), g) in enumerate(groups.items(), start=1):
-        # Synthesise a part number from model + grade so each group is uniquely addressable
-        pn_raw = f"{model}-{grade}" if grade else model
-        pn_norm = normalize_part_number(pn_raw)
+    for row_idx, ((label, grade), g) in enumerate(groups.items(), start=1):
+        pn_raw = f"{label}-{grade}" if grade else label
         rows.append({
             "part_number": pn_raw,
-            "part_number_normalized": pn_norm,
+            "part_number_normalized": normalize_part_number(pn_raw),
             "description": g["description"],
             "manufacturer": g["manufacturer"],
             "quantity": g["count"],
             "reserve_price": g["reserve_price"],
             "category": g["grade"],
-            "row_number": row_idx,  # sequential — was hardcoded 1 (caused template to overwrite all rows at row 2)
+            "row_number": row_idx,
         })
 
     logger.info("[file_parser] unit-level aggregation: %d units → %d master items", sum(g["count"] for g in groups.values()), len(rows))
@@ -296,8 +330,25 @@ def _load_dataframe(file_bytes: bytes, filename: str, hint_aliases: dict) -> pd.
             "Supported formats: Excel (.xlsx/.xls), CSV, PDF, Word (.docx/.doc)."
         )
 
-    # Return the candidate with the highest column-match score
-    return max(candidates, key=lambda df: _score_df(df, hint_aliases))
+    best = max(candidates, key=lambda df: _score_df(df, hint_aliases) + df.attrs.get("_sheet_bonus", 0))
+
+    # For multi-sheet Excel files: merge other sheets that share the SAME column mapping
+    # (e.g., "Laptop Bid Lot" + "Desktop Bid Lot" have identical structures → combine)
+    if ext in ("xlsx", "xls"):
+        best_map = _map_columns(best, hint_aliases)
+        same_struct = [
+            df for df in candidates
+            if df is not best
+            and _map_columns(df, hint_aliases) == best_map
+            and df.attrs.get("_sheet_bonus", 0) == best.attrs.get("_sheet_bonus", 0)
+        ]
+        if same_struct:
+            _bonus = best.attrs.get("_sheet_bonus", 0)
+            best = pd.concat([best] + same_struct, ignore_index=True)
+            best.attrs["_sheet_bonus"] = _bonus
+            logger.info("[file_parser] merged %d same-structure sheets", 1 + len(same_struct))
+
+    return best
 
 
 def _clean(df: pd.DataFrame) -> pd.DataFrame:
@@ -312,10 +363,12 @@ def _candidates_excel(buf: io.BytesIO, ext: str) -> list[pd.DataFrame]:
         engine = "openpyxl" if ext == "xlsx" else None
         xf = pd.ExcelFile(buf, engine=engine)
         for sheet in xf.sheet_names:
+            bonus = _sheet_score_bonus(sheet)
             for hdr in range(MAX_HEADER_SCAN):
                 try:
                     df = _clean(xf.parse(sheet, header=hdr))
                     if len(df) > 0 and len(df.columns) > 1:
+                        df.attrs["_sheet_bonus"] = bonus
                         out.append(df)
                 except Exception:
                     pass
