@@ -66,6 +66,12 @@ BUYER_COLUMN_ALIASES = {
         "unit price ($)", "price ($)", "unit price(usd)", "unit price (usd)",
     ],
     "quantity": ["quantity", "qty", "units", "unit count"],
+    # Grade/condition column — used when buyer submits a unit-level file (laptops, servers)
+    # so we can aggregate by (model, grade) to match master items.
+    "category": [
+        "grade", "final grade", "condition", "condition grade",
+        "grading description", "grading notes", "grade description",
+    ],
 }
 
 FUZZY_THRESHOLD = 72   # minimum rapidfuzz score for a column name to match
@@ -217,13 +223,18 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
     if "part_number" not in mapping:
         raise ValueError(
             "Could not find a part number column. "
-            "Expected headers like: 'Part Number', 'SKU', 'Part#', 'P/N'."
+            "Expected headers like: 'Part Number', 'SKU', 'Part#', 'P/N', 'Model'."
         )
     if "unit_price" not in mapping:
         raise ValueError(
             "Could not find a price column. "
             "Expected headers like: 'Unit Price', 'Price', 'Bid Price', 'Offer', 'Cost'."
         )
+
+    # Unit-level buyer files (ThinkTLS laptops, servers, desktops): one row per physical unit.
+    # Group by (model, grade) — same synthesis as admin upload — so bid lines match master items.
+    if _is_unit_level(df):
+        return _aggregate_buyer_unit_level(df, mapping)
 
     rows = []
     for idx, row in df.iterrows():
@@ -260,6 +271,64 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
             consolidated[key] = row.copy()
 
     return list(consolidated.values())
+
+
+def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
+    """
+    For unit-level buyer files (ThinkTLS laptops, servers, desktops) where the buyer fills
+    an Offer price for each individual unit row.
+
+    Groups by (model, grade) — mirroring how parse_master_file creates master items — so the
+    resulting bid lines have part numbers that match master items exactly.
+    Picks the lowest (most competitive) offered price per group.
+    """
+    pn_col = mapping["part_number"]
+    price_col = mapping["unit_price"]
+    desc_col = mapping.get("description")
+    grade_col = mapping.get("category")
+
+    groups: dict[tuple, dict] = {}
+    for _, row in df.iterrows():
+        label = str(row.get(pn_col, "")).strip()
+        if not label or label.lower() in ("nan", "none", ""):
+            continue
+        grade = str(row.get(grade_col, "") if grade_col else "").strip()
+        if grade.lower() in ("nan", "none", ""):
+            grade = ""
+        key = (label, grade)
+        price = _safe_float(row.get(price_col))
+        desc = normalize_description(str(row.get(desc_col, "") if desc_col else "").strip())
+
+        if key not in groups:
+            groups[key] = {"count": 0, "min_price": None, "description": desc or label}
+        groups[key]["count"] += 1
+        if price is not None:
+            if groups[key]["min_price"] is None or price < groups[key]["min_price"]:
+                groups[key]["min_price"] = price
+
+    rows = []
+    for row_idx, ((label, grade), g) in enumerate(groups.items(), start=1):
+        if g["min_price"] is None:
+            continue  # buyer left this group blank — skip
+        pn_raw = f"{label}-{grade}" if grade else label
+        pn_norm = normalize_part_number(pn_raw)
+        qty = g["count"]
+        price = g["min_price"]
+        rows.append({
+            "raw_part_number": pn_raw,
+            "normalized_part_number": pn_norm,
+            "description": g["description"],
+            "unit_price": price,
+            "quantity": qty,
+            "total_price": round(price * qty, 4),
+            "row_number": row_idx,
+        })
+
+    logger.info(
+        "[file_parser] buyer unit-level aggregation: %d units → %d priced bid groups",
+        sum(g["count"] for g in groups.values()), len(rows),
+    )
+    return rows
 
 
 # ── internal helpers ──────────────────────────────────────────────────────────
