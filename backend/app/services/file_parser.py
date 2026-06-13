@@ -2,6 +2,7 @@
 Parse master files and buyer bid files.
 Supports: .xlsx, .xls, .csv, .pdf, .docx, .doc
 
+NO row limits — files of any size are parsed in full.
 Auto-decodes column names via alias matching + rapidfuzz fuzzy fallback.
 Tries every sheet (Excel) and every header row (all formats) so files
 that don't match the standard template still parse correctly.
@@ -149,7 +150,12 @@ BUYER_COLUMN_ALIASES = {
 }
 
 FUZZY_THRESHOLD = 72   # minimum rapidfuzz score for a column name to match
-MAX_HEADER_SCAN = 12   # try up to this many rows as the header — covers files with title/notes blocks
+
+# How many leading rows to try as the header row.
+# This is NOT a data row limit — all rows are always parsed regardless of file size.
+# 15 covers files that have a title block, logo row, instruction rows, or blank rows
+# before the actual column headers begin.
+_HEADER_ROW_SCAN_DEPTH = 15
 
 # Columns that signal a unit-level (one-row-per-unit) inventory file
 _SERIAL_ALIASES = [
@@ -528,7 +534,7 @@ def _candidates_excel(buf: io.BytesIO, ext: str) -> list[pd.DataFrame]:
         xf = pd.ExcelFile(buf, engine=engine)
         for sheet in xf.sheet_names:
             bonus = _sheet_score_bonus(sheet)
-            for hdr in range(MAX_HEADER_SCAN):
+            for hdr in range(_HEADER_ROW_SCAN_DEPTH):
                 try:
                     df = _clean(xf.parse(sheet, header=hdr))
                     if len(df) > 0 and len(df.columns) > 1:
@@ -595,7 +601,7 @@ def _candidates_pivot_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> li
                 if len(block_cols) < 2:
                     continue
                 block = raw[block_cols].copy()
-                for hdr in range(min(MAX_HEADER_SCAN, len(block))):
+                for hdr in range(min(_HEADER_ROW_SCAN_DEPTH, len(block))):
                     try:
                         header_row = block.iloc[hdr].tolist()
                         data = block.iloc[hdr + 1:].copy()
@@ -615,7 +621,7 @@ def _candidates_pivot_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> li
 def _candidates_csv(file_bytes: bytes) -> list[pd.DataFrame]:
     out = []
     for encoding in ("utf-8", "latin-1", "cp1252"):
-        for hdr in range(MAX_HEADER_SCAN):
+        for hdr in range(_HEADER_ROW_SCAN_DEPTH):
             try:
                 df = _clean(pd.read_csv(
                     io.BytesIO(file_bytes),

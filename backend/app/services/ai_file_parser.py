@@ -54,6 +54,9 @@ def ai_parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
     Load the file, ask the configured AI to identify columns, then parse into bid rows.
     Returns same shape as parse_buyer_file().
     Raises ValueError on unrecoverable failure.
+
+    NO row limit — ALL rows in the file are parsed after column detection.
+    The AI only receives a small sample (20 rows) for column identification, not for data.
     """
     from app.core.config import settings
     from app.services.file_parser import (
@@ -74,7 +77,8 @@ def ai_parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
         raise ValueError(f"Cannot read file '{filename}': {e}")
 
     columns = list(df.columns)
-    sample_csv = df.head(8).to_csv(index=False)
+    # Send a sample to the AI for column detection only — actual parsing uses ALL rows.
+    sample_csv = df.head(20).to_csv(index=False)
 
     prompt = (
         "You are a file-parsing assistant for an IT hardware procurement platform. "
