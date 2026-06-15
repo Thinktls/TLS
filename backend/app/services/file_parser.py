@@ -337,6 +337,10 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
     if _is_unit_level(df):
         return _aggregate_buyer_unit_level(df, mapping)
 
+    # Columns not covered by standard mapping — preserved so buyers see all their data
+    mapped_cols = set(mapping.values())
+    extra_col_names = [c for c in df.columns if c not in mapped_cols]
+
     rows = []
     for idx, row in df.iterrows():
         raw_pn = str(row.get(mapping["part_number"], "")).strip()
@@ -344,14 +348,21 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
             continue
         unit_price = _safe_float(row.get(mapping["unit_price"]))
         qty = _safe_int(row.get(mapping.get("quantity", ""), 1))
+        extra = {
+            col: str(row.get(col, "")).strip()
+            for col in extra_col_names
+            if str(row.get(col, "")).strip() not in ("", "nan", "None")
+        }
         rows.append({
             "raw_part_number": raw_pn,
             "normalized_part_number": normalize_part_number(raw_pn),
             "description": normalize_description(str(row.get(mapping.get("description", ""), ""))),
+            "category": str(row.get(mapping.get("category", ""), "")).strip() or None,
             "unit_price": unit_price,
             "quantity": qty,
             "total_price": round(unit_price * qty, 4) if unit_price else None,
             "row_number": int(idx) + 2,
+            "extra_columns": extra if extra else None,
         })
 
     # Consolidate duplicate part numbers: sum quantities, keep the lowest (most competitive) price
@@ -419,10 +430,12 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             "raw_part_number": pn_raw,
             "normalized_part_number": pn_norm,
             "description": g["description"],
+            "category": grade or None,
             "unit_price": price,
             "quantity": qty,
             "total_price": round(price * qty, 4),
             "row_number": row_idx,
+            "extra_columns": None,
         })
 
     logger.info(
@@ -500,17 +513,38 @@ def _load_dataframe(file_bytes: bytes, filename: str, hint_aliases: dict) -> pd.
             "Supported formats: Excel (.xlsx/.xls), CSV, PDF, Word (.docx/.doc)."
         )
 
+    # For Excel: deduplicate candidates to ONE best parse per sheet before selection.
+    # Without this, the same sheet appears up to _HEADER_ROW_SCAN_DEPTH times (one per
+    # header-row attempt) and the merge step would concat the same data many times.
+    if ext in ("xlsx", "xls"):
+        per_sheet: dict[str, pd.DataFrame] = {}
+        for df in candidates:
+            sheet = df.attrs.get("_sheet_name", "__csv__")
+            score = _score_df(df, hint_aliases) + df.attrs.get("_sheet_bonus", 0)
+            prev = per_sheet.get(sheet)
+            if prev is None:
+                per_sheet[sheet] = df
+            else:
+                prev_score = _score_df(prev, hint_aliases) + prev.attrs.get("_sheet_bonus", 0)
+                if score > prev_score:
+                    per_sheet[sheet] = df
+        candidates = list(per_sheet.values())
+        logger.info("[file_parser] Excel sheets found: %s", list(per_sheet.keys()))
+
     best = max(candidates, key=lambda df: _score_df(df, hint_aliases) + df.attrs.get("_sheet_bonus", 0))
 
-    # For multi-sheet Excel files: merge other sheets that share the SAME column mapping
-    # (e.g., "Laptop Bid Lot" + "Desktop Bid Lot" have identical structures → combine)
+    # For multi-sheet Excel files: merge sheets that have the same DETECTABLE FIELDS
+    # (e.g., "Laptop Bid Lot" + "Desktop Bid Lot" with identical structures).
+    # Compare by detected field keys, not raw column names — so "Part #" and "Part Number"
+    # on different sheets both detected as part_number are correctly merged.
     if ext in ("xlsx", "xls"):
-        best_map = _map_columns(best, hint_aliases)
+        best_fields = set(_map_columns(best, hint_aliases).keys())
+        best_bonus  = best.attrs.get("_sheet_bonus", 0)
         same_struct = [
             df for df in candidates
             if df is not best
-            and _map_columns(df, hint_aliases) == best_map
-            and df.attrs.get("_sheet_bonus", 0) == best.attrs.get("_sheet_bonus", 0)
+            and set(_map_columns(df, hint_aliases).keys()) == best_fields
+            and df.attrs.get("_sheet_bonus", 0) == best_bonus
         ]
         if same_struct:
             _bonus = best.attrs.get("_sheet_bonus", 0)
@@ -539,6 +573,7 @@ def _candidates_excel(buf: io.BytesIO, ext: str) -> list[pd.DataFrame]:
                     df = _clean(xf.parse(sheet, header=hdr))
                     if len(df) > 0 and len(df.columns) > 1:
                         df.attrs["_sheet_bonus"] = bonus
+                        df.attrs["_sheet_name"] = sheet  # used for deduplication
                         out.append(df)
                 except Exception:
                     pass

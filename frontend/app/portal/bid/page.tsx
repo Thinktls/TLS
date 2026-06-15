@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
+import { fmtDatetime } from "@/lib/format";
 
 interface Round {
   id: number; name: string; commodity: string;
@@ -14,6 +15,8 @@ interface Round {
 interface PreviewRow {
   raw_part_number: string; description: string;
   unit_price: number | null; quantity: number;
+  category?: string | null;
+  extra_columns?: Record<string, string> | null;
 }
 
 interface Preview {
@@ -176,7 +179,7 @@ function SubmitBidInner() {
                       {round.deadline && (
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <span style={{ fontSize: "0.75rem", color: "#fbbf24", fontWeight: 500 }}>Deadline: {new Date(round.deadline).toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" })} EST</span>
+                          <span style={{ fontSize: "0.75rem", color: "#fbbf24", fontWeight: 500 }}>Deadline: {fmtDatetime(round.deadline)}</span>
                         </div>
                       )}
                       {round.customer && <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>Customer: {round.customer}</p>}
@@ -271,32 +274,52 @@ function SubmitBidInner() {
                         ← Re-upload
                       </button>
                     </div>
-                    <div style={{ overflowX: "auto", maxHeight: "340px", overflowY: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
-                        <thead>
-                          <tr style={{ position: "sticky", top: 0, background: "var(--bg-2)", zIndex: 1 }}>
-                            {["Part Number", "Description", "Unit Price", "Qty"].map(h => (
-                              <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: "var(--text-4)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {preview.rows.slice(0, 50).map((row, i) => (
-                            <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                              <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem" }}>{row.raw_part_number}</td>
-                              <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description || "—"}</td>
-                              <td style={{ padding: "7px 12px", color: row.unit_price ? "#34d399" : "var(--text-4)" }}>
-                                {row.unit_price != null ? `$${row.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-                              </td>
-                              <td style={{ padding: "7px 12px", color: "var(--text-2)" }}>{row.quantity}</td>
-                            </tr>
-                          ))}
-                          {preview.rows.length > 50 && (
-                            <tr><td colSpan={4} style={{ padding: "10px 12px", color: "var(--text-4)", fontSize: "0.75rem", textAlign: "center" }}>…and {preview.rows.length - 50} more lines</td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    {(() => {
+                      // Build dynamic column list from actual data
+                      const hasCategory = preview.rows.some(r => r.category);
+                      const extraKeys = Array.from(new Set(
+                        preview.rows.flatMap(r => Object.keys(r.extra_columns ?? {}))
+                      ));
+                      const thStyle: React.CSSProperties = { padding: "8px 12px", textAlign: "left", fontWeight: 700, color: "var(--text-4)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" };
+                      const colCount = 4 + (hasCategory ? 1 : 0) + extraKeys.length;
+                      return (
+                        <div style={{ overflowX: "auto", maxHeight: "340px", overflowY: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                            <thead>
+                              <tr style={{ position: "sticky", top: 0, background: "var(--bg-2)", zIndex: 1 }}>
+                                <th style={thStyle}>Part Number</th>
+                                <th style={thStyle}>Description</th>
+                                {hasCategory && <th style={thStyle}>Grade</th>}
+                                <th style={thStyle}>Unit Price</th>
+                                <th style={thStyle}>Qty</th>
+                                {extraKeys.map(k => <th key={k} style={thStyle}>{k}</th>)}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {preview.rows.slice(0, 50).map((row, i) => (
+                                <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", whiteSpace: "nowrap" }}>{row.raw_part_number}</td>
+                                  <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description || "—"}</td>
+                                  {hasCategory && <td style={{ padding: "7px 12px", color: "var(--text-3)", whiteSpace: "nowrap" }}>{row.category || "—"}</td>}
+                                  <td style={{ padding: "7px 12px", color: row.unit_price ? "#34d399" : "var(--text-4)", whiteSpace: "nowrap" }}>
+                                    {row.unit_price != null ? `$${row.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                                  </td>
+                                  <td style={{ padding: "7px 12px", color: "var(--text-2)" }}>{row.quantity}</td>
+                                  {extraKeys.map(k => (
+                                    <td key={k} style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {row.extra_columns?.[k] || "—"}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                              {preview.rows.length > 50 && (
+                                <tr><td colSpan={colCount} style={{ padding: "10px 12px", color: "var(--text-4)", fontSize: "0.75rem", textAlign: "center" }}>…and {preview.rows.length - 50} more lines</td></tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
                     <div style={{ padding: "16px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "center" }}>
                       <button onClick={confirmSubmit} disabled={submitting} className="btn-brand" style={{ padding: "10px 28px", fontSize: "0.9rem", fontWeight: 700 }}>
                         {submitting ? "Submitting…" : `Confirm & Submit ${preview.total_lines} lines`}
