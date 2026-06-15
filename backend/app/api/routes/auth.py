@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 import time
 from collections import defaultdict
@@ -32,11 +33,13 @@ def _check_rate_limit(client_ip: str):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+async def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(client_ip)
     user = db.query(User).filter(User.email == req.email).first()
-    if not user or not verify_password(req.password, user.hashed_password):
+    # Run bcrypt off the event loop — it's CPU-bound and would block all other requests
+    password_ok = await asyncio.to_thread(verify_password, req.password, user.hashed_password) if user else False
+    if not user or not password_ok:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is disabled")

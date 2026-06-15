@@ -23,10 +23,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [warmState, setWarmState] = useState<"warming" | "ready" | "slow">("warming");
 
-  // Pre-warm Render free tier (sleeps after 15 min of inactivity)
   useEffect(() => {
-    api.get("/auth/me").catch(() => {});
+    const slowTimer = setTimeout(() => setWarmState("slow"), 4000);
+
+    // /auth/me wakes Render and tells us when the server is actually ready
+    api.get("/auth/me").catch(() => {}).finally(() => {
+      clearTimeout(slowTimer);
+      setWarmState("ready");
+    });
+
+    return () => clearTimeout(slowTimer);
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -102,6 +110,10 @@ export default function LoginPage() {
           box-shadow: 0 4px 20px rgba(61,129,227,0.28);
         }
         .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
       `}</style>
 
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0a0a0f", overflow: "hidden", position: "relative" }}>
@@ -192,6 +204,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    placeholder="••••••••"
                     className="glass-input"
                   />
                 </div>
@@ -210,8 +223,22 @@ export default function LoginPage() {
                 )}
 
                 <button type="submit" disabled={loading} className="submit-btn">
-                  {loading ? "Signing in..." : "Sign In →"}
+                  {loading ? "Signing in…" : "Sign In →"}
                 </button>
+
+                {warmState === "slow" && !loading && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: "8px",
+                    padding: "8px 12px",
+                    background: "rgba(251,191,36,0.08)",
+                    border: "1px solid rgba(251,191,36,0.2)",
+                    borderRadius: "10px",
+                    fontSize: "0.75rem", color: "#fbbf24",
+                  }}>
+                    <span style={{ display: "inline-block", width: "7px", height: "7px", borderRadius: "50%", background: "#fbbf24", animation: "pulse 1.4s infinite" }} />
+                    Server is starting up — sign in will work in a few seconds
+                  </div>
+                )}
               </form>
 
               <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid rgba(255,255,255,0.07)", textAlign: "center", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
