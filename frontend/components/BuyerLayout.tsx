@@ -5,6 +5,7 @@ import { logout, getFullName } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeProvider";
+import ChatWidget from "@/components/ChatWidget";
 
 /* ── Auth guard ──────────────────────────────────────────────── */
 function useAuthGuard() {
@@ -158,6 +159,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
           {children}
         </div>
       </div>
+      <ChatWidget role="buyer" />
     </div>
   );
 }

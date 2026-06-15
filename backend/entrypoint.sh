@@ -23,8 +23,6 @@ else:
 "
 
 echo "[entrypoint] Starting uvicorn on port ${PORT:-8000}..."
-# --limit-concurrency: no cap on concurrent requests
 # --timeout-keep-alive 120: allow large file uploads up to 2 min without disconnect
 exec uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}" \
-  --timeout-keep-alive 120 \
-  --limit-max-requests 0
+  --timeout-keep-alive 120

@@ -11,6 +11,7 @@ from app.api.routes.deals import router as deals_router
 from app.api.routes.nlquery import router as nlquery_router
 from app.api.routes.inbound_email import router as inbound_email_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.chat import router as chat_router
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 
@@ -52,6 +53,7 @@ app.include_router(deals_router, prefix="/api")
 app.include_router(nlquery_router, prefix="/api")
 app.include_router(inbound_email_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 
 
 @app.get("/health")

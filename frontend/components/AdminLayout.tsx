@@ -5,6 +5,7 @@ import { logout, getFullName } from "@/lib/auth";
 import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeProvider";
+import ChatWidget from "@/components/ChatWidget";
 
 /* ── Auth guard ──────────────────────────────────────────────── */
 function useAuthGuard() {
@@ -322,6 +323,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </div>
       </div>
+      <ChatWidget role="admin" />
     </div>
   );
 }
