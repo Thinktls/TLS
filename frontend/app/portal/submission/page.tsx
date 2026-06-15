@@ -5,6 +5,7 @@ import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import Link from "next/link";
+import { fmtDatetime } from "@/lib/format";
 
 interface BidFileMeta {
   id: number; filename: string; uploaded_at: string | null;
@@ -116,7 +117,7 @@ function SubmissionInner() {
             {/* File info */}
             <div style={{ marginBottom: "16px", fontSize: "0.75rem", color: "var(--text-4)" }}>
               {bidFile.filename}
-              {bidFile.uploaded_at && ` · Uploaded ${new Date(bidFile.uploaded_at).toLocaleString()}`}
+              {bidFile.uploaded_at && ` · Uploaded ${fmtDatetime(bidFile.uploaded_at)}`}
             </div>
 
             {/* Stats row */}

@@ -5,6 +5,7 @@ import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import Link from "next/link";
+import { fmtDatetime } from "@/lib/format";
 
 interface BuyerInfo {
   id: number;
@@ -161,7 +162,7 @@ export default function BuyerRoundBidsPage() {
                   <p style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-1)", margin: "0 0 3px", fontFamily: "monospace" }}>{bidFile.filename}</p>
                   <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>
                     {bidFile.lines_parsed} lines parsed
-                    {bidFile.uploaded_at && ` · Uploaded ${new Date(bidFile.uploaded_at).toLocaleString()}`}
+                    {bidFile.uploaded_at && ` · Uploaded ${fmtDatetime(bidFile.uploaded_at)}`}
                   </p>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
+import { fmtDate } from "@/lib/format";
 
 interface BuyerProfile {
   id: number;
@@ -29,8 +30,7 @@ const stat = (label: string, value: string | number, color = "white"): [string, 
   [label, value, color];
 
 function fmt(dt: string | null): string {
-  if (!dt) return "Never";
-  return new Date(dt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return fmtDate(dt) === "—" ? "Never" : fmtDate(dt);
 }
 
 export default function BuyerProfilePage() {

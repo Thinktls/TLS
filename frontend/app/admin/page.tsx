@@ -4,6 +4,7 @@ import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
 import { getFullName } from "@/lib/auth";
+import { fmtDatetimeShort } from "@/lib/format";
 
 interface Round {
   id: number; name: string; commodity: string; status: string;
@@ -182,7 +183,7 @@ export default function AdminDashboard() {
                           <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 2px", fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
                           <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0 }}>
                             {r.total_line_items.toLocaleString()} items
-                            {r.submission_deadline && ` · Due ${new Date(r.submission_deadline).toLocaleDateString()}`}
+                            {r.submission_deadline && ` · Due ${fmtDatetimeShort(r.submission_deadline)}`}
                           </p>
                         </div>
                         <span className={`badge ${meta.badge}`}>{r.status}</span>

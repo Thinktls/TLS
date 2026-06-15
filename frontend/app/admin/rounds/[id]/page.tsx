@@ -5,6 +5,7 @@ import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import Link from "next/link";
+import { fmtDatetime, fmtDatetimeShort } from "@/lib/format";
 
 interface Round {
   id: number; name: string; commodity: string; customer: string | null;
@@ -362,7 +363,7 @@ export default function RoundDetail() {
                 <span className={`badge ${STATUS_BADGE[round.status] || "badge-draft"}`}>{round.status}</span>
                 <span style={{ fontSize: "0.75rem", color: "var(--text-4)", textTransform: "capitalize" }}>{round.commodity}</span>
                 {round.customer && <><span style={{ color: "var(--border-mid)" }}>·</span><span style={{ fontSize: "0.75rem", color: "var(--text-4)" }}>{round.customer}</span></>}
-                {round.submission_deadline && <><span style={{ color: "var(--border-mid)" }}>·</span><span style={{ fontSize: "0.75rem", color: "#fbbf24" }}>Due {new Date(round.submission_deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span></>}
+                {round.submission_deadline && <><span style={{ color: "var(--border-mid)" }}>·</span><span style={{ fontSize: "0.75rem", color: "#fbbf24" }}>Due {fmtDatetimeShort(round.submission_deadline)}</span></>}
                 <span style={{ fontSize: "0.68rem", color: "var(--text-4)", fontFamily: "monospace" }}>#{round.id}</span>
               </div>
             </div>
@@ -649,7 +650,7 @@ export default function RoundDetail() {
                       <span style={{ fontSize: "0.73rem", color: "var(--text-4)", fontFamily: "monospace" }}>{f.filename}</span>
                       <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{f.lines_parsed} lines</span>
                       {f.file_size_bytes && <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{(f.file_size_bytes / 1024).toFixed(1)} KB</span>}
-                      {f.uploaded_at && <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{new Date(f.uploaded_at).toLocaleString()}</span>}
+                      {f.uploaded_at && <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{fmtDatetime(f.uploaded_at)}</span>}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>

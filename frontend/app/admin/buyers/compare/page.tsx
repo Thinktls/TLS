@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
+import { fmtDate } from "@/lib/format";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,10 +50,6 @@ function fmt(n: number) {
   return `$${n.toFixed(2)}`;
 }
 
-function fmtDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "2-digit" });
-}
 
 function Bar({ pct, color = "#3D81E3", height = 6 }: { pct: number; color?: string; height?: number }) {
   return (

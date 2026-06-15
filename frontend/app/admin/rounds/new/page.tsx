@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
+import { fmtDatetime } from "@/lib/format";
 
 const COMMODITIES = [
   "laptops",
@@ -519,7 +520,7 @@ export default function NewRound() {
                 { label: "Round Name", value: roundName },
                 { label: "Commodity", value: form.commodity === CUSTOM_VALUE ? customCommodity.trim() || "—" : form.commodity },
                 { label: "Customer", value: form.customer || "—" },
-                { label: "Deadline", value: form.submission_deadline ? new Date(form.submission_deadline).toLocaleString() : "None" },
+                { label: "Deadline", value: form.submission_deadline ? fmtDatetime(form.submission_deadline) : "None" },
                 { label: "Master Items", value: masterCount != null ? `${masterCount.toLocaleString()} line items` : "—" },
                 { label: "Buyers Assigned", value: assignedBuyerIds.length > 0 ? `${assignedBuyerIds.length} buyer${assignedBuyerIds.length > 1 ? "s" : ""}` : "None (add later)" },
               ].map(({ label, value }) => (
