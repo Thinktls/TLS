@@ -47,7 +47,7 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
         if not master:
             continue
 
-        # Anomaly detection
+        # Anomaly detection — flag outlier bids and route to exception queue
         prices = [l.unit_price for l in lines if l.unit_price]
         if len(prices) >= 3:
             mean_price = statistics.mean(prices)
@@ -55,21 +55,26 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
             for line in lines:
                 z = abs(line.unit_price - mean_price) / stdev if stdev > 0 else 0
                 line.z_score = round(z, 4)
-                line.is_anomaly = (
-                    z > 2.5
-                    or line.unit_price > mean_price * 10
-                    or line.unit_price < mean_price * 0.2
-                )
+                if z > 2.5 or line.unit_price > mean_price * 10 or line.unit_price < mean_price * 0.2:
+                    line.is_anomaly = True
+                    line.match_status = "exception"
+                    line.exception_type = "price_anomaly"
+                    if line.unit_price > mean_price * 10:
+                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {line.unit_price/mean_price:.0f}x the median ${mean_price:.2f} — possible data entry error"
+                    elif line.unit_price < mean_price * 0.2:
+                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {(1-line.unit_price/mean_price)*100:.0f}% below the median ${mean_price:.2f} — possible magnitude error"
+                    else:
+                        line.exception_notes = f"Bid ${line.unit_price:.2f} has z-score {z:.2f} (median ${mean_price:.2f}) — statistical outlier"
 
-        # Filter out below-reserve bids
-        valid_lines = lines
+        # Filter out below-reserve bids and anomalies from valid candidates
+        valid_lines = [l for l in lines if not l.is_anomaly]
         if master.reserve_price:
-            below_reserve = [l for l in lines if l.unit_price < master.reserve_price]
+            below_reserve = [l for l in valid_lines if l.unit_price < master.reserve_price]
             for l in below_reserve:
                 l.match_status = "exception"
                 l.exception_type = "below_reserve"
                 l.exception_notes = f"Bid ${l.unit_price:.2f} is below reserve ${master.reserve_price:.2f}"
-            valid_lines = [l for l in lines if l.unit_price >= master.reserve_price]
+            valid_lines = [l for l in valid_lines if l.unit_price >= master.reserve_price]
 
         if not valid_lines:
             continue

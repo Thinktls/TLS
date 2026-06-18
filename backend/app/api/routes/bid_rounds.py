@@ -34,6 +34,27 @@ router = APIRouter(prefix="/rounds", tags=["bid_rounds"])
 UPLOAD_DIR = "/tmp/thinktls_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+_ALLOWED_EXTENSIONS = {".xlsx", ".xls", ".csv"}
+_MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
+# xlsx/xls are ZIP-based (PK magic); csv has no magic bytes so we only check extension
+_XLSX_MAGIC = b"PK\x03\x04"
+_XLS_MAGIC = b"\xd0\xcf\x11\xe0"
+
+
+def _validate_upload(content: bytes, filename: str) -> None:
+    """Raise HTTPException if the upload is not a valid bid file."""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"Unsupported file type '{ext}'. Allowed: .xlsx, .xls, .csv")
+    if len(content) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "File exceeds 100 MB limit")
+    if len(content) == 0:
+        raise HTTPException(400, "Uploaded file is empty")
+    if ext == ".xlsx" and not content.startswith(_XLSX_MAGIC):
+        raise HTTPException(400, "File does not appear to be a valid Excel (.xlsx) file")
+    if ext == ".xls" and not content.startswith(_XLS_MAGIC):
+        raise HTTPException(400, "File does not appear to be a valid Excel (.xls) file")
+
 
 class RoundCreate(BaseModel):
     name: str
@@ -215,6 +236,7 @@ async def upload_master_file(round_id: int, file: UploadFile = File(...), db: Se
         raise HTTPException(404, "Round not found")
 
     content = await file.read()
+    _validate_upload(content, file.filename)
     try:
         rows = parse_master_file(content, file.filename)
     except ValueError as e:

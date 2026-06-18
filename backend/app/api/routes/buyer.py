@@ -15,6 +15,7 @@ Buyer-facing routes:
 import os
 import mimetypes
 from datetime import datetime, timezone
+from app.api.routes.bid_rounds import _validate_upload
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -133,6 +134,7 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
     if not assigned:
         raise HTTPException(403, "You are not assigned to this round")
     content = await file.read()
+    _validate_upload(content, file.filename)
     try:
         rows = parse_buyer_file(content, file.filename)
     except ValueError as e:
@@ -174,6 +176,7 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
         raise HTTPException(400, "Submission deadline has passed")
 
     content = await file.read()
+    _validate_upload(content, file.filename)
     file_size = len(content)
 
     # Resubmission: remove previous PENDING bid lines so the matcher only sees
