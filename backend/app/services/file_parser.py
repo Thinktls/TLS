@@ -249,15 +249,61 @@ def _is_unit_level(df: pd.DataFrame) -> bool:
     return _find_column(df, _SERIAL_ALIASES) is not None
 
 
+def _all_identifier_columns(df: pd.DataFrame) -> set[str]:
+    """Return every column that is a unique-per-unit identifier (Serial, UID, asset tag, ...).
+    A file can have more than one such column (e.g. both "UID" and "Serial") — all must be
+    excluded from spec fingerprinting, since by definition every value differs per row and
+    would otherwise make every unit look like a distinct configuration."""
+    cols_lower = {c.lower().strip(): c for c in df.columns}
+    return {cols_lower[alias] for alias in _SERIAL_ALIASES if alias in cols_lower}
+
+
+# Whitelist, not blacklist: columns like "Networking Card" or "Storage Controller" look like
+# specs but are free-text device-enumeration dumps with an embedded MAC address or revision
+# string per unit — including them would make every unit look unique even when the real specs
+# (CPU, memory) are identical. Only match columns that are unambiguously a hardware spec.
+_SPEC_FINGERPRINT_KEYWORDS = ["cpu", "processor", "memory", "ram", "drive bay"]
+
+
+def _spec_columns(df: pd.DataFrame, exclude_cols: set[str]) -> list[str]:
+    """Columns that materially affect a unit's configuration/value — CPU and memory specs.
+    Deliberately excludes networking/storage-controller columns (see module note above)."""
+    return [
+        c for c in df.columns
+        if c not in exclude_cols and any(k in c.lower() for k in _SPEC_FINGERPRINT_KEYWORDS)
+    ]
+
+
+def _spec_fingerprint(row, spec_cols: list[str]) -> str:
+    """Build a fingerprint string from hardware-spec columns (CPU, memory, storage, etc.)
+    so units that genuinely differ in configuration are never silently merged."""
+    parts = []
+    for c in spec_cols:
+        v = str(row.get(c, "")).strip()
+        if v and v.lower() not in ("nan", "none"):
+            parts.append(f"{c}:{v}")
+    return "|".join(parts)
+
+
 def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     """
-    Group a unit-level inventory file by (part_number_or_description, grade) and return
-    one master-item row per group with quantity = count of units.
+    Group a unit-level inventory file by part_number_or_description and return one
+    master-item row per group with quantity = count of units.
 
     When the file has an explicit part_number column (e.g. ThinkTLS drive Detail tab has
     "Part Number"), that value becomes the group key and the stored pn — giving clean,
     short part numbers like "AL14SEB120N-USED" instead of synthesising from the full
     description.  Without an explicit pn column we fall back to grouping by description.
+
+    Grading-aware grouping: when the file has a grade/condition column (laptops, graded
+    drives), units are grouped by (part_number, grade) only — this matches standard ITAD
+    practice where a condition grade absorbs minor spec variance within a lot.
+
+    When there is NO grade column (e.g. servers, sold by exact configuration rather than
+    cosmetic condition), units are additionally grouped by a full hardware-spec fingerprint
+    (every other populated column — CPU, memory, storage, etc.) so two units sharing a Model
+    name but differing in CPU or RAM are never merged into one biddable line. Real ThinkTLS
+    server files routinely have the same Model with 4+ distinct CPU/RAM configurations.
     """
     pn_col = mapping.get("part_number")
     desc_col = mapping.get("description")
@@ -268,6 +314,10 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     # Need at least one of: part_number or description column to group on
     if not pn_col and not desc_col:
         raise ValueError("Unit-level file has no part number or description column to group on.")
+
+    use_spec_fingerprint = grade_col is None
+    exclude_cols = {c for c in (pn_col, desc_col, grade_col, mfr_col, reserve_col) if c} | _all_identifier_columns(df)
+    spec_cols = _spec_columns(df, exclude_cols) if use_spec_fingerprint else []
 
     groups: dict[tuple, dict] = {}
     for _, row in df.iterrows():
@@ -287,7 +337,9 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         if grade.lower() in ("nan", "none", ""):
             grade = ""
 
-        key = (label, grade)
+        fingerprint = _spec_fingerprint(row, spec_cols) if use_spec_fingerprint else ""
+
+        key = (label, grade, fingerprint)
         if key not in groups:
             groups[key] = {
                 "pn_label": label,
@@ -299,9 +351,19 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             }
         groups[key]["count"] += 1
 
+    # When the same (label, grade) maps to more than one distinct spec fingerprint,
+    # suffix the part number so each configuration stays uniquely identifiable.
+    variant_counts: dict[tuple, int] = {}
+    for (label, grade, _fp) in groups:
+        variant_counts[(label, grade)] = variant_counts.get((label, grade), 0) + 1
+
     rows = []
-    for row_idx, ((label, grade), g) in enumerate(groups.items(), start=1):
+    variant_seen: dict[tuple, int] = {}
+    for row_idx, ((label, grade, _fp), g) in enumerate(groups.items(), start=1):
         pn_raw = f"{label}-{grade}" if grade else label
+        if variant_counts[(label, grade)] > 1:
+            variant_seen[(label, grade)] = variant_seen.get((label, grade), 0) + 1
+            pn_raw = f"{pn_raw} #{variant_seen[(label, grade)]}"
         rows.append({
             "part_number": pn_raw,
             "part_number_normalized": normalize_part_number(pn_raw),
@@ -391,13 +453,20 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     an Offer price for each individual unit row.
 
     Groups by (model, grade) — mirroring how parse_master_file creates master items — so the
-    resulting bid lines have part numbers that match master items exactly.
+    resulting bid lines have part numbers that match master items exactly. When the file has
+    no grade/condition column (e.g. servers), also groups by a hardware-spec fingerprint so
+    units sharing a Model but differing in CPU/RAM stay distinct, exactly mirroring
+    _aggregate_unit_level's logic on the master-file side.
     Picks the lowest (most competitive) offered price per group.
     """
     pn_col = mapping["part_number"]
     price_col = mapping["unit_price"]
     desc_col = mapping.get("description")
     grade_col = mapping.get("category")
+
+    use_spec_fingerprint = grade_col is None
+    exclude_cols = {c for c in (pn_col, desc_col, grade_col, price_col) if c} | _all_identifier_columns(df)
+    spec_cols = _spec_columns(df, exclude_cols) if use_spec_fingerprint else []
 
     groups: dict[tuple, dict] = {}
     for _, row in df.iterrows():
@@ -407,7 +476,8 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         grade = str(row.get(grade_col, "") if grade_col else "").strip()
         if grade.lower() in ("nan", "none", ""):
             grade = ""
-        key = (label, grade)
+        fingerprint = _spec_fingerprint(row, spec_cols) if use_spec_fingerprint else ""
+        key = (label, grade, fingerprint)
         price = _safe_float(row.get(price_col))
         desc = normalize_description(str(row.get(desc_col, "") if desc_col else "").strip())
 
@@ -418,11 +488,19 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             if groups[key]["min_price"] is None or price < groups[key]["min_price"]:
                 groups[key]["min_price"] = price
 
+    variant_counts: dict[tuple, int] = {}
+    for (label, grade, _fp) in groups:
+        variant_counts[(label, grade)] = variant_counts.get((label, grade), 0) + 1
+
     rows = []
-    for row_idx, ((label, grade), g) in enumerate(groups.items(), start=1):
+    variant_seen: dict[tuple, int] = {}
+    for row_idx, ((label, grade, _fp), g) in enumerate(groups.items(), start=1):
         if g["min_price"] is None:
             continue  # buyer left this group blank — skip
         pn_raw = f"{label}-{grade}" if grade else label
+        if variant_counts[(label, grade)] > 1:
+            variant_seen[(label, grade)] = variant_seen.get((label, grade), 0) + 1
+            pn_raw = f"{pn_raw} #{variant_seen[(label, grade)]}"
         pn_norm = normalize_part_number(pn_raw)
         qty = g["count"]
         price = g["min_price"]
