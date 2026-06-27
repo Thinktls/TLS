@@ -1,5 +1,6 @@
 import os
 import shutil
+import asyncio
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
@@ -238,7 +239,10 @@ async def upload_master_file(round_id: int, file: UploadFile = File(...), db: Se
     content = await file.read()
     _validate_upload(content, file.filename)
     try:
-        rows = parse_master_file(content, file.filename)
+        # Parsing a large multi-sheet workbook is CPU-bound and can take several seconds —
+        # run it off the event loop so it doesn't freeze every other request on the backend
+        # for the duration of the parse.
+        rows = await asyncio.to_thread(parse_master_file, content, file.filename)
     except ValueError as e:
         raise HTTPException(400, str(e))
 

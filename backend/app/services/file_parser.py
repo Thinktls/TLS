@@ -258,69 +258,33 @@ def _all_identifier_columns(df: pd.DataFrame) -> set[str]:
     return {cols_lower[alias] for alias in _SERIAL_ALIASES if alias in cols_lower}
 
 
-# Whitelist, not blacklist: columns like "Networking Card" or "Storage Controller" look like
-# specs but are free-text device-enumeration dumps with an embedded MAC address or revision
-# string per unit — including them would make every unit look unique even when the real specs
-# (CPU, memory) are identical. Only match columns that are unambiguously a hardware spec.
-_SPEC_FINGERPRINT_KEYWORDS = ["cpu", "processor", "memory", "ram", "drive bay"]
-
-
-def _spec_columns(df: pd.DataFrame, exclude_cols: set[str]) -> list[str]:
-    """Columns that materially affect a unit's configuration/value — CPU and memory specs.
-    Deliberately excludes networking/storage-controller columns (see module note above)."""
-    return [
-        c for c in df.columns
-        if c not in exclude_cols and any(k in c.lower() for k in _SPEC_FINGERPRINT_KEYWORDS)
-    ]
-
-
-def _spec_fingerprint(row, spec_cols: list[str]) -> str:
-    """Build a fingerprint string from hardware-spec columns (CPU, memory, storage, etc.)
-    so units that genuinely differ in configuration are never silently merged."""
-    parts = []
-    for c in spec_cols:
-        v = str(row.get(c, "")).strip()
-        if v and v.lower() not in ("nan", "none"):
-            parts.append(f"{c}:{v}")
-    return "|".join(parts)
-
-
 def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     """
-    Group a unit-level inventory file by part_number_or_description and return one
-    master-item row per group with quantity = count of units.
+    Convert a unit-level inventory file (one row per physical unit — laptops, servers,
+    desktops) into one master-item row per unit. NO grouping or merging: every valid data
+    row in the file becomes exactly one line item, quantity always 1. This is deliberate —
+    silently summing "duplicate" units into one line with quantity > 1 previously hid real
+    differences between units and caused exactly the line-count mismatches this function
+    now avoids entirely (e.g. a 100-unit file must always produce 100 line items).
 
-    When the file has an explicit part_number column (e.g. ThinkTLS drive Detail tab has
-    "Part Number"), that value becomes the group key and the stored pn — giving clean,
-    short part numbers like "AL14SEB120N-USED" instead of synthesising from the full
-    description.  Without an explicit pn column we fall back to grouping by description.
-
-    Grading-aware grouping: when the file has a grade/condition column (laptops, graded
-    drives), units are grouped by (part_number, grade) only — this matches standard ITAD
-    practice where a condition grade absorbs minor spec variance within a lot.
-
-    When there is NO grade column (e.g. servers, sold by exact configuration rather than
-    cosmetic condition), units are additionally grouped by a full hardware-spec fingerprint
-    (every other populated column — CPU, memory, storage, etc.) so two units sharing a Model
-    name but differing in CPU or RAM are never merged into one biddable line. Real ThinkTLS
-    server files routinely have the same Model with 4+ distinct CPU/RAM configurations.
+    The unit's serial/UID column is appended to the part number to guarantee uniqueness
+    even when many rows share the same Model — and because a Serial/UID is stable content
+    (not row position), the buyer's submitted copy of the same file lines up with these
+    master items regardless of row order.
     """
     pn_col = mapping.get("part_number")
     desc_col = mapping.get("description")
     grade_col = mapping.get("category")  # "grade" / "final grade" / "condition" maps to category
     mfr_col = mapping.get("manufacturer")
     reserve_col = mapping.get("reserve_price")
+    id_cols = sorted(_all_identifier_columns(df))  # e.g. both "UID" and "Serial" — use whichever is populated
 
-    # Need at least one of: part_number or description column to group on
+    # Need at least one of: part_number or description column to identify each unit
     if not pn_col and not desc_col:
-        raise ValueError("Unit-level file has no part number or description column to group on.")
+        raise ValueError("Unit-level file has no part number or description column.")
 
-    use_spec_fingerprint = grade_col is None
-    exclude_cols = {c for c in (pn_col, desc_col, grade_col, mfr_col, reserve_col) if c} | _all_identifier_columns(df)
-    spec_cols = _spec_columns(df, exclude_cols) if use_spec_fingerprint else []
-
-    groups: dict[tuple, dict] = {}
-    for _, row in df.iterrows():
+    rows = []
+    for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
         if pn_col:
             pn_val = str(row.get(pn_col, "")).strip()
             if not pn_val or pn_val.lower() in ("nan", "none", "") or _is_junk_row(pn_val):
@@ -337,45 +301,27 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         if grade.lower() in ("nan", "none", ""):
             grade = ""
 
-        fingerprint = _spec_fingerprint(row, spec_cols) if use_spec_fingerprint else ""
+        unit_id = next(
+            (v for c in id_cols if (v := str(row.get(c, "")).strip()) and v.lower() not in ("nan", "none")),
+            None,
+        )
 
-        key = (label, grade, fingerprint)
-        if key not in groups:
-            groups[key] = {
-                "pn_label": label,
-                "description": desc_val,
-                "grade": grade,
-                "manufacturer": str(row.get(mfr_col, "")).strip() if mfr_col else "",
-                "reserve_price": _safe_float(row.get(reserve_col)) if reserve_col else None,
-                "count": 0,
-            }
-        groups[key]["count"] += 1
-
-    # When the same (label, grade) maps to more than one distinct spec fingerprint,
-    # suffix the part number so each configuration stays uniquely identifiable.
-    variant_counts: dict[tuple, int] = {}
-    for (label, grade, _fp) in groups:
-        variant_counts[(label, grade)] = variant_counts.get((label, grade), 0) + 1
-
-    rows = []
-    variant_seen: dict[tuple, int] = {}
-    for row_idx, ((label, grade, _fp), g) in enumerate(groups.items(), start=1):
         pn_raw = f"{label}-{grade}" if grade else label
-        if variant_counts[(label, grade)] > 1:
-            variant_seen[(label, grade)] = variant_seen.get((label, grade), 0) + 1
-            pn_raw = f"{pn_raw} #{variant_seen[(label, grade)]}"
+        if unit_id:
+            pn_raw = f"{pn_raw}-{unit_id}"
+
         rows.append({
             "part_number": pn_raw,
             "part_number_normalized": normalize_part_number(pn_raw),
-            "description": g["description"],
-            "manufacturer": g["manufacturer"],
-            "quantity": g["count"],
-            "reserve_price": g["reserve_price"],
-            "category": g["grade"],
+            "description": desc_val,
+            "manufacturer": str(row.get(mfr_col, "")).strip() if mfr_col else "",
+            "quantity": 1,
+            "reserve_price": _safe_float(row.get(reserve_col)) if reserve_col else None,
+            "category": grade,
             "row_number": row_idx,
         })
 
-    logger.info("[file_parser] unit-level aggregation: %d units → %d master items", sum(g["count"] for g in groups.values()), len(rows))
+    logger.info("[file_parser] unit-level file: %d rows → %d master items (1:1, no aggregation)", len(df), len(rows))
     return rows
 
 
@@ -452,73 +398,55 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     For unit-level buyer files (ThinkTLS laptops, servers, desktops) where the buyer fills
     an Offer price for each individual unit row.
 
-    Groups by (model, grade) — mirroring how parse_master_file creates master items — so the
-    resulting bid lines have part numbers that match master items exactly. When the file has
-    no grade/condition column (e.g. servers), also groups by a hardware-spec fingerprint so
-    units sharing a Model but differing in CPU/RAM stay distinct, exactly mirroring
-    _aggregate_unit_level's logic on the master-file side.
-    Picks the lowest (most competitive) offered price per group.
+    NO grouping or merging — mirrors _aggregate_unit_level on the master-file side exactly,
+    one bid line per physical unit, quantity always 1. The part number is built the same way
+    (label + grade + serial/UID) so each bid line matches its master item by content, not by
+    row order. A buyer who leaves the price blank for a unit simply doesn't bid on it.
     """
     pn_col = mapping["part_number"]
     price_col = mapping["unit_price"]
     desc_col = mapping.get("description")
     grade_col = mapping.get("category")
+    id_cols = sorted(_all_identifier_columns(df))
 
-    use_spec_fingerprint = grade_col is None
-    exclude_cols = {c for c in (pn_col, desc_col, grade_col, price_col) if c} | _all_identifier_columns(df)
-    spec_cols = _spec_columns(df, exclude_cols) if use_spec_fingerprint else []
-
-    groups: dict[tuple, dict] = {}
-    for _, row in df.iterrows():
+    rows = []
+    for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
         label = str(row.get(pn_col, "")).strip()
         if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
             continue
+        price = _safe_float(row.get(price_col))
+        if price is None:
+            continue  # buyer left this unit blank — not bidding on it
+
         grade = str(row.get(grade_col, "") if grade_col else "").strip()
         if grade.lower() in ("nan", "none", ""):
             grade = ""
-        fingerprint = _spec_fingerprint(row, spec_cols) if use_spec_fingerprint else ""
-        key = (label, grade, fingerprint)
-        price = _safe_float(row.get(price_col))
-        desc = normalize_description(str(row.get(desc_col, "") if desc_col else "").strip())
 
-        if key not in groups:
-            groups[key] = {"count": 0, "min_price": None, "description": desc or label}
-        groups[key]["count"] += 1
-        if price is not None:
-            if groups[key]["min_price"] is None or price < groups[key]["min_price"]:
-                groups[key]["min_price"] = price
+        unit_id = next(
+            (v for c in id_cols if (v := str(row.get(c, "")).strip()) and v.lower() not in ("nan", "none")),
+            None,
+        )
 
-    variant_counts: dict[tuple, int] = {}
-    for (label, grade, _fp) in groups:
-        variant_counts[(label, grade)] = variant_counts.get((label, grade), 0) + 1
-
-    rows = []
-    variant_seen: dict[tuple, int] = {}
-    for row_idx, ((label, grade, _fp), g) in enumerate(groups.items(), start=1):
-        if g["min_price"] is None:
-            continue  # buyer left this group blank — skip
         pn_raw = f"{label}-{grade}" if grade else label
-        if variant_counts[(label, grade)] > 1:
-            variant_seen[(label, grade)] = variant_seen.get((label, grade), 0) + 1
-            pn_raw = f"{pn_raw} #{variant_seen[(label, grade)]}"
-        pn_norm = normalize_part_number(pn_raw)
-        qty = g["count"]
-        price = g["min_price"]
+        if unit_id:
+            pn_raw = f"{pn_raw}-{unit_id}"
+
+        desc = normalize_description(str(row.get(desc_col, "") if desc_col else "").strip())
         rows.append({
             "raw_part_number": pn_raw,
-            "normalized_part_number": pn_norm,
-            "description": g["description"],
+            "normalized_part_number": normalize_part_number(pn_raw),
+            "description": desc or label,
             "category": grade or None,
             "unit_price": price,
-            "quantity": qty,
-            "total_price": round(price * qty, 4),
+            "quantity": 1,
+            "total_price": round(price, 4),
             "row_number": row_idx,
             "extra_columns": None,
         })
 
     logger.info(
-        "[file_parser] buyer unit-level aggregation: %d units → %d priced bid groups",
-        sum(g["count"] for g in groups.values()), len(rows),
+        "[file_parser] buyer unit-level file: %d rows → %d priced bid lines (1:1, no aggregation)",
+        len(df), len(rows),
     )
     return rows
 
@@ -639,12 +567,24 @@ def _clean(df: pd.DataFrame) -> pd.DataFrame:
     return df.dropna(how="all")
 
 
+def _visible_sheet_names(xf: pd.ExcelFile) -> list[str]:
+    """Skip hidden/very-hidden sheets. Real-world files often keep a hidden "Master Sheet"
+    that's a full rollup of every other tab (e.g. a hidden 1818-row sheet alongside 9 visible
+    per-rack breakdown tabs covering the same 1818 units) — ingesting both doubles every line.
+    A sheet hidden by the file's author is a strong signal it isn't meant for ingestion."""
+    try:
+        wb = xf.book  # openpyxl Workbook — only available with engine="openpyxl" (.xlsx)
+        return [s for s in xf.sheet_names if getattr(wb[s], "sheet_state", "visible") == "visible"]
+    except Exception:
+        return list(xf.sheet_names)
+
+
 def _candidates_excel(buf: io.BytesIO, ext: str) -> list[pd.DataFrame]:
     out = []
     try:
         engine = "openpyxl" if ext == "xlsx" else None
         xf = pd.ExcelFile(buf, engine=engine)
-        for sheet in xf.sheet_names:
+        for sheet in _visible_sheet_names(xf):
             bonus = _sheet_score_bonus(sheet)
             for hdr in range(_HEADER_ROW_SCAN_DEPTH):
                 try:
@@ -671,7 +611,7 @@ def _candidates_pivot_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> li
     try:
         engine = "openpyxl" if ext == "xlsx" else None
         xf = pd.ExcelFile(buf, engine=engine)
-        for sheet in xf.sheet_names:
+        for sheet in _visible_sheet_names(xf):
             try:
                 raw = xf.parse(sheet, header=None)
             except Exception:
@@ -710,7 +650,7 @@ def _candidates_pivot_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> li
             if tail:
                 slices.append(tail)
 
-            for block_cols in slices:
+            for block_idx, block_cols in enumerate(slices):
                 if len(block_cols) < 2:
                     continue
                 block = raw[block_cols].copy()
@@ -722,6 +662,11 @@ def _candidates_pivot_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> li
                                          for i, h in enumerate(header_row)]
                         df = _clean(data.reset_index(drop=True))
                         if len(df) > 0 and len(df.columns) > 1 and _score_df(df, hint_aliases) > 0:
+                            # Tag with a key unique per (sheet, block) — distinct from the plain
+                            # _candidates_excel candidate for this same sheet, so the per-sheet
+                            # dedup in _load_dataframe never collapses or collides the two.
+                            df.attrs["_sheet_bonus"] = _sheet_score_bonus(sheet)
+                            df.attrs["_sheet_name"] = f"{sheet}__pivot{block_idx}"
                             out.append(df)
                             break
                     except Exception:

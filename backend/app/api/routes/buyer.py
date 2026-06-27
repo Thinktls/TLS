@@ -13,6 +13,7 @@ Buyer-facing routes:
   - GET  /buyer/rounds/{id}/award-sheet      — download personal award sheet
 """
 import os
+import asyncio
 import mimetypes
 from datetime import datetime, timezone
 from app.api.routes.bid_rounds import _validate_upload
@@ -136,12 +137,14 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
     content = await file.read()
     _validate_upload(content, file.filename)
     try:
-        rows = parse_buyer_file(content, file.filename)
+        # CPU-bound parsing of large workbooks can take several seconds — keep it off the
+        # event loop so it doesn't stall every other request on the backend meanwhile.
+        rows = await asyncio.to_thread(parse_buyer_file, content, file.filename)
     except ValueError as e:
         if settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL:
             try:
                 from app.services.ai_file_parser import ai_parse_buyer_file
-                rows = ai_parse_buyer_file(content, file.filename)
+                rows = await asyncio.to_thread(ai_parse_buyer_file, content, file.filename)
             except ValueError as ai_e:
                 raise HTTPException(400, str(ai_e))
         else:
@@ -211,12 +214,12 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     db.flush()
 
     try:
-        rows = parse_buyer_file(content, file.filename)
+        rows = await asyncio.to_thread(parse_buyer_file, content, file.filename)
     except ValueError as e:
         if settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL:
             try:
                 from app.services.ai_file_parser import ai_parse_buyer_file
-                rows = ai_parse_buyer_file(content, file.filename)
+                rows = await asyncio.to_thread(ai_parse_buyer_file, content, file.filename)
             except ValueError as ai_e:
                 bid_file.status = "error"
                 bid_file.error_message = str(ai_e)
