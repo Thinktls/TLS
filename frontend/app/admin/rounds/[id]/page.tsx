@@ -55,15 +55,6 @@ function initials(name: string) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function fmtTs(iso: string | null): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleString("en-US", {
-    month: "2-digit", day: "2-digit", year: "numeric",
-    hour: "numeric", minute: "2-digit", hour12: true,
-    timeZone: "America/New_York",
-  }) + " EST";
-}
-
 function RoundTimeline({ round }: { round: Round }) {
   const steps: { label: string; sub: string; ts: string | null; done: boolean; active: boolean }[] = [
     {
@@ -152,7 +143,7 @@ function RoundTimeline({ round }: { round: Round }) {
                 }}>{step.label}</p>
                 <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "0 0 2px" }}>{step.sub}</p>
                 {step.ts ? (
-                  <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: 0, fontFamily: "monospace" }}>{fmtTs(step.ts)}</p>
+                  <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: 0, fontFamily: "monospace" }}>{fmtDatetime(step.ts)}</p>
                 ) : step.active ? (
                   <p style={{ fontSize: "0.7rem", color: "var(--brand)", margin: 0 }}>In progress…</p>
                 ) : null}
