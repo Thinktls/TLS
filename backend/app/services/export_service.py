@@ -279,44 +279,44 @@ def export_disposition_report(db: Session, bid_round_id: int) -> bytes:
     Shows every master line item with disposition:
     AWARDED (has approved deal), NO_BIDS (no valid bid lines), BELOW_RESERVE,
     or PENDING (matched lines but no deal yet approved).
+
+    Batch-fetches deals/bid-lines/buyers once up front instead of querying per master
+    item — at 1818 master items the previous per-row query pattern (3 queries each,
+    5400+ total) took 14s; this version runs a fixed handful of queries regardless of
+    master item count.
     """
     masters = db.query(MasterItem).filter(MasterItem.bid_round_id == bid_round_id).all()
+
+    deals_by_item = {
+        d.master_item_id: d
+        for d in db.query(Deal).filter(Deal.bid_round_id == bid_round_id, Deal.status == "approved")
+    }
+    matched_lines_by_item: dict[int, list[BidLine]] = {}
+    below_reserve_by_item: set[int] = set()
+    for l in db.query(BidLine).filter(BidLine.bid_round_id == bid_round_id):
+        if l.match_status == "matched":
+            matched_lines_by_item.setdefault(l.master_item_id, []).append(l)
+        elif l.exception_type == "below_reserve":
+            below_reserve_by_item.add(l.master_item_id)
+
+    buyer_ids = {d.winning_buyer_id for d in deals_by_item.values()}
+    buyers_by_id = {u.id: u for u in db.query(User).filter(User.id.in_(buyer_ids))} if buyer_ids else {}
+
     rows = []
     for m in masters:
-        deal = (
-            db.query(Deal)
-            .filter(Deal.bid_round_id == bid_round_id, Deal.master_item_id == m.id, Deal.status == "approved")
-            .first()
-        )
-        valid_lines = (
-            db.query(BidLine)
-            .filter(
-                BidLine.bid_round_id == bid_round_id,
-                BidLine.master_item_id == m.id,
-                BidLine.match_status == "matched",
-            )
-            .all()
-        )
-        below_reserve_lines = (
-            db.query(BidLine)
-            .filter(
-                BidLine.bid_round_id == bid_round_id,
-                BidLine.master_item_id == m.id,
-                BidLine.exception_type == "below_reserve",
-            )
-            .all()
-        )
+        deal = deals_by_item.get(m.id)
+        valid_lines = matched_lines_by_item.get(m.id, [])
 
         if deal:
             disposition = "AWARDED"
-            winner = db.query(User).filter(User.id == deal.winning_buyer_id).first()
+            winner = buyers_by_id.get(deal.winning_buyer_id)
             awarded_to = winner.company_name if winner else ""
             awarded_price = deal.winning_price
         elif valid_lines:
             disposition = "PENDING"
             awarded_to = ""
             awarded_price = None
-        elif below_reserve_lines:
+        elif m.id in below_reserve_by_item:
             disposition = "BELOW_RESERVE"
             awarded_to = ""
             awarded_price = None
@@ -348,10 +348,16 @@ def export_disposition_report(db: Session, bid_round_id: int) -> bytes:
 
 def export_margin_report(db: Session, bid_round_id: int) -> bytes:
     deals = db.query(Deal).filter(Deal.bid_round_id == bid_round_id).all()
+
+    buyer_ids = {d.winning_buyer_id for d in deals if d.winning_buyer_id}
+    buyers_by_id = {u.id: u for u in db.query(User).filter(User.id.in_(buyer_ids))} if buyer_ids else {}
+    master_ids = {d.master_item_id for d in deals if d.master_item_id}
+    masters_by_id = {m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids))} if master_ids else {}
+
     rows = []
     for d in deals:
-        buyer  = db.query(User).filter(User.id == d.winning_buyer_id).first()
-        master = db.query(MasterItem).filter(MasterItem.id == d.master_item_id).first()
+        buyer  = buyers_by_id.get(d.winning_buyer_id)
+        master = masters_by_id.get(d.master_item_id)
         reserve = master.reserve_price if master else None
         margin  = round(d.winning_price - reserve, 4) if reserve else None
         margin_pct = round((margin / reserve * 100), 2) if (margin is not None and reserve) else None
