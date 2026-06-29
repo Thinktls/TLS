@@ -79,7 +79,7 @@ async def receive_inbound_email(request: Request):
         buyer = _find_buyer_by_email(db, from_email)
         if not buyer:
             logger.warning(f"Inbound email from unknown sender: {from_email}")
-            _send(
+            await asyncio.to_thread(_send,
                 from_email, from_email,
                 "ThinkTLS: Could not process your bid submission",
                 f"<p>We could not find a buyer account associated with <strong>{from_email}</strong>. "
@@ -95,7 +95,7 @@ async def receive_inbound_email(request: Request):
         round_id = _extract_round_id(subject)
         if not round_id:
             logger.warning(f"Could not extract round ID from subject: {subject!r}")
-            _send(
+            await asyncio.to_thread(_send,
                 buyer.email, buyer.full_name,
                 "ThinkTLS: Could not process your bid — round not identified",
                 f"<p>Hello {buyer.full_name},</p>"
@@ -110,7 +110,7 @@ async def receive_inbound_email(request: Request):
         if not bid_round:
             return {"status": "rejected", "reason": f"round_{round_id}_not_found"}
         if bid_round.status != "open":
-            _send(
+            await asyncio.to_thread(_send,
                 buyer.email, buyer.full_name,
                 f"ThinkTLS: Round {bid_round.name} is not accepting bids",
                 f"<p>Hello {buyer.full_name},</p>"
@@ -121,7 +121,7 @@ async def receive_inbound_email(request: Request):
 
         # Check deadline
         if bid_round.submission_deadline and datetime.now(timezone.utc) > bid_round.submission_deadline:
-            _send(
+            await asyncio.to_thread(_send,
                 buyer.email, buyer.full_name,
                 f"ThinkTLS: Submission deadline passed for {bid_round.name}",
                 f"<p>The submission deadline for <strong>{bid_round.name}</strong> has passed. "
@@ -130,7 +130,7 @@ async def receive_inbound_email(request: Request):
             return {"status": "rejected", "reason": "deadline_passed"}
 
         if num_attachments == 0:
-            _send(
+            await asyncio.to_thread(_send,
                 buyer.email, buyer.full_name,
                 "ThinkTLS: No attachment found in your bid email",
                 "<p>We received your email but no attachment was found. "
@@ -157,7 +157,7 @@ async def receive_inbound_email(request: Request):
                 errors.append(result.get("error", "Unknown error"))
 
         if processed > 0:
-            _send(
+            await asyncio.to_thread(_send,
                 buyer.email, buyer.full_name,
                 f"ThinkTLS: Bid received for {bid_round.name}",
                 f"<p>Hello {buyer.full_name},</p>"
@@ -166,7 +166,7 @@ async def receive_inbound_email(request: Request):
             )
             return {"status": "accepted", "files_processed": processed}
         else:
-            _send(
+            await asyncio.to_thread(_send,
                 buyer.email, buyer.full_name,
                 f"ThinkTLS: Error processing your bid for {bid_round.name}",
                 f"<p>Hello {buyer.full_name},</p>"
