@@ -10,11 +10,13 @@ import hmac
 import hashlib
 import logging
 import re
+import asyncio
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.core.config import settings
+from app.core.executors import file_parsing_executor
 
 
 def _verify_sendgrid_signature(request_body: bytes, signature: str, timestamp: str) -> bool:
@@ -148,7 +150,7 @@ async def receive_inbound_email(request: Request):
                 continue
 
             content = await attachment.read()
-            result = _process_attachment(db, content, filename, buyer, bid_round)
+            result = await _process_attachment(db, content, filename, buyer, bid_round)
             if result.get("ok"):
                 processed += 1
             else:
@@ -196,9 +198,12 @@ def _is_valid_extension(filename: str) -> bool:
     return filename.lower().endswith((".xlsx", ".xls", ".csv", ".pdf", ".docx", ".doc"))
 
 
-def _process_attachment(db: Session, content: bytes, filename: str, buyer: User, bid_round: BidRound) -> dict:
+async def _process_attachment(db: Session, content: bytes, filename: str, buyer: User, bid_round: BidRound) -> dict:
     try:
-        rows = parse_buyer_file(content, filename)
+        # CPU-bound parse on the dedicated executor — never the default pool login depends on.
+        rows = await asyncio.get_running_loop().run_in_executor(
+            file_parsing_executor, parse_buyer_file, content, filename
+        )
     except ValueError as e:
         return {"ok": False, "error": str(e)}
 

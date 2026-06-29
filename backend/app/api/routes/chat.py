@@ -60,10 +60,10 @@ def _ai_available() -> bool:
     return bool(settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL)
 
 
-def _call_anthropic(system: str, messages: list[dict]) -> str:
+async def _call_anthropic(system: str, messages: list[dict]) -> str:
     import anthropic
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-    resp = client.messages.create(
+    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    resp = await client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=600,
         system=system,
@@ -72,7 +72,7 @@ def _call_anthropic(system: str, messages: list[dict]) -> str:
     return resp.content[0].text.strip()
 
 
-def _call_ollama(system: str, messages: list[dict]) -> str:
+async def _call_ollama(system: str, messages: list[dict]) -> str:
     import httpx
     base = settings.OLLAMA_BASE_URL.rstrip("/")
     endpoint = f"{base}/chat/completions" if base.endswith("/v1") else f"{base}/v1/chat/completions"
@@ -85,15 +85,16 @@ def _call_ollama(system: str, messages: list[dict]) -> str:
         "temperature": 0.3,
         "max_tokens": 600,
     }
-    resp = httpx.post(endpoint, headers=headers, json=payload, timeout=30.0)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(endpoint, headers=headers, json=payload)
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"].strip()
 
 
-def _call_ai(system: str, messages: list[dict]) -> str:
+async def _call_ai(system: str, messages: list[dict]) -> str:
     if settings.ANTHROPIC_API_KEY:
-        return _call_anthropic(system, messages)
-    return _call_ollama(system, messages)
+        return await _call_anthropic(system, messages)
+    return await _call_ollama(system, messages)
 
 
 # ── Context builders ──────────────────────────────────────────────────────────
@@ -237,7 +238,7 @@ async def admin_chat(req: ChatRequest, db: Session = Depends(get_db), user=Depen
     messages.append({"role": "user", "content": req.message})
 
     try:
-        reply = _call_ai(system, messages)
+        reply = await _call_ai(system, messages)
     except Exception as e:
         logger.error("Chat AI error: %s", e)
         raise HTTPException(500, "AI response failed. Please try again.")
@@ -264,7 +265,7 @@ async def buyer_chat(req: ChatRequest, db: Session = Depends(get_db), user=Depen
     messages.append({"role": "user", "content": req.message})
 
     try:
-        reply = _call_ai(system, messages)
+        reply = await _call_ai(system, messages)
     except Exception as e:
         logger.error("Chat AI error: %s", e)
         raise HTTPException(500, "AI response failed. Please try again.")
