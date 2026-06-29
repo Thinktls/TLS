@@ -210,10 +210,10 @@ def main():
     # ── Seed users ──────────────────────────────────────────────────────────
     admin = db.query(User).filter(User.email == "perf@thinktls.com").first()
     if not admin:
-        from passlib.context import CryptContext
+        from app.core.security import hash_password
         admin = User(
             email="perf@thinktls.com",
-            hashed_password=CryptContext(schemes=["bcrypt"]).hash("perftest"),
+            hashed_password=hash_password("perftest"),
             full_name="Perf Admin",
             role="admin",
             is_active=True,

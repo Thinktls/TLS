@@ -7,15 +7,13 @@ from app.models.bid_file import BidFile
 from app.models.bid_line import BidLine
 from app.models.master_item import MasterItem
 from app.models.user import User
-from passlib.context import CryptContext
-
-pwd_ctx = CryptContext(schemes=["bcrypt"])
+from app.core.security import hash_password
 
 
 def _make_admin(db):
     u = User(
         email="excadmin@test.com",
-        hashed_password=pwd_ctx.hash("pass"),
+        hashed_password=hash_password("pass"),
         full_name="Exc Admin",
         role="admin",
         is_active=True,
@@ -29,7 +27,7 @@ def _make_admin(db):
 def _make_buyer(db):
     u = User(
         email="excbuyer@test.com",
-        hashed_password=pwd_ctx.hash("pass"),
+        hashed_password=hash_password("pass"),
         full_name="Exc Buyer",
         role="buyer",
         is_active=True,

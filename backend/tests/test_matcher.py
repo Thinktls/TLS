@@ -61,9 +61,8 @@ def _make_bid_file(db, round_id, buyer_id):
 
 def _make_buyer(db, email="matcher@test.com"):
     from app.models.user import User
-    from passlib.context import CryptContext
-    pwd_ctx = CryptContext(schemes=["bcrypt"])
-    u = User(email=email, hashed_password=pwd_ctx.hash("pass"), full_name="Matcher Buyer", role="buyer", is_active=True)
+    from app.core.security import hash_password
+    u = User(email=email, hashed_password=hash_password("pass"), full_name="Matcher Buyer", role="buyer", is_active=True)
     db.add(u)
     db.flush()
     return u

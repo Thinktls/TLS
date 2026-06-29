@@ -8,11 +8,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
-from passlib.context import CryptContext
-
 from app.db.base import Base
 from app.db.session import get_db
 from app.models.user import User
+from app.core.security import hash_password
 from main import app
 
 TEST_DB_URL = "sqlite:///:memory:"
@@ -23,7 +22,6 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-pwd_ctx = CryptContext(schemes=["bcrypt"])
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -68,7 +66,7 @@ def _create_user(db, email, password, role, full_name, company_name=""):
         return existing
     u = User(
         email=email,
-        hashed_password=pwd_ctx.hash(password),
+        hashed_password=hash_password(password),
         full_name=full_name,
         company_name=company_name,
         role=role,

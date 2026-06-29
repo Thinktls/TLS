@@ -2,6 +2,7 @@ import os
 import shutil
 import asyncio
 from datetime import datetime, timezone
+from app.core.executors import file_parsing_executor
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
@@ -239,10 +240,13 @@ async def upload_master_file(round_id: int, file: UploadFile = File(...), db: Se
     content = await file.read()
     _validate_upload(content, file.filename)
     try:
-        # Parsing a large multi-sheet workbook is CPU-bound and can take several seconds —
-        # run it off the event loop so it doesn't freeze every other request on the backend
-        # for the duration of the parse.
-        rows = await asyncio.to_thread(parse_master_file, content, file.filename)
+        # Parsing a large multi-sheet workbook is CPU-bound and can take several seconds.
+        # Run it on a DEDICATED executor (not asyncio's default one) — sharing the default
+        # pool with login's bcrypt thread-offload caused logins to stall for seconds behind
+        # an in-progress upload (measured 13.5s vs 91ms under contention).
+        rows = await asyncio.get_running_loop().run_in_executor(
+            file_parsing_executor, parse_master_file, content, file.filename
+        )
     except ValueError as e:
         raise HTTPException(400, str(e))
 

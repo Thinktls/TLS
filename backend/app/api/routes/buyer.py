@@ -17,6 +17,7 @@ import asyncio
 import mimetypes
 from datetime import datetime, timezone
 from app.api.routes.bid_rounds import _validate_upload
+from app.core.executors import file_parsing_executor
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -136,15 +137,15 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
         raise HTTPException(403, "You are not assigned to this round")
     content = await file.read()
     _validate_upload(content, file.filename)
+    loop = asyncio.get_running_loop()
     try:
-        # CPU-bound parsing of large workbooks can take several seconds — keep it off the
-        # event loop so it doesn't stall every other request on the backend meanwhile.
-        rows = await asyncio.to_thread(parse_buyer_file, content, file.filename)
+        # CPU-bound parsing on a DEDICATED executor — never the default one login depends on.
+        rows = await loop.run_in_executor(file_parsing_executor, parse_buyer_file, content, file.filename)
     except ValueError as e:
         if settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL:
             try:
                 from app.services.ai_file_parser import ai_parse_buyer_file
-                rows = await asyncio.to_thread(ai_parse_buyer_file, content, file.filename)
+                rows = await loop.run_in_executor(file_parsing_executor, ai_parse_buyer_file, content, file.filename)
             except ValueError as ai_e:
                 raise HTTPException(400, str(ai_e))
         else:
@@ -213,13 +214,14 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     db.add(bid_file)
     db.flush()
 
+    loop = asyncio.get_running_loop()
     try:
-        rows = await asyncio.to_thread(parse_buyer_file, content, file.filename)
+        rows = await loop.run_in_executor(file_parsing_executor, parse_buyer_file, content, file.filename)
     except ValueError as e:
         if settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL:
             try:
                 from app.services.ai_file_parser import ai_parse_buyer_file
-                rows = await asyncio.to_thread(ai_parse_buyer_file, content, file.filename)
+                rows = await loop.run_in_executor(file_parsing_executor, ai_parse_buyer_file, content, file.filename)
             except ValueError as ai_e:
                 bid_file.status = "error"
                 bid_file.error_message = str(ai_e)

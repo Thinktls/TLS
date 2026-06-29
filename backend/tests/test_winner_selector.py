@@ -12,9 +12,7 @@ from app.models.bid_round import BidRound
 from app.models.user import User
 from app.models.deal import Deal
 from app.services.winner_selector import select_winners
-from passlib.context import CryptContext
-
-pwd_ctx = CryptContext(schemes=["bcrypt"])
+from app.core.security import hash_password
 
 
 def _make_round(db):
@@ -27,7 +25,7 @@ def _make_round(db):
 def _make_buyer(db, email="buyer@test.com", fluff=3.5):
     u = User(
         email=email,
-        hashed_password=pwd_ctx.hash("pass"),
+        hashed_password=hash_password("pass"),
         full_name="Test Buyer",
         role="buyer",
         is_active=True,
