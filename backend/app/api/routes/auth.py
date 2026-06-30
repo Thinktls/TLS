@@ -305,30 +305,66 @@ def compare_buyers(db: Session = Depends(get_db), _=Depends(require_admin)):
     """
     Returns all buyers with full performance metrics for the comparison dashboard.
     Includes per-round participation breakdown.
+    Uses bulk queries (4 total) instead of N×M individual COUNT queries.
     """
     from app.models.bid_line import BidLine
     from app.models.deal import Deal
     from app.models.bid_round import BidRound
+    from sqlalchemy import func
 
     buyers = db.query(User).filter(User.role == "buyer").order_by(User.total_margin_contribution.desc()).all()
     all_rounds = db.query(BidRound).order_by(BidRound.created_at.desc()).limit(10).all()
+    round_ids = [r.id for r in all_rounds]
+    buyer_ids = [b.id for b in buyers]
+
+    if not buyer_ids or not round_ids:
+        return {"buyers": [], "rounds": [{"id": r.id, "name": r.name, "status": r.status} for r in all_rounds]}
+
+    # Bulk-fetch matched bid counts per (buyer, round) — replaces N×M COUNT queries
+    lines_counts = {
+        (row.buyer_id, row.bid_round_id): row.cnt
+        for row in db.query(
+            BidLine.buyer_id, BidLine.bid_round_id, func.count().label("cnt")
+        ).filter(
+            BidLine.bid_round_id.in_(round_ids),
+            BidLine.buyer_id.in_(buyer_ids),
+            BidLine.match_status == "matched",
+        ).group_by(BidLine.buyer_id, BidLine.bid_round_id).all()
+    }
+
+    # Bulk-fetch won counts per (buyer, round)
+    won_counts = {
+        (row.buyer_id, row.bid_round_id): row.cnt
+        for row in db.query(
+            BidLine.buyer_id, BidLine.bid_round_id, func.count().label("cnt")
+        ).filter(
+            BidLine.bid_round_id.in_(round_ids),
+            BidLine.buyer_id.in_(buyer_ids),
+            BidLine.is_winner == True,
+        ).group_by(BidLine.buyer_id, BidLine.bid_round_id).all()
+    }
+
+    # Bulk-fetch all approved deals
+    all_deals = db.query(Deal).filter(
+        Deal.winning_buyer_id.in_(buyer_ids), Deal.status == "approved"
+    ).all()
+    deals_by_buyer: dict[int, list] = {}
+    for d in all_deals:
+        deals_by_buyer.setdefault(d.winning_buyer_id, []).append(d)
 
     rows = []
     for b in buyers:
-        # Per-round participation
-        round_participation = []
-        for r in all_rounds:
-            lines = db.query(BidLine).filter(BidLine.bid_round_id == r.id, BidLine.buyer_id == b.id, BidLine.match_status == "matched").count()
-            won = db.query(BidLine).filter(BidLine.bid_round_id == r.id, BidLine.buyer_id == b.id, BidLine.is_winner == True).count()
-            round_participation.append({
+        round_participation = [
+            {
                 "round_id": r.id,
                 "round_name": r.name,
-                "lines_bid": lines,
-                "lines_won": won,
-                "participated": lines > 0,
-            })
-
-        deals = db.query(Deal).filter(Deal.winning_buyer_id == b.id, Deal.status == "approved").all()
+                "lines_bid": lines_counts.get((b.id, r.id), 0),
+                "lines_won": won_counts.get((b.id, r.id), 0),
+                "participated": lines_counts.get((b.id, r.id), 0) > 0,
+            }
+            for r in all_rounds
+        ]
+        deals = deals_by_buyer.get(b.id, [])
         rows.append({
             "id": b.id,
             "full_name": b.full_name,

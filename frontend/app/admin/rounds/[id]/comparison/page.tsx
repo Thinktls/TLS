@@ -19,8 +19,10 @@ interface ComparisonRow {
   master_item_id: number;
   part_number: string;
   description: string | null;
+  category: string | null;
   quantity: number | null;
   reserve_price: number | null;
+  extra_columns: Record<string, string> | null;
   bids: Record<string, BidEntry>;
 }
 
@@ -29,13 +31,13 @@ interface ComparisonData {
   rows: ComparisonRow[];
 }
 
-const COL_W_PART = 180;
-const COL_W_DESC = 260;
-const COL_W_QTY  = 70;
-const COL_W_RES  = 90;
-const COL_W_BID  = 120;
-const ROW_H      = 40;
-const HEADER_H   = 44;
+const COL_W_ITEM  = 280;  // Model name + part number sub-line
+const COL_W_GRADE = 100;  // Grade / condition
+const COL_W_QTY   = 70;
+const COL_W_RES   = 90;
+const COL_W_BID   = 120;
+const ROW_H       = 52;   // Taller to fit two-line model/serial cell
+const HEADER_H    = 44;
 
 export default function ComparisonPage() {
   const { id } = useParams();
@@ -86,7 +88,8 @@ export default function ComparisonPage() {
   );
 
   const { buyers, rows } = data;
-  const totalWidth = COL_W_PART + COL_W_DESC + COL_W_QTY + COL_W_RES + buyers.length * COL_W_BID;
+  const isUnitLevel = rows.some(r => r.category);
+  const totalWidth = COL_W_ITEM + (isUnitLevel ? COL_W_GRADE : 0) + COL_W_QTY + COL_W_RES + buyers.length * COL_W_BID;
 
   // Build name → buyer_id map from the first bid entry found for each buyer
   const buyerIdMap: Record<string, number> = {};
@@ -159,8 +162,8 @@ export default function ComparisonPage() {
                 top: 0,
                 zIndex: 10,
               }}>
-                <HeaderCell width={COL_W_PART}>Part Number</HeaderCell>
-                <HeaderCell width={COL_W_DESC}>Description</HeaderCell>
+                <HeaderCell width={COL_W_ITEM}>Model / Part</HeaderCell>
+                {isUnitLevel && <HeaderCell width={COL_W_GRADE} center>Grade</HeaderCell>}
                 <HeaderCell width={COL_W_QTY} center>Qty</HeaderCell>
                 <HeaderCell width={COL_W_RES} center>Reserve $</HeaderCell>
                 {buyers.map((b) => (
@@ -205,8 +208,39 @@ export default function ComparisonPage() {
                           background: virtualRow.index % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
                         }}
                       >
-                        <Cell width={COL_W_PART} mono>{row.part_number}</Cell>
-                        <Cell width={COL_W_DESC} muted>{row.description || ""}</Cell>
+                        {/* Two-line item cell: model name on top, part number / serial below */}
+                        <div style={{
+                          width: COL_W_ITEM, flexShrink: 0,
+                          display: "flex", flexDirection: "column", justifyContent: "center",
+                          padding: "0 12px", overflow: "hidden",
+                          borderRight: "1px solid rgba(255,255,255,0.03)",
+                        }}>
+                          <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>
+                            {row.description || row.part_number}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.32)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
+                            {row.part_number}
+                          </div>
+                        </div>
+                        {isUnitLevel && (
+                          <div style={{
+                            width: COL_W_GRADE, flexShrink: 0,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            padding: "0 8px", overflow: "hidden",
+                            borderRight: "1px solid rgba(255,255,255,0.03)",
+                          }}>
+                            {row.category ? (
+                              <span style={{
+                                fontSize: "0.7rem", fontWeight: 600,
+                                padding: "2px 7px", borderRadius: "4px",
+                                background: "rgba(52,211,153,0.1)", color: "#34d399",
+                                border: "1px solid rgba(52,211,153,0.2)",
+                                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                                maxWidth: "100%",
+                              }}>{row.category}</span>
+                            ) : <span style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.75rem" }}>—</span>}
+                          </div>
+                        )}
                         <Cell width={COL_W_QTY} center muted>{row.quantity ?? "—"}</Cell>
                         <Cell width={COL_W_RES} center muted>
                           {row.reserve_price ? `$${row.reserve_price.toFixed(2)}` : "—"}

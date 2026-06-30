@@ -903,8 +903,10 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
             "master_item_id": mi.id,
             "part_number": mi.part_number,
             "description": mi.description,
+            "category": mi.category,
             "quantity": mi.quantity,
             "reserve_price": mi.reserve_price,
+            "extra_columns": mi.extra_columns,
             "bids": by_item.get(mi.id, {}),
         }
         rows.append(row)

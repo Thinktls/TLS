@@ -333,7 +333,10 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             None,
         )
 
-        pn_raw = f"{label}-{grade}" if grade else label
+        # Composite key: model + serial only. Grade is NOT embedded here — it can be a
+        # long description ("Grade A – Like New, minor scuffs") that makes the part number
+        # unreadable in admin views. Serial already guarantees per-unit uniqueness.
+        pn_raw = label
         if unit_id:
             pn_raw = f"{pn_raw}-{unit_id}"
 
@@ -472,7 +475,8 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             None,
         )
 
-        pn_raw = f"{label}-{grade}" if grade else label
+        # Composite key: model + serial only (no grade) — mirrors _aggregate_unit_level.
+        pn_raw = label
         if unit_id:
             pn_raw = f"{pn_raw}-{unit_id}"
 
