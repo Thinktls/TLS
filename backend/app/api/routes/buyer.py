@@ -243,8 +243,17 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
             db.commit()
             raise HTTPException(400, str(e))
 
+    def _to_bid_line_kwargs(row: dict) -> dict:
+        kw = dict(row)
+        cat = kw.pop("category", None)
+        if cat:
+            ec = dict(kw.get("extra_columns") or {})
+            ec.setdefault("Grade", cat)
+            kw["extra_columns"] = ec
+        return kw
+
     db.add_all([
-        BidLine(bid_file_id=bid_file.id, bid_round_id=round_id, buyer_id=buyer.id, **row)
+        BidLine(bid_file_id=bid_file.id, bid_round_id=round_id, buyer_id=buyer.id, **_to_bid_line_kwargs(row))
         for row in rows
     ])
 
