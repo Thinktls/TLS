@@ -160,12 +160,32 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
     ws.sheet_view.showGridLines = False
     ws.sheet_properties.tabColor = "217346"   # green tab
 
-    headers   = ["Row #", "Part Number", "Manufacturer", "Description", "Avail Qty", "Unit Price ($)", "Your Qty"]
-    col_widths = [7,       22,            16,             50,            10,           16,               10]
-    # Columns that the buyer can edit (1-indexed): Unit Price=6, Your Qty=7
-    editable = {6, 7}
+    # Discover all spec columns present across all items (union of their extra_columns keys),
+    # preserving insertion order so the template column sequence is stable across uploads.
+    spec_keys: list[str] = []
+    seen_spec: set[str] = set()
+    for item in items:
+        if item.extra_columns:
+            for k in item.extra_columns:
+                if k not in seen_spec:
+                    spec_keys.append(k)
+                    seen_spec.add(k)
 
-    for col_idx, (hdr, width) in enumerate(zip(headers, col_widths), start=1):
+    # Fixed locked columns | spec columns (locked) | editable buyer columns
+    fixed_headers   = ["Row #", "Part Number", "Manufacturer", "Description", "Avail Qty"]
+    fixed_widths    = [7,       22,             16,             50,            10]
+    buyer_headers   = ["Unit Price ($)", "Your Qty"]
+    buyer_widths    = [16,               10]
+    spec_widths     = [max(14, min(len(k) + 2, 30)) for k in spec_keys]
+
+    all_headers = fixed_headers + spec_keys + buyer_headers
+    all_widths  = fixed_widths  + spec_widths + buyer_widths
+
+    total_cols      = len(all_headers)
+    editable_start  = len(fixed_headers) + len(spec_keys) + 1  # 1-indexed
+    editable        = {editable_start, editable_start + 1}
+
+    for col_idx, (hdr, width) in enumerate(zip(all_headers, all_widths), start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
         cell = ws.cell(row=1, column=col_idx, value=hdr)
         cell.font      = HDR_FONT
@@ -180,18 +200,23 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
 
     for seq_row, item in enumerate(items, start=2):
         alt = (seq_row % 2 == 0)
-        row_fill = ALT_FILL if alt else EDIT_FILL   # alternate rows for readability
 
-        values = [
+        fixed_values = [
             seq_row - 1,            # display row #
             item.part_number,
             item.manufacturer or "",
             item.description or "",
             item.quantity,
-            None,                   # Unit Price — buyer fills this in
-            None,                   # Your Qty — optional override
         ]
-        for col_idx, value in enumerate(values, start=1):
+        spec_values = [
+            (item.extra_columns or {}).get(k, "")
+            for k in spec_keys
+        ]
+        buyer_values = [None, None]  # Unit Price, Your Qty — buyer fills these in
+
+        all_values = fixed_values + spec_values + buyer_values
+
+        for col_idx, value in enumerate(all_values, start=1):
             cell = ws.cell(row=seq_row, column=col_idx, value=value)
             cell.border = _thin_border()
             if col_idx in editable:

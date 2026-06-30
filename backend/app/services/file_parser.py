@@ -283,6 +283,12 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     if not pn_col and not desc_col:
         raise ValueError("Unit-level file has no part number or description column.")
 
+    # Columns already consumed by standard fields — everything ELSE goes into extra_columns
+    # so hardware-spec data (CPU Type, Memory Size, Health Status, Grading Notes, etc.) flows
+    # through to the bid template and back, never silently dropped.
+    standard_cols = {c for c in (pn_col, desc_col, grade_col, mfr_col, reserve_col) if c} | set(id_cols)
+    extra_col_names = [c for c in df.columns if c not in standard_cols]
+
     rows = []
     for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
         if pn_col:
@@ -310,6 +316,12 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         if unit_id:
             pn_raw = f"{pn_raw}-{unit_id}"
 
+        extra = {
+            col: str(row.get(col, "")).strip()
+            for col in extra_col_names
+            if str(row.get(col, "")).strip() not in ("", "nan", "None")
+        }
+
         rows.append({
             "part_number": pn_raw,
             "part_number_normalized": normalize_part_number(pn_raw),
@@ -318,6 +330,7 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             "quantity": 1,
             "reserve_price": _safe_float(row.get(reserve_col)) if reserve_col else None,
             "category": grade,
+            "extra_columns": extra if extra else None,
             "row_number": row_idx,
         })
 
@@ -409,6 +422,9 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     grade_col = mapping.get("category")
     id_cols = sorted(_all_identifier_columns(df))
 
+    standard_cols = {c for c in (pn_col, desc_col, grade_col, price_col) if c} | set(id_cols)
+    extra_col_names = [c for c in df.columns if c not in standard_cols]
+
     rows = []
     for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
         label = str(row.get(pn_col, "")).strip()
@@ -432,6 +448,11 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             pn_raw = f"{pn_raw}-{unit_id}"
 
         desc = normalize_description(str(row.get(desc_col, "") if desc_col else "").strip())
+        extra = {
+            col: str(row.get(col, "")).strip()
+            for col in extra_col_names
+            if str(row.get(col, "")).strip() not in ("", "nan", "None")
+        }
         rows.append({
             "raw_part_number": pn_raw,
             "normalized_part_number": normalize_part_number(pn_raw),
@@ -441,7 +462,7 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             "quantity": 1,
             "total_price": round(price, 4),
             "row_number": row_idx,
-            "extra_columns": None,
+            "extra_columns": extra if extra else None,
         })
 
     logger.info(

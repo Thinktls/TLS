@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Index, Integer, String, Float, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Index, Integer, String, Float, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -22,6 +22,7 @@ class MasterItem(Base):
     quantity = Column(Integer, default=1)
     reserve_price = Column(Float, nullable=True)  # floor price; null = no floor
     category = Column(String, nullable=True)
+    extra_columns = Column(JSON, nullable=True)  # non-standard spec cols from original upload (CPU, Memory, Grade, etc.)
 
     row_number = Column(Integer, nullable=True)  # original Excel row
 

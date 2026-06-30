@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Index, Integer, String, Float, ForeignKey, DateTime, Boolean, Text
+from sqlalchemy import Column, Index, Integer, String, Float, ForeignKey, DateTime, Boolean, Text, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -54,6 +54,7 @@ class BidLine(Base):
     anomaly_reason = Column(String, nullable=True)  # z_score | price_too_high | price_too_low
 
     row_number = Column(Integer, nullable=True)  # original Excel row for traceability
+    extra_columns = Column(JSON, nullable=True)  # spec columns from the original file (CPU, Memory, Grade, etc.)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     bid_file = relationship("BidFile", back_populates="bid_lines")
