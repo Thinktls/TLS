@@ -267,6 +267,10 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
     ws.protection.sort                = False
     ws.protection.autoFilter          = False
 
+    # Open directly on the Bid Template tab so the buyer sees the pricing sheet
+    # immediately — not the Instructions page which was covering it on open.
+    wb.active = 1   # 0 = Instructions, 1 = Bid Template
+
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
