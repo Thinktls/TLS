@@ -212,11 +212,23 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
             "Expected headers like: 'Part Number', 'SKU', 'Part#', 'P/N', 'Model Number'."
         )
 
+    # Capture any columns not consumed by standard field mapping so spec data
+    # (CPU, Memory, Storage, etc.) flows through to master_items.extra_columns
+    # and eventually into the generated bid template — mirroring the behaviour
+    # already present on the unit-level and buyer-file paths.
+    mapped_master_cols = set(mapping.values())
+    extra_master_col_names = [c for c in df.columns if c not in mapped_master_cols]
+
     rows = []
     for idx, row in df.iterrows():
         raw_pn = str(row.get(mapping["part_number"], "")).strip()
         if not raw_pn or raw_pn.lower() in ("nan", "none", "") or _is_junk_row(raw_pn):
             continue
+        extra = {
+            col: str(row.get(col, "")).strip()
+            for col in extra_master_col_names
+            if str(row.get(col, "")).strip() not in ("", "nan", "None")
+        }
         rows.append({
             "part_number": raw_pn,
             "part_number_normalized": normalize_part_number(raw_pn),
@@ -225,10 +237,13 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
             "quantity": _safe_int(row.get(mapping.get("quantity", ""), 1)),
             "reserve_price": _safe_float(row.get(mapping.get("reserve_price", ""), None)),
             "category": str(row.get(mapping.get("category", ""), "")).strip(),
+            "extra_columns": extra if extra else None,
             "row_number": int(idx) + 2,
         })
 
-    # Consolidate duplicate normalized part numbers: sum quantities, keep lowest reserve price
+    # Consolidate duplicate normalized part numbers: sum quantities, keep lowest reserve price.
+    # When the same PN appears multiple times with different extra spec values, merge the dicts
+    # so no spec column is silently dropped — first-seen values are kept for conflicts.
     consolidated: dict[str, dict] = {}
     for row in rows:
         key = row["part_number_normalized"]
@@ -238,6 +253,10 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
             if row["reserve_price"] is not None:
                 if existing["reserve_price"] is None or row["reserve_price"] < existing["reserve_price"]:
                     existing["reserve_price"] = row["reserve_price"]
+            # Merge extra_columns: incoming fills in any keys missing from the first-seen row
+            if row.get("extra_columns"):
+                merged = {**(row["extra_columns"] or {}), **(existing["extra_columns"] or {})}
+                existing["extra_columns"] = merged or None
         else:
             consolidated[key] = row.copy()
 
@@ -386,7 +405,8 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
             "extra_columns": extra if extra else None,
         })
 
-    # Consolidate duplicate part numbers: sum quantities, keep the lowest (most competitive) price
+    # Consolidate duplicate part numbers: sum quantities, keep the lowest (most competitive) price.
+    # Merge extra_columns so spec data from later rows fills keys missing in the first-seen row.
     consolidated: dict[str, dict] = {}
     for row in rows:
         key = row["normalized_part_number"]
@@ -400,6 +420,9 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
                 round(existing["unit_price"] * existing["quantity"], 4)
                 if existing["unit_price"] is not None else None
             )
+            if row.get("extra_columns"):
+                merged = {**(row["extra_columns"] or {}), **(existing["extra_columns"] or {})}
+                existing["extra_columns"] = merged or None
         else:
             consolidated[key] = row.copy()
 

@@ -183,16 +183,26 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     _validate_upload(content, file.filename)
     file_size = len(content)
 
-    # Resubmission: remove previous PENDING bid lines so the matcher only sees
-    # the latest file. Lines already processed (matched/exception) are left alone.
+    # Resubmission: clear every previous bid line for this buyer in this round — pending,
+    # matched, and exception alike — so a corrected re-upload (e.g. after an admin reopen)
+    # actually overrides stale data instead of leaving old matched/exception lines silently
+    # competing alongside the new ones at the next processing pass. Lines already locked into
+    # a finalized Deal can't be deleted (FK), so those are excluded and left for admin review.
     prev_files = db.query(BidFile).filter(
         BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id
     ).all()
-    for pf in prev_files:
-        db.query(BidLine).filter(
-            BidLine.bid_file_id == pf.id, BidLine.match_status == "pending"
-        ).delete(synchronize_session="fetch")
-        pf.status = "superseded"
+    if prev_files:
+        prev_file_ids = [pf.id for pf in prev_files]
+        deal_protected_ids = [
+            row[0] for row in db.query(Deal.winning_bid_line_id)
+            .filter(Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id).all()
+        ]
+        stale_q = db.query(BidLine).filter(BidLine.bid_file_id.in_(prev_file_ids))
+        if deal_protected_ids:
+            stale_q = stale_q.filter(~BidLine.id.in_(deal_protected_ids))
+        stale_q.delete(synchronize_session="fetch")
+        for pf in prev_files:
+            pf.status = "superseded"
 
     # Persist file to the uploads volume so admin can download it later
     import os as _os
@@ -592,15 +602,22 @@ def submit_bid_inline(
     if not priced:
         raise HTTPException(400, "No priced lines — enter at least one Unit Price before submitting")
 
-    # Supersede previous pending submissions
+    # Supersede previous submissions — same full-clear logic as the file-upload path above.
     prev_files = db.query(BidFile).filter(
         BidFile.bid_round_id == round_id, BidFile.buyer_id == buyer.id
     ).all()
-    for pf in prev_files:
-        db.query(BidLine).filter(
-            BidLine.bid_file_id == pf.id, BidLine.match_status == "pending"
-        ).delete(synchronize_session="fetch")
-        pf.status = "superseded"
+    if prev_files:
+        prev_file_ids = [pf.id for pf in prev_files]
+        deal_protected_ids = [
+            row[0] for row in db.query(Deal.winning_bid_line_id)
+            .filter(Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id).all()
+        ]
+        stale_q = db.query(BidLine).filter(BidLine.bid_file_id.in_(prev_file_ids))
+        if deal_protected_ids:
+            stale_q = stale_q.filter(~BidLine.id.in_(deal_protected_ids))
+        stale_q.delete(synchronize_session="fetch")
+        for pf in prev_files:
+            pf.status = "superseded"
 
     # Create a virtual BidFile to hold these lines
     bid_file = BidFile(
