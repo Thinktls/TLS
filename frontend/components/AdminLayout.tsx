@@ -194,10 +194,17 @@ function NotificationBell() {
 }
 
 /* ── Active check ────────────────────────────────────────────── */
+// Pick the nav item with the longest (most specific) matching prefix.
+// Bug: the old check yielded to ANY other match — "/admin" (len 6) beat
+// "/admin/rounds" (len 14) for paths like "/admin/rounds/5/page", leaving
+// nothing highlighted. Fix: only defer to a competing item if its href is
+// strictly longer (more specific) than ours.
 function isNavActive(href: string, path: string): boolean {
   if (path === href) return true;
   if (!path.startsWith(href + "/")) return false;
-  return !nav.some(n => n.href !== href && path.startsWith(n.href));
+  return !nav.some(
+    n => n.href !== href && n.href.length > href.length && path.startsWith(n.href)
+  );
 }
 
 /* ── Logo ────────────────────────────────────────────────────── */

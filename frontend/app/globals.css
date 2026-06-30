@@ -99,8 +99,8 @@ html, body {
 /* ── Scrollbar ──────────────────────────────────────────────── */
 ::-webkit-scrollbar         { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track   { background: transparent; }
-::-webkit-scrollbar-thumb   { background: rgba(255,255,255,0.08); border-radius: 100px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+::-webkit-scrollbar-thumb   { background: var(--border-mid); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.3); }
 
 /* ── Gradient text util ─────────────────────────────────────── */
 .gradient-text {
@@ -217,7 +217,7 @@ html, body {
 .glass-input {
   background: var(--input-bg);
   border: 1px solid var(--border-mid);
-  color: white;
+  color: var(--text-1);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   width: 100%;
@@ -232,7 +232,7 @@ html, body {
   background: rgba(255,255,255,0.06);
   box-shadow: 0 0 0 3px rgba(61,129,227,0.12);
 }
-.glass-input option { background: var(--bg-3); color: white; }
+.glass-input option { background: var(--bg-3); color: var(--text-1); }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .btn-brand {
@@ -345,7 +345,7 @@ html, body {
 .dark-table td {
   padding: 13px 16px;
   color: var(--text-2);
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
   transition: background 0.15s;
 }
 .dark-table tr:hover td { background: var(--table-row-hover); }
@@ -530,3 +530,71 @@ html, body {
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .page-content { padding: 16px 12px; }
 }
+
+/* ── Keyboard focus rings (WCAG 2.4.11 — visible focus indicator) ─ */
+/* Only apply the ring when navigating by keyboard, not on mouse click. */
+.btn-brand:focus-visible,
+.btn-ghost:focus-visible,
+.btn-danger:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.glass-input:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 0;
+}
+/* Ensure links in the nav are keyboard-reachable */
+.nav-item:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+/* Remove default :focus outline for mouse users — :focus-visible handles keyboard */
+.btn-brand:focus:not(:focus-visible),
+.btn-ghost:focus:not(:focus-visible),
+.btn-danger:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Skeleton loaders ───────────────────────────────────────────── */
+/* Drop-in replacement for spinner patterns — looks far more enterprise. */
+/* translateX is GPU-composited (Composite only, no Paint/Layout).
+   background-position would trigger Paint on every frame — avoid it. */
+@keyframes skeleton-shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 25%, var(--surface-hover) 50%, transparent 75%);
+  will-change: transform;   /* promotes to its own GPU layer — Composite only, no Paint */
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+.skeleton-text  { height: 0.75rem; border-radius: 4px; }
+.skeleton-title { height: 1.1rem;  border-radius: 4px; }
+.skeleton-circle { border-radius: 50%; }
+.skeleton-row   { height: 44px; border-radius: var(--radius-sm); margin-bottom: 1px; }
+
+/* Respects user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: var(--surface); }
+  .animate-in { animation: none !important; }
+}
+
+/* ── Badge consistency — ensure all badges have borders ─────────── */
+/* badge-matched and badge-exception were missing the border that all other
+   status badges have, causing visual inconsistency in the exception queue. */
+.badge-matched   { border: 1px solid rgba(16,185,129,0.2); }
+.badge-exception { border: 1px solid rgba(245,158,11,0.2); }
+
+/* ── Light theme input caret ─────────────────────────────────────── */
+/* In light mode the caret is invisible against the light background without this */
+[data-theme="light"] .glass-input { caret-color: var(--text-1); }

@@ -52,13 +52,32 @@ export default function AdminDashboard() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ width: "32px", height: "32px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", margin: "0 auto 12px", animation: "spin 0.8s linear infinite" }} />
-          <p style={{ color: "var(--text-4)", fontSize: "0.82rem" }}>Loading dashboard…</p>
+      <div style={{ maxWidth: "960px" }}>
+        {/* Header skeleton */}
+        <div style={{ marginBottom: "32px" }}>
+          <div className="skeleton skeleton-text" style={{ width: "80px", marginBottom: "8px" }} />
+          <div className="skeleton skeleton-title" style={{ width: "200px", height: "1.6rem", marginBottom: "8px" }} />
+          <div className="skeleton skeleton-text" style={{ width: "140px" }} />
+        </div>
+        {/* KPI card skeletons */}
+        <div className="stat-grid" style={{ marginBottom: "32px" }}>
+          {[1,2,3,4].map(i => (
+            <div key={i} style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "22px 24px" }}>
+              <div className="skeleton skeleton-circle" style={{ width: "42px", height: "42px", marginBottom: "18px" }} />
+              <div className="skeleton" style={{ width: "60px", height: "2rem", marginBottom: "8px" }} />
+              <div className="skeleton skeleton-text" style={{ width: "80px", marginBottom: "4px" }} />
+              <div className="skeleton skeleton-text" style={{ width: "50px" }} />
+            </div>
+          ))}
+        </div>
+        {/* Table skeleton */}
+        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "20px", marginBottom: "20px" }}>
+          <div className="skeleton skeleton-title" style={{ width: "120px", marginBottom: "16px" }} />
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i} className="skeleton skeleton-row" style={{ marginBottom: i < 6 ? "4px" : 0 }} />
+          ))}
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </AdminLayout>
   );
 
