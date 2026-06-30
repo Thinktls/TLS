@@ -108,8 +108,8 @@ export default function MyDeals() {
           ))}
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: "4px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "4px", marginBottom: "20px", width: "fit-content" }}>
+        {/* Tabs — data-tour anchors the guided tour to the rounds section */}
+        <div data-tour="portal-rounds" style={{ display: "flex", gap: "4px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "4px", marginBottom: "20px", width: "fit-content" }}>
           <button style={tabStyle(tab === "rounds")} onClick={() => setTab("rounds")}>
             Bid Rounds ({rounds.length})
           </button>

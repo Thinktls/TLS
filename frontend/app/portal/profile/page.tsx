@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import BuyerLayout from "@/components/BuyerLayout";
+import { resetBuyerTour } from "@/components/BuyerTour";
 import api from "@/lib/api";
 
 export default function ProfilePage() {
@@ -110,6 +111,20 @@ export default function ProfilePage() {
               {saving ? "Saving…" : "Update Password"}
             </button>
           </form>
+        </div>
+
+        {/* Help section */}
+        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 24px" }}>
+          <h2 style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-4)", letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 12px" }}>Help & Onboarding</h2>
+          <p style={{ fontSize: "0.82rem", color: "var(--text-3)", margin: "0 0 14px" }}>Replay the guided tour to rediscover features at any time.</p>
+          <button
+            type="button"
+            onClick={() => { resetBuyerTour(); window.location.href = "/portal"; }}
+            className="btn-ghost"
+            style={{ fontSize: "0.8rem" }}
+          >
+            ↺ Replay guided tour
+          </button>
         </div>
       </div>
     </BuyerLayout>

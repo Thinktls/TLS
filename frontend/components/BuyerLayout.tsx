@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeProvider";
 import ChatWidget from "@/components/ChatWidget";
+import BuyerTour from "@/components/BuyerTour";
 
 /* ── Auth guard ──────────────────────────────────────────────── */
 function useAuthGuard() {
@@ -98,8 +99,13 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
           <div className="section-label" style={{ marginTop: "4px" }}>Navigation</div>
           {nav.map(({ href, label, icon }) => {
             const active = path === href || (href !== "/portal" && path.startsWith(href));
+            const tourAttr =
+              href === "/portal/bid"        ? "nav-submit-bid"  :
+              href === "/portal/submission" ? "nav-submission"  :
+              href === "/portal/results"    ? "nav-results"     : undefined;
             return (
-              <Link key={href} href={href} onClick={closeSidebar} className={`nav-item${active ? " active" : ""}`}>
+              <Link key={href} href={href} onClick={closeSidebar} className={`nav-item${active ? " active" : ""}`}
+                {...(tourAttr ? { "data-tour": tourAttr } : {})}>
                 {icon}{label}
               </Link>
             );
@@ -160,6 +166,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
       <ChatWidget role="buyer" />
+      <BuyerTour />
     </div>
   );
 }

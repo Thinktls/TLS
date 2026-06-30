@@ -69,6 +69,7 @@ export default function ChatWidget({ role, roundId }: Props) {
       <button
         onClick={() => setOpen(o => !o)}
         aria-label="AI Assistant"
+        data-tour="chat-button"
         style={{
           position: "fixed", bottom: "24px", right: "24px",
           width: "48px", height: "48px", borderRadius: "50%",
