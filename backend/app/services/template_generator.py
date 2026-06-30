@@ -14,6 +14,11 @@ from sqlalchemy.orm import Session
 from app.models.master_item import MasterItem
 from app.models.bid_round import BidRound
 
+# Lowercase column-name fragments that identify a serial/UID column — used to
+# detect unit-level rounds so the template can use the original column names
+# from the admin file instead of the generic renamed headers.
+_SERIAL_INDICATORS = {"uid", "serial", "s/n", "sn", "asset tag", "asset#", "barcode"}
+
 # ── Colour palette (clean / professional) ────────────────────────────────────
 _WHITE    = "FFFFFF"
 _HDR_BG   = "1F497D"   # dark blue header
@@ -171,9 +176,24 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
                     spec_keys.append(k)
                     seen_spec.add(k)
 
-    # Fixed locked columns | spec columns (locked) | editable buyer columns
-    fixed_headers   = ["Row #", "Part Number", "Manufacturer", "Description", "Avail Qty"]
-    fixed_widths    = [7,       22,             16,             50,            10]
+    # Unit-level detection: if any spec column name looks like a UID/serial column, this round
+    # was uploaded as a unit-level file (one row per physical unit). In that case the original
+    # column names are already in spec_keys (model title, UID, grade, etc.) so we use a minimal
+    # fixed section — just Row # — and let the original columns speak for themselves.
+    # Non-unit-level rounds keep the standard hardcoded headers (Part Number, Description, …).
+    is_unit_level_round = any(
+        any(ind in k.lower() for ind in _SERIAL_INDICATORS)
+        for k in spec_keys
+    )
+
+    if is_unit_level_round:
+        # Original column names carry all the data — no generic renamed fixed columns needed.
+        fixed_headers = ["Row #"]
+        fixed_widths  = [7]
+    else:
+        fixed_headers = ["Row #", "Part Number", "Manufacturer", "Description", "Avail Qty"]
+        fixed_widths  = [7, 22, 16, 50, 10]
+
     buyer_headers   = ["Unit Price ($)", "Your Qty"]
     buyer_widths    = [16,               10]
     spec_widths     = [max(14, min(len(k) + 2, 30)) for k in spec_keys]
@@ -201,13 +221,16 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
     for seq_row, item in enumerate(items, start=2):
         alt = (seq_row % 2 == 0)
 
-        fixed_values = [
-            seq_row - 1,            # display row #
-            item.part_number,
-            item.manufacturer or "",
-            item.description or "",
-            item.quantity,
-        ]
+        if is_unit_level_round:
+            fixed_values = [seq_row - 1]   # Row # only — all data lives in spec_keys
+        else:
+            fixed_values = [
+                seq_row - 1,
+                item.part_number,
+                item.manufacturer or "",
+                item.description or "",
+                item.quantity,
+            ]
         spec_values = [
             (item.extra_columns or {}).get(k, "")
             for k in spec_keys

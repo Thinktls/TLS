@@ -302,11 +302,13 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     if not pn_col and not desc_col:
         raise ValueError("Unit-level file has no part number or description column.")
 
-    # Columns already consumed by standard fields — everything ELSE goes into extra_columns
-    # so hardware-spec data (CPU Type, Memory Size, Health Status, Grading Notes, etc.) flows
-    # through to the bid template and back, never silently dropped.
-    standard_cols = {c for c in (pn_col, desc_col, grade_col, mfr_col, reserve_col) if c} | set(id_cols)
-    extra_col_names = [c for c in df.columns if c not in standard_cols]
+    # Only the reserve price is excluded — it's admin-only (floor price buyers must not see).
+    # Every other original column (model/title, UID/serial, grade, manufacturer, all spec
+    # columns) flows into extra_columns with its EXACT original name and in the original
+    # column order, so the generated buyer template mirrors the admin file column-for-column
+    # with no renaming and no columns combined or hidden.
+    system_only = {reserve_col} if reserve_col else set()
+    extra_col_names = [c for c in df.columns if c not in system_only]
 
     rows = []
     for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
@@ -445,8 +447,12 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     grade_col = mapping.get("category")
     id_cols = sorted(_all_identifier_columns(df))
 
-    standard_cols = {c for c in (pn_col, desc_col, grade_col, price_col) if c} | set(id_cols)
-    extra_col_names = [c for c in df.columns if c not in standard_cols]
+    # Only the offer-price column is excluded (captured as unit_price).
+    # All other original columns — model/title, UID/serial, grade, manufacturer, spec fields —
+    # flow into extra_columns with their exact original names so the submission preview
+    # shows the buyer's data exactly as it appeared in the file they uploaded.
+    system_only = {price_col} if price_col else set()
+    extra_col_names = [c for c in df.columns if c not in system_only]
 
     rows = []
     for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
