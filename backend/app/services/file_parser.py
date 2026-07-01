@@ -53,10 +53,13 @@ MASTER_COLUMN_ALIASES = {
         "model title", "model name", "item title", "title",
         "part description", "part name", "product title",
         "specification", "spec", "specs", "specifications",
-        "details", "info", "information", "notes",
+        "details", "info", "information",
         "long description", "short description", "product details",
         "line description", "line item", "line item description",
         "commodity description",
+        # NOTE: "grading description" / "grading notes" intentionally excluded —
+        # those columns describe cosmetic grade, not the product itself, and must
+        # map to "category" instead so grade text doesn't appear as the description.
     ],
     "manufacturer": [
         "manufacturer", "mfr", "mfg", "brand", "vendor", "make", "oem",
@@ -82,9 +85,12 @@ MASTER_COLUMN_ALIASES = {
     "category": [
         "category", "cat", "type", "commodity", "product type",
         "grade", "final grade", "condition", "condition grade",
+        # Cosmetic-grade column names come first — prefer "Grade A" over full description text.
+        # "cosmetic grade" / "cosmetic" are common ThinkTLS column names for the letter grade.
+        "cosmetic grade", "cosmetic", "quality grade", "quality",
+        # Grading description columns come after so they only win when no short-grade column exists.
         "grading description", "grading notes", "grade description",
-        "quality", "quality grade", "cosmetic grade",
-        "r2v3", "r2 grade", "cosmetic",
+        "r2v3", "r2 grade",
     ],
 }
 
@@ -139,12 +145,12 @@ BUYER_COLUMN_ALIASES = {
         "your qty", "your quantity", "bid qty", "order qty",
         "requested qty", "demand", "volume", "amount",
     ],
-    # Grade/condition — used when buyer submits a unit-level file (laptops, servers)
-    # so we aggregate by (model, grade) and match master items exactly.
+    # Grade/condition — used when buyer submits a unit-level file (laptops, servers).
+    # Cosmetic grade columns come first; long description columns are last fallback.
     "category": [
         "grade", "final grade", "condition", "condition grade",
+        "cosmetic grade", "cosmetic", "quality grade", "quality",
         "grading description", "grading notes", "grade description",
-        "quality", "quality grade", "cosmetic", "cosmetic grade",
         "r2v3", "r2 grade",
     ],
 }
@@ -156,6 +162,18 @@ FUZZY_THRESHOLD = 72   # minimum rapidfuzz score for a column name to match
 # 15 covers files that have a title block, logo row, instruction rows, or blank rows
 # before the actual column headers begin.
 _HEADER_ROW_SCAN_DEPTH = 15
+
+# Keywords that identify a column as grade/condition-related.
+# Used to prevent grade columns from being mis-used as the item description in unit-level files.
+# "Grading Description" fuzzy-matches the alias "description" (score ~73, just above threshold=72),
+# so an explicit keyword guard is the most reliable defence.
+_GRADE_COLUMN_KEYWORDS = {"grade", "grading", "cosmetic", "condition", "quality"}
+
+def _is_grade_column(col_name: str) -> bool:
+    """Return True if the column name is grade/condition-related, not a product description."""
+    lower = col_name.lower()
+    return any(k in lower for k in _GRADE_COLUMN_KEYWORDS)
+
 
 # Columns that signal a unit-level (one-row-per-unit) inventory file
 _SERIAL_ALIASES = [
@@ -322,7 +340,14 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
                 continue
 
-        desc_val = normalize_description(str(row.get(desc_col, "")).strip()) if desc_col else label
+        # If desc_col is grade-related (e.g. "Grading Description" fuzzy-matched
+        # "description"), don't use it as the item description — use the model name instead.
+        # "Grading Description" scores ~73 on fuzz.token_sort_ratio("description", ...)
+        # which is just above FUZZY_THRESHOLD=72, so the keyword guard is the safest defence.
+        if desc_col and not _is_grade_column(desc_col) and desc_col != grade_col:
+            desc_val = normalize_description(str(row.get(desc_col, "")).strip())
+        else:
+            desc_val = normalize_description(label)
 
         grade = str(row.get(grade_col, "")).strip() if grade_col else ""
         if grade.lower() in ("nan", "none", ""):
@@ -480,7 +505,11 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         if unit_id:
             pn_raw = f"{pn_raw}-{unit_id}"
 
-        desc = normalize_description(str(row.get(desc_col, "") if desc_col else "").strip())
+        # Same grade-column guard as master path: don't use grade/condition columns as description.
+        if desc_col and not _is_grade_column(desc_col) and desc_col != grade_col:
+            desc = normalize_description(str(row.get(desc_col, "")).strip())
+        else:
+            desc = normalize_description(label)
         extra = {
             col: str(row.get(col, "")).strip()
             for col in extra_col_names

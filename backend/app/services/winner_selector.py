@@ -47,24 +47,34 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
         if not master:
             continue
 
-        # Anomaly detection — flag outlier bids and route to exception queue
+        # Anomaly detection — flag outlier bids and route to exception queue.
+        # With ≥3 bids: z-score + absolute ratio using the group mean.
+        # With 2 bids: check max/min ratio directly (catches 10x typos like $1000 instead of $100).
+        # With 1 bid: no peers, so no anomaly detection.
         prices = [l.unit_price for l in lines if l.unit_price]
-        if len(prices) >= 3:
+        if len(prices) >= 2:
             mean_price = statistics.mean(prices)
-            stdev = statistics.stdev(prices)
+            stdev = statistics.stdev(prices) if len(prices) >= 3 else None
+            min_price = min(prices)
+            max_price = max(prices)
             for line in lines:
-                z = abs(line.unit_price - mean_price) / stdev if stdev > 0 else 0
+                if line.unit_price is None:
+                    continue
+                z = abs(line.unit_price - mean_price) / stdev if stdev and stdev > 0 else 0
                 line.z_score = round(z, 4)
-                if z > 2.5 or line.unit_price > mean_price * 10 or line.unit_price < mean_price * 0.2:
+                # Extreme ratio check works with 2 bids: flag the high bid when it's ≥10x the low bid
+                extreme_high = (len(prices) == 2 and max_price > min_price * 10 and line.unit_price == max_price)
+                if z > 2.5 or line.unit_price > mean_price * 10 or line.unit_price < mean_price * 0.2 or extreme_high:
                     line.is_anomaly = True
                     line.match_status = "exception"
                     line.exception_type = "price_anomaly"
-                    if line.unit_price > mean_price * 10:
-                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {line.unit_price/mean_price:.0f}x the median ${mean_price:.2f} — possible data entry error"
+                    if extreme_high or line.unit_price > mean_price * 10:
+                        ratio = line.unit_price / min(p for p in prices if p != line.unit_price)
+                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {ratio:.0f}× other bids (${min_price:.2f}–${max_price:.2f}) — likely data entry error"
                     elif line.unit_price < mean_price * 0.2:
-                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {(1-line.unit_price/mean_price)*100:.0f}% below the median ${mean_price:.2f} — possible magnitude error"
+                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {(1-line.unit_price/mean_price)*100:.0f}% below median ${mean_price:.2f} — possible magnitude error"
                     else:
-                        line.exception_notes = f"Bid ${line.unit_price:.2f} has z-score {z:.2f} (median ${mean_price:.2f}) — statistical outlier"
+                        line.exception_notes = f"Bid ${line.unit_price:.2f} has z-score {z:.2f} (group mean ${mean_price:.2f}) — statistical outlier"
 
         # Filter out below-reserve bids and anomalies from valid candidates
         valid_lines = [l for l in lines if not l.is_anomaly]

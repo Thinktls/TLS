@@ -225,12 +225,15 @@ def _batch_ollama(
         base = settings.OLLAMA_BASE_URL.rstrip("/")
 
         # Try OpenAI-compatible /v1/chat/completions endpoint (Ollama supports this)
+        is_groq = "/openai" in base
+
         payload = {
             "model": settings.OLLAMA_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
-            "format": "json",  # Ollama JSON mode — forces valid JSON output
         }
+        if not is_groq:
+            payload["format"] = "json"  # Ollama JSON mode — not supported by Groq
 
         headers = {"Content-Type": "application/json"}
         if settings.OLLAMA_API_KEY:
@@ -239,14 +242,10 @@ def _batch_ollama(
         # Groq base ends with /openai; local Ollama just needs /v1 appended
         if base.endswith("/v1"):
             endpoint = f"{base}/chat/completions"
-        elif "/openai" in base:
+        elif is_groq:
             endpoint = f"{base}/v1/chat/completions"
         else:
             endpoint = f"{base}/v1/chat/completions"
-
-        # Groq doesn't support the format:json field — only send it for local Ollama
-        if "/openai" not in base:
-            payload["format"] = "json"
 
         resp = httpx.post(
             endpoint,
