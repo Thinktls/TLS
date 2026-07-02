@@ -550,16 +550,40 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
     from app.core.config import settings
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
 
+    # Pre-fetch master items once — needed for part_number/description in loss emails
+    masters_idx = {
+        m.id: m for m in db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
+    }
+
     sent = 0
     for row in assigned:
         buyer = db.query(User).filter(User.id == row.buyer_id).first()
         if not buyer or not buyer.is_active:
             continue
-        won = db.query(Deal).filter(Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id).count()
-        total_lines = db.query(BidLine).filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id, BidLine.match_status == "matched").count()
-        lost = max(0, total_lines - won)
+        buyer_lines = db.query(BidLine).filter(
+            BidLine.bid_round_id == round_id,
+            BidLine.buyer_id == buyer.id,
+            BidLine.match_status == "matched",
+        ).all()
+        won = sum(1 for l in buyer_lines if l.is_winner)
+        lost = len(buyer_lines) - won
+
+        # Build per-item loss detail list — only items where buyer bid AND has a fluffed price
+        lost_items = []
+        for line in buyer_lines:
+            if not line.is_winner and line.unit_price is not None and line.fluffed_loss_price is not None:
+                master = masters_idx.get(line.master_item_id) if line.master_item_id else None
+                lost_items.append({
+                    "part_number": master.part_number if master else line.raw_part_number,
+                    "description": (master.description if master else line.description) or "",
+                    "your_price": line.unit_price,
+                    "winning_price": line.fluffed_loss_price,
+                })
+
         portal_url = f"{frontend_url}/portal/results?round={round_id}"
-        background_tasks.add_task(send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url)
+        background_tasks.add_task(
+            send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url, lost_items
+        )
         sent += 1
 
     return {"sent": sent, "message": f"Results queued for {sent} buyer(s)"}

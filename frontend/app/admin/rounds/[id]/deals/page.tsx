@@ -46,6 +46,18 @@ interface OverrideModal {
   reason: string;
 }
 
+interface RoundBuyer {
+  id: number;
+  full_name: string;
+  email: string;
+  company_name: string | null;
+}
+
+interface AwardLotModal {
+  buyerId: number | "";
+  reason: string;
+}
+
 const statusBadge: Record<string, { background: string; color: string }> = {
   pending_approval: { background: "rgba(251,191,36,0.15)", color: "#fbbf24" },
   approved:         { background: "rgba(52,211,153,0.15)", color: "#34d399" },
@@ -155,6 +167,9 @@ export default function DealsPage() {
   const [override, setOverride] = useState<OverrideModal | null>(null);
   const [submittingOverride, setSubmittingOverride] = useState(false);
   const [expandedDeal, setExpandedDeal] = useState<number | null>(null);
+  const [awardLot, setAwardLot] = useState<AwardLotModal | null>(null);
+  const [roundBuyers, setRoundBuyers] = useState<RoundBuyer[]>([]);
+  const [awardingLot, setAwardingLot] = useState(false);
 
   function flash(text: string, type: "ok" | "err" = "ok") {
     setMsg(text); setMsgType(type);
@@ -167,7 +182,10 @@ export default function DealsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    load();
+    api.get(`/rounds/${id}/buyers`).then((r) => setRoundBuyers(r.data)).catch(() => {});
+  }, [id]);
 
   async function singleAction(dealId: number, endpoint: string, label: string) {
     setActing(dealId);
@@ -192,6 +210,25 @@ export default function DealsPage() {
       flash(err.response?.data?.detail || "Failed", "err");
     } finally {
       setApprovingAll(false);
+    }
+  }
+
+  async function submitAwardLot() {
+    if (!awardLot || !awardLot.buyerId) { flash("Select a buyer", "err"); return; }
+    if (!awardLot.reason.trim()) { flash("Reason is required", "err"); return; }
+    setAwardingLot(true);
+    try {
+      const res = await api.post(`/deals/rounds/${id}/award-lot`, {
+        buyer_id: awardLot.buyerId,
+        reason_note: awardLot.reason,
+      });
+      flash(`✓ All ${res.data.awarded} deals awarded to ${res.data.buyer}`);
+      setAwardLot(null);
+      load();
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Award lot failed", "err");
+    } finally {
+      setAwardingLot(false);
     }
   }
 
@@ -231,7 +268,7 @@ export default function DealsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1200px" }} className="animate-in">
+      <div className="animate-in">
         <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           Round Detail
@@ -254,17 +291,26 @@ export default function DealsPage() {
               {deals.length} deals · ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} total · Click any row to see all competing bids
             </p>
           </div>
-          {pendingCount > 0 && (
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <button
-              onClick={approveAll}
-              disabled={approvingAll}
-              className="btn-brand"
-              style={{ background: "#059669", minHeight: "44px", minWidth: "160px" }}
-              title="Approve all pending deals and automatically send win/loss notices to buyers"
+              onClick={() => setAwardLot({ buyerId: "", reason: "" })}
+              className="btn-ghost"
+              style={{ minHeight: "44px", whiteSpace: "nowrap" }}
             >
-              {approvingAll ? "Approving & Notifying…" : `Approve All & Lock Awards (${pendingCount})`}
+              Award Entire Lot
             </button>
-          )}
+            {pendingCount > 0 && (
+              <button
+                onClick={approveAll}
+                disabled={approvingAll}
+                className="btn-brand"
+                style={{ background: "#059669", minHeight: "44px", whiteSpace: "nowrap" }}
+                title="Approve all pending deals and automatically send win/loss notices to buyers"
+              >
+                {approvingAll ? "Approving…" : `Approve All (${pendingCount})`}
+              </button>
+            )}
+          </div>
         </div>
 
         {msg && (
@@ -278,20 +324,26 @@ export default function DealsPage() {
           </div>
         )}
 
-        {/* Scrollable table wrapper */}
         <div style={{
           background: "var(--bg-2)",
           border: "1px solid var(--border)",
           borderRadius: "var(--radius-xl)",
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch",
         }}>
-          <table className="dark-table" style={{ minWidth: "700px" }}>
+          <table className="dark-table" style={{ width: "100%", tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: "28px" }} />
+              <col style={{ width: "36%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "50px" }} />
+              <col style={{ width: "90px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "110px" }} />
+              <col style={{ width: "18%" }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ width: "28px" }} />
-                <th>Part Number</th>
-                <th>Description</th>
+                <th><span className="sr-only">Expand</span></th>
+                <th>Item</th>
                 <th>Winner</th>
                 <th style={{ textAlign: "right" }}>Qty</th>
                 <th style={{ textAlign: "right" }}>Price</th>
@@ -318,13 +370,12 @@ export default function DealsPage() {
                       <td style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: "0.7rem", paddingRight: 0 }}>
                         {isExpanded ? "▼" : "▶"}
                       </td>
-                      <td style={{ fontFamily: "monospace", fontSize: "0.78rem", whiteSpace: "nowrap" }}>{d.part_number}</td>
-                      <td style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {d.description}
+                      <td style={{ overflow: "hidden" }}>
+                        <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.part_number}</div>
+                        <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</div>
                       </td>
-                      <td style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                        <div style={{ fontWeight: 500, color: "var(--text-1)" }}>{d.winner_company || "—"}</div>
-                        <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>{d.winner_email}</div>
+                      <td style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500, color: "var(--text-1)" }}>
+                        {d.winner_company || "—"}
                       </td>
                       <td style={{ textAlign: "right" }}>{d.quantity}</td>
                       <td style={{ textAlign: "right", fontFamily: "monospace", whiteSpace: "nowrap" }}>${d.winning_price.toFixed(2)}</td>
@@ -393,6 +444,79 @@ export default function DealsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Award Entire Lot Modal */}
+        {awardLot && (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 100,
+            background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+          }}>
+            <div style={{
+              background: "#0d1826",
+              border: "1px solid rgba(61,129,227,0.3)",
+              borderRadius: "20px 20px 0 0",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "560px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}>
+              <div style={{ width: "40px", height: "4px", borderRadius: "2px", background: "rgba(255,255,255,0.12)", margin: "0 auto 20px" }} />
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 6px" }}>
+                Award Entire Lot
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", margin: "0 0 20px" }}>
+                All {deals.length} deals will be reassigned to the selected buyer. Existing winner selections are overridden and deals return to pending approval.
+              </p>
+
+              <label style={labelStyle}>Select Buyer</label>
+              <select
+                value={awardLot.buyerId}
+                onChange={(e) => setAwardLot({ ...awardLot, buyerId: e.target.value ? Number(e.target.value) : "" })}
+                className="glass-input"
+                style={{ marginBottom: 14 }}
+              >
+                <option value="">Choose buyer...</option>
+                {roundBuyers.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.company_name || b.full_name} ({b.email})
+                  </option>
+                ))}
+              </select>
+
+              <label style={labelStyle}>Reason (required)</label>
+              <textarea
+                value={awardLot.reason}
+                onChange={(e) => setAwardLot({ ...awardLot, reason: e.target.value })}
+                placeholder="e.g. Customer requested single-vendor award"
+                rows={3}
+                className="glass-input"
+                style={{ marginBottom: 20, resize: "vertical" }}
+              />
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={submitAwardLot}
+                  disabled={awardingLot}
+                  className="btn-brand"
+                  style={{ flex: 1, minHeight: "48px", background: "#7c3aed" }}
+                >
+                  {awardingLot ? "Awarding…" : "Award Entire Lot"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAwardLot(null)}
+                  className="btn-ghost"
+                  style={{ flex: 1, minHeight: "48px" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Override Modal */}
         {override && (

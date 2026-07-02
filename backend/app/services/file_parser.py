@@ -46,6 +46,8 @@ MASTER_COLUMN_ALIASES = {
         "upc", "gtin", "ean", "isbn", "asset number", "asset#", "asset id", "asset tag",
         # ThinkTLS / industry-specific
         "drive part#", "drive part number",
+        # Excel pivot row-label header (ThinkTLS memory bid sheets)
+        "row labels", "row label", "labels",
     ],
     "description": [
         "description", "desc", "item description", "product name", "name",
@@ -113,6 +115,8 @@ BUYER_COLUMN_ALIASES = {
         "p/n", "pn", "p.n.", "mpn",
         # ThinkTLS / industry-specific
         "drive part#", "drive part number",
+        # Excel pivot row-label header (ThinkTLS memory bid sheets)
+        "row labels", "row label", "labels",
     ],
     "description": [
         "description", "desc", "item description", "product", "product name",
@@ -488,8 +492,6 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
         if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
             continue
         price = _safe_float(row.get(price_col))
-        if price is None:
-            continue  # buyer left this unit blank — not bidding on it
 
         grade = str(row.get(grade_col, "") if grade_col else "").strip()
         if grade.lower() in ("nan", "none", ""):
@@ -522,14 +524,14 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             "category": grade or None,
             "unit_price": price,
             "quantity": 1,
-            "total_price": round(price, 4),
+            "total_price": round(price, 4) if price is not None else None,
             "row_number": row_idx,
             "extra_columns": extra if extra else None,
         })
 
     logger.info(
-        "[file_parser] buyer unit-level file: %d rows → %d priced bid lines (1:1, no aggregation)",
-        len(df), len(rows),
+        "[file_parser] buyer unit-level file: %d rows → %d bid lines (%d priced)",
+        len(df), len(rows), sum(1 for r in rows if r["unit_price"] is not None),
     )
     return rows
 

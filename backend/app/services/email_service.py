@@ -62,9 +62,9 @@ def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, comm
     _send(buyer_email, buyer_name, subject, html)
 
 
-def send_round_results(buyer_email: str, buyer_name: str, round_name: str, won_count: int, lost_count: int, portal_url: str):
+def send_round_results(buyer_email: str, buyer_name: str, round_name: str, won_count: int, lost_count: int, portal_url: str, lost_items: list | None = None):
     from app.services.email_templates import results_email
-    subject, html = results_email(buyer_name, round_name, won_count, lost_count, portal_url)
+    subject, html = results_email(buyer_name, round_name, won_count, lost_count, portal_url, lost_items or [])
     _send(buyer_email, buyer_name, subject, html)
 
 

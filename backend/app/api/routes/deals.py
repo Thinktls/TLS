@@ -33,6 +33,11 @@ class BulkApproveRequest(BaseModel):
     deal_ids: list[int]
 
 
+class AwardLotRequest(BaseModel):
+    buyer_id: int
+    reason_note: str
+
+
 @router.get("/rounds/{round_id}")
 def list_deals(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     deals = db.query(Deal).filter(Deal.bid_round_id == round_id).all()
@@ -236,6 +241,49 @@ async def push_to_razor(deal_id: int, db: Session = Depends(get_db), _=Depends(r
             "error": str(e),
             "fallback": f"Download CSV at /api/rounds/{deal.bid_round_id}/export/razor.csv",
         }
+
+
+@router.post("/rounds/{round_id}/award-lot")
+def award_lot(round_id: int, req: AwardLotRequest, db: Session = Depends(get_db), admin=Depends(require_admin)):
+    """Award entire lot to a single buyer, overriding per-line winners."""
+    new_buyer = db.query(User).filter(User.id == req.buyer_id).first()
+    if not new_buyer:
+        raise HTTPException(404, "Buyer not found")
+    deals = db.query(Deal).filter(Deal.bid_round_id == round_id).all()
+    if not deals:
+        raise HTTPException(404, "No deals found for this round")
+    overridden = 0
+    now = datetime.now(timezone.utc)
+    for deal in deals:
+        old_buyer_id = deal.winning_buyer_id
+        deal.winning_buyer_id = req.buyer_id
+        deal.status = "pending_approval"
+        deal.approved_by = None
+        deal.approved_at = None
+        # Use the new buyer's own bid price if available
+        buyer_line = db.query(BidLine).filter(
+            BidLine.bid_round_id == round_id,
+            BidLine.buyer_id == req.buyer_id,
+            BidLine.master_item_id == deal.master_item_id,
+            BidLine.match_status == "matched",
+        ).first()
+        if buyer_line and buyer_line.unit_price is not None:
+            deal.winning_price = buyer_line.unit_price
+            deal.total_value = round(buyer_line.unit_price * deal.quantity, 4)
+        override = ApprovalOverride(
+            deal_id=deal.id,
+            bid_round_id=round_id,
+            admin_user=admin.email,
+            field_changed="winning_buyer",
+            old_value=str(old_buyer_id),
+            new_value=str(req.buyer_id),
+            reason_note=f"Award entire lot — {req.reason_note}",
+        )
+        db.add(override)
+        overridden += 1
+    db.commit()
+    recalculate_buyer_scores(db, round_id)
+    return {"awarded": len(deals), "overridden": overridden, "buyer": new_buyer.full_name}
 
 
 @router.post("/rounds/{round_id}/push-razor-all")
