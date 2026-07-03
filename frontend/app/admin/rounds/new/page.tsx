@@ -300,6 +300,7 @@ export default function NewRound() {
               <input
                 type="datetime-local"
                 value={form.submission_deadline}
+                min={new Date().toISOString().slice(0, 16)}
                 onChange={(e) => setForm({ ...form, submission_deadline: e.target.value })}
                 className="glass-input"
               />

@@ -169,6 +169,8 @@ export default function RoundDetail() {
   const [sendingResults, setSendingResults] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [extendDeadline, setExtendDeadline] = useState<string | null>(null);
+  const [extendingDeadline, setExtendingDeadline] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [msg, setMsg] = useState("");
@@ -281,6 +283,23 @@ export default function RoundDetail() {
     } finally { setSendingResults(false); }
   }
 
+  async function submitExtendDeadline() {
+    if (!extendDeadline) return;
+    const newDt = new Date(extendDeadline);
+    if (newDt <= new Date()) { flash("New deadline must be in the future", "err"); return; }
+    setExtendingDeadline(true);
+    try {
+      await api.patch(`/rounds/${id}`, { submission_deadline: newDt.toISOString() });
+      flash(`✓ Deadline extended to ${fmtDatetime(newDt.toISOString())}`);
+      setExtendDeadline(null);
+      load();
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to extend deadline", "err");
+    } finally {
+      setExtendingDeadline(false);
+    }
+  }
+
   async function reopenRound() {
     setReopening(true);
     try {
@@ -347,7 +366,7 @@ export default function RoundDetail() {
               {COMMODITY_ICON[round.commodity] || "📦"}
             </div>
             <div>
-              <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 6px", lineHeight: 1.1 }}>
+              <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 6px", lineHeight: 1.3 }}>
                 {round.name}
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -404,11 +423,21 @@ export default function RoundDetail() {
               </button>
             )}
             {round.status === "open" && (
-              <button onClick={() => changeStatus("close")} className="btn-brand" style={{ background: "linear-gradient(135deg,#b45309,#f59e0b)" }}
-                aria-label="Close bidding and prepare for processing">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                Close Round
-              </button>
+              <>
+                <button onClick={() => changeStatus("close")} className="btn-brand" style={{ background: "linear-gradient(135deg,#b45309,#f59e0b)" }}
+                  aria-label="Close bidding and prepare for processing">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                  Close Round
+                </button>
+                <button
+                  onClick={() => setExtendDeadline(round.submission_deadline ? new Date(round.submission_deadline).toISOString().slice(0, 16) : new Date(Date.now() + 86400000).toISOString().slice(0, 16))}
+                  className="btn-ghost"
+                  aria-label="Extend the submission deadline for this round"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Extend Deadline
+                </button>
+              </>
             )}
             {round.status === "closed" && (
               <>
@@ -524,9 +553,9 @@ export default function RoundDetail() {
                 {uploading ? "Uploading…" : round.master_file_uploaded ? "Replace File" : "Upload Master File"}
               </button>
               {round.master_file_uploaded && (
-                <button onClick={() => downloadFile(`/rounds/${id}/generate-template`, `bid_template_${round.name.replace(/\s+/g, "_")}_${id}.xlsx`)} className="btn-brand" style={{ fontSize: "0.8rem" }}>
+                <button onClick={() => downloadFile(`/rounds/${id}/generate-template`, `bid_template_${round.name.replace(/\s+/g, "_")}_${id}.xlsx`)} className="btn-brand" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Bid Template
+                  Pricing Template
                 </button>
               )}
             </div>
@@ -699,6 +728,36 @@ export default function RoundDetail() {
             </div>
           </div>
         )}
+
+      {/* Extend Deadline Modal */}
+      {extendDeadline !== null && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "#0d1826", border: "1px solid rgba(61,129,227,0.3)", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "440px" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 8px" }}>Extend Submission Deadline</h3>
+            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", margin: "0 0 20px" }}>
+              Set a new deadline for this round. Buyers will be able to submit until the new date.
+            </p>
+            <label htmlFor="extend-deadline-input" style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "rgba(255,255,255,0.5)", marginBottom: "6px" }}>New Deadline</label>
+            <input
+              id="extend-deadline-input"
+              type="datetime-local"
+              value={extendDeadline}
+              min={new Date().toISOString().slice(0, 16)}
+              onChange={(e) => setExtendDeadline(e.target.value)}
+              className="glass-input"
+              style={{ marginBottom: "20px" }}
+            />
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button type="button" onClick={submitExtendDeadline} disabled={extendingDeadline} className="btn-brand" style={{ flex: 1, minHeight: "44px" }}>
+                {extendingDeadline ? "Saving…" : "Save New Deadline"}
+              </button>
+              <button type="button" onClick={() => setExtendDeadline(null)} className="btn-ghost" style={{ flex: 1, minHeight: "44px" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </AdminLayout>
