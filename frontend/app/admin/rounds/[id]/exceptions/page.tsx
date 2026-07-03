@@ -49,13 +49,24 @@ interface MasterSearchResult {
 
 const TYPE_LABELS: Record<string, string> = {
   unmatched: "Unmatched",
-  partial_match: "Partial",
+  partial_match: "Partial Match",
   duplicate: "Duplicate",
-  price_anomaly: "Anomaly",
+  price_anomaly: "Price Anomaly",
   below_reserve: "Below Reserve",
   overbid: "Overbid",
   rejected: "Rejected",
   bad_format: "Bad Format",
+};
+
+const TYPE_DESCRIPTIONS: Record<string, string> = {
+  unmatched: "Buyer submitted a part number that doesn't exist in your master catalog. Use AI Match or search manually to link it.",
+  partial_match: "Part number is similar to one in your catalog but didn't match exactly. Review and confirm if correct.",
+  duplicate: "This part number was submitted more than once by the same buyer. Only one bid can win.",
+  price_anomaly: "This bid price is statistically unusual compared to other bids on the same item — may be a typo.",
+  below_reserve: "Buyer's bid is below your minimum acceptable price. Cannot win without admin override.",
+  overbid: "Bid is significantly higher than other bids — may be a data entry error. Confirm before awarding.",
+  rejected: "This bid line was manually rejected and removed from consideration.",
+  bad_format: "Part number or data format couldn't be parsed. Try remapping to the correct catalog item.",
 };
 
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -71,13 +82,17 @@ const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
 
 function ConfidenceBadge({ score }: { score: number | null }) {
   if (!score) return null;
-  const color = score >= 90 ? "#34d399" : score >= 75 ? "#fbbf24" : "#f87171";
+  const color = score >= 85 ? "#34d399" : score >= 75 ? "#fbbf24" : "#f87171";
+  const label = score >= 85 ? "High confidence" : score >= 75 ? "Medium confidence" : "Low confidence";
   return (
-    <span style={{
-      padding: "2px 8px", borderRadius: "100px", fontSize: "0.68rem", fontWeight: 700,
-      background: `${color}22`, color, marginLeft: "6px",
-    }}>
-      {score.toFixed(0)}% AI
+    <span
+      title={`AI match confidence: ${score.toFixed(0)}% — ${label}`}
+      style={{
+        padding: "2px 8px", borderRadius: "100px", fontSize: "0.68rem", fontWeight: 700,
+        background: `${color}22`, color, marginLeft: "4px", cursor: "help",
+      }}
+    >
+      {score.toFixed(0)}% match
     </span>
   );
 }
@@ -301,13 +316,13 @@ export default function ExceptionsPage() {
         </Link>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
-              Exception Queue
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.3 }}>
+              Review Flagged Bids
             </h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
-              Review flagged bid lines — approve, remap, or reject each one.
+              These bid lines couldn't be automatically matched. For each one: accept a suggestion, search the catalog, or reject the line.
             </p>
           </div>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -317,8 +332,9 @@ export default function ExceptionsPage() {
                 disabled={bulkWorking}
                 className="btn-brand"
                 style={{ fontSize: "0.82rem", padding: "8px 16px" }}
+                title="Accept all AI-suggested matches at once — only applies to lines where the AI found a match"
               >
-                {bulkWorking ? "Approving..." : `⚡ Approve ${stats.ai_suggestions_available} AI Matches`}
+                {bulkWorking ? "Accepting…" : `⚡ Accept All ${stats.ai_suggestions_available} AI Matches`}
               </button>
             )}
             <button
@@ -326,10 +342,28 @@ export default function ExceptionsPage() {
               disabled={aiRunning}
               className="btn-ghost"
               style={{ fontSize: "0.82rem", padding: "8px 16px" }}
+              title="Use AI to automatically suggest matches for unmatched bid lines"
             >
-              {aiRunning ? "Running..." : "Run AI Match"}
+              {aiRunning ? "AI running…" : "🤖 Run AI Matching"}
             </button>
           </div>
+        </div>
+
+        {/* How-to callout */}
+        <div style={{ padding: "12px 16px", background: "rgba(61,129,227,0.06)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px", marginBottom: "20px", display: "flex", gap: "24px", flexWrap: "wrap" }}>
+          {[
+            { icon: "🤖", title: "AI Match", body: "The AI suggests a catalog item. Review and click Accept." },
+            { icon: "🔍", title: "Find in Catalog", body: "Search your master list and manually link the line." },
+            { icon: "✕", title: "Remove from Round", body: "Reject lines you can't or don't want to fulfill." },
+          ].map(({ icon, title, body }) => (
+            <div key={title} style={{ display: "flex", gap: "8px", alignItems: "flex-start", flex: "1 1 180px" }}>
+              <span style={{ fontSize: "1rem", lineHeight: 1 }}>{icon}</span>
+              <div>
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-2)", margin: "0 0 2px" }}>{title}</p>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>{body}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Stat pills */}
@@ -339,7 +373,7 @@ export default function ExceptionsPage() {
               { label: "Total",      value: stats.total,                   color: "var(--text-2)", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
               { label: "Unresolved", value: stats.unresolved,              color: "#fb923c",       bg: "rgba(251,146,60,0.07)", border: "rgba(251,146,60,0.2)" },
               { label: "Resolved",   value: stats.resolved,                color: "#34d399",       bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
-              { label: "AI Ready",   value: stats.ai_suggestions_available, color: "#a78bfa",      bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)" },
+              { label: "AI Matched", value: stats.ai_suggestions_available, color: "#a78bfa",      bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)" },
             ].map(({ label, value, color, bg, border }) => (
               <div key={label} style={{ padding: "10px 16px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius-lg)" }}>
                 <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>
@@ -386,142 +420,133 @@ export default function ExceptionsPage() {
                 padding: "20px 22px",
                 opacity: ex.resolved ? 0.6 : 1,
               }}>
-                {/* Top row */}
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
-                  <div style={{ flex: 1 }}>
+                {/* Top row: part info + buyer/price */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "6px" }}>
-                      <span style={{
-                        padding: "2px 10px", borderRadius: "6px", fontSize: "0.7rem", fontWeight: 700,
-                        background: typeStyle.bg, color: typeStyle.color,
-                      }}>
+                      <span style={{ padding: "2px 10px", borderRadius: "6px", fontSize: "0.7rem", fontWeight: 700, background: typeStyle.bg, color: typeStyle.color }}>
                         {TYPE_LABELS[ex.exception_type] || ex.exception_type}
                       </span>
-                      {ex.ai_match_confidence && (
-                        <ConfidenceBadge score={ex.ai_match_confidence} />
-                      )}
                       {ex.resolved && (
                         <span style={{ fontSize: "0.7rem", color: "#34d399" }}>✓ Resolved{ex.resolved_by ? ` by ${ex.resolved_by}` : ""}</span>
                       )}
                     </div>
-                    <p style={{ fontFamily: "monospace", fontWeight: 600, color: "var(--text-1)", margin: "0 0 3px", fontSize: "0.92rem" }}>
+                    <p style={{ fontFamily: "monospace", fontWeight: 600, color: "var(--text-1)", margin: "0 0 2px", fontSize: "0.92rem" }}>
                       {ex.raw_part_number}
                     </p>
-                    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>{ex.description}</p>
+                    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.45)", margin: "0 0 6px" }}>{ex.description}</p>
+                    <p style={{ fontSize: "0.74rem", color: "rgba(255,255,255,0.28)", margin: 0, lineHeight: 1.45 }}>
+                      {TYPE_DESCRIPTIONS[ex.exception_type] || "Review this line and take an action below."}
+                    </p>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "16px" }}>
-                    <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 4px", fontSize: "0.9rem" }}>
+                  <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "20px" }}>
+                    <p style={{ fontWeight: 700, color: "var(--text-1)", margin: "0 0 2px", fontSize: "1rem", fontFamily: "monospace" }}>
                       {ex.unit_price != null ? `$${ex.unit_price.toFixed(2)}` : "—"}
                     </p>
-                    <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>{ex.buyer_company || ex.buyer_name}</p>
+                    <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>from {ex.buyer_company || ex.buyer_name}</p>
                   </div>
                 </div>
 
+                {/* System notes (anomaly reason, etc.) */}
                 {ex.exception_notes && (
-                  <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.3)", margin: "0 0 12px", fontStyle: "italic" }}>
-                    {ex.exception_notes}
-                  </p>
+                  <div style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "8px", marginBottom: "12px" }}>
+                    <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.5 }}>
+                      <strong style={{ color: "rgba(255,255,255,0.55)" }}>System note: </strong>{ex.exception_notes}
+                    </p>
+                  </div>
                 )}
 
                 {/* AI suggestion block */}
                 {ex.ai_match_suggestion && (
-                  <div style={{
-                    background: "rgba(167,139,250,0.08)",
-                    border: "1px solid rgba(167,139,250,0.2)",
-                    borderRadius: "10px",
-                    padding: "10px 14px",
-                    marginBottom: "12px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "10px",
-                    flexWrap: "wrap",
-                  }}>
-                    <div>
-                      <p style={{ fontSize: "0.7rem", color: "#a78bfa", fontWeight: 600, margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                        AI Suggestion <ConfidenceBadge score={ex.ai_match_confidence} />
-                      </p>
-                      <p style={{ fontFamily: "monospace", fontSize: "0.82rem", color: "rgba(196,181,253,0.9)", margin: 0 }}>
-                        {ex.ai_match_suggestion}
-                      </p>
+                  <div style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "10px", padding: "12px 16px", marginBottom: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: "0.72rem", color: "#a78bfa", fontWeight: 700, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          🤖 AI Found a Match <ConfidenceBadge score={ex.ai_match_confidence} />
+                        </p>
+                        <p style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "rgba(196,181,253,0.95)", margin: "0 0 4px", fontWeight: 600 }}>
+                          {ex.ai_match_suggestion}
+                        </p>
+                        <p style={{ fontSize: "0.72rem", color: "rgba(167,139,250,0.6)", margin: 0 }}>
+                          {(ex.ai_match_confidence ?? 0) >= 85
+                            ? "High confidence — safe to accept."
+                            : (ex.ai_match_confidence ?? 0) >= 75
+                            ? "Medium confidence — review before accepting."
+                            : "Low confidence — verify manually before accepting."}
+                        </p>
+                      </div>
+                      {!ex.resolved && (
+                        <button
+                          type="button"
+                          onClick={() => resolve(ex.id, "approve_ai")}
+                          disabled={isWorking}
+                          className="btn-brand"
+                          style={{ fontSize: "0.78rem", padding: "8px 16px", background: "#7c3aed", border: "1px solid rgba(167,139,250,0.4)", whiteSpace: "nowrap" }}
+                        >
+                          ✓ Accept AI Match
+                        </button>
+                      )}
                     </div>
-                    {!ex.resolved && (
-                      <button
-                        onClick={() => resolve(ex.id, "approve_ai")}
-                        disabled={isWorking}
-                        className="btn-brand"
-                        style={{ fontSize: "0.78rem", padding: "6px 14px", background: "rgba(167,139,250,0.25)", border: "1px solid rgba(167,139,250,0.35)" }}
-                      >
-                        Accept
-                      </button>
-                    )}
                   </div>
                 )}
 
                 {/* Fuzzy suggested match block */}
                 {ex.suggested_match && !ex.ai_match_suggestion && (
-                  <div style={{
-                    background: "rgba(61,129,227,0.08)",
-                    border: "1px solid rgba(61,129,227,0.2)",
-                    borderRadius: "10px",
-                    padding: "10px 14px",
-                    marginBottom: "12px",
-                  }}>
-                    <p style={{ color: "#60a5fa", fontWeight: 600, margin: "0 0 3px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      Fuzzy Match · {ex.match_score?.toFixed(0)}% score
+                  <div style={{ background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.2)", borderRadius: "10px", padding: "12px 16px", marginBottom: "12px" }}>
+                    <p style={{ color: "#60a5fa", fontWeight: 700, margin: "0 0 4px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      Text-Similarity Match — {ex.match_score?.toFixed(0)}% score
                     </p>
-                    <p style={{ fontFamily: "monospace", fontSize: "0.82rem", color: "rgba(147,197,253,0.85)", margin: 0 }}>
-                      {ex.suggested_match.part_number} — {ex.suggested_match.description}
+                    <p style={{ fontFamily: "monospace", fontSize: "0.84rem", color: "rgba(147,197,253,0.9)", margin: "0 0 4px", fontWeight: 600 }}>
+                      {ex.suggested_match.part_number}
                     </p>
+                    <p style={{ fontSize: "0.75rem", color: "rgba(147,197,253,0.6)", margin: 0 }}>{ex.suggested_match.description}</p>
                   </div>
                 )}
 
-                {/* Notes field */}
+                {/* Action area */}
                 {!ex.resolved && (
-                  <input
-                    aria-label="Resolution notes"
-                    value={notes[ex.id] || ""}
-                    onChange={(e) => setNotes((n) => ({ ...n, [ex.id]: e.target.value }))}
-                    placeholder="Optional resolution notes..."
-                    className="glass-input"
-                    style={{ marginBottom: "12px", fontSize: "0.78rem", padding: "7px 12px" }}
-                  />
-                )}
-
-                {/* Action buttons */}
-                {!ex.resolved && (
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                    {ex.suggested_match && (
+                  <>
+                    <input
+                      aria-label="Resolution notes (optional)"
+                      value={notes[ex.id] || ""}
+                      onChange={(e) => setNotes((n) => ({ ...n, [ex.id]: e.target.value }))}
+                      placeholder="Optional note (e.g. confirmed with buyer, wrong model)"
+                      className="glass-input"
+                      style={{ marginBottom: "10px", fontSize: "0.78rem", padding: "7px 12px" }}
+                    />
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                      {ex.suggested_match && (
+                        <button
+                          type="button"
+                          onClick={() => resolve(ex.id, "approve_match")}
+                          disabled={isWorking}
+                          className="btn-brand"
+                          style={{ fontSize: "0.78rem", padding: "7px 16px", background: "#059669" }}
+                        >
+                          ✓ Confirm Match
+                        </button>
+                      )}
                       <button
-                        onClick={() => resolve(ex.id, "approve_match")}
+                        aria-label={searchingLine === ex.id ? "Cancel catalog search" : `Search catalog for ${ex.raw_part_number}`}
+                        onClick={() => setSearchingLine(searchingLine === ex.id ? null : ex.id)}
                         disabled={isWorking}
-                        className="btn-brand"
-                        style={{ fontSize: "0.78rem", padding: "6px 14px", background: "#059669" }}
+                        className="btn-ghost"
+                        style={{ fontSize: "0.78rem", padding: "7px 16px" }}
                       >
-                        ✓ Approve Match
+                        {searchingLine === ex.id ? "Cancel Search" : "🔍 Find in Catalog"}
                       </button>
-                    )}
-                    <button
-                      aria-label={searchingLine === ex.id ? "Cancel master item search" : `Remap ${ex.raw_part_number} to a master item`}
-                      onClick={() => setSearchingLine(searchingLine === ex.id ? null : ex.id)}
-                      disabled={isWorking}
-                      className="btn-ghost"
-                      style={{ fontSize: "0.78rem", padding: "6px 14px" }}
-                    >
-                      {searchingLine === ex.id ? "Cancel Search" : "🔍 Remap"}
-                    </button>
-                    <button
-                      aria-label={`Reject ${ex.raw_part_number}`}
-                      onClick={() => resolve(ex.id, "reject")}
-                      disabled={isWorking}
-                      className="btn-ghost"
-                      style={{ fontSize: "0.78rem", padding: "6px 14px", color: "#f87171", borderColor: "rgba(239,68,68,0.25)" }}
-                    >
-                      Reject
-                    </button>
-                    {isWorking && (
-                      <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)" }}>Saving...</span>
-                    )}
-                  </div>
+                      <button
+                        aria-label={`Remove ${ex.raw_part_number} from this round`}
+                        onClick={() => resolve(ex.id, "reject")}
+                        disabled={isWorking}
+                        className="btn-ghost"
+                        style={{ fontSize: "0.78rem", padding: "7px 16px", color: "#f87171", borderColor: "rgba(239,68,68,0.25)" }}
+                      >
+                        ✕ Remove from Round
+                      </button>
+                      {isWorking && <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)" }}>Saving…</span>}
+                    </div>
+                  </>
                 )}
 
                 {/* Master item search */}
