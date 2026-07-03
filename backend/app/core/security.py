@@ -13,7 +13,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=Fals
 
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=10)).decode()
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=8)).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:

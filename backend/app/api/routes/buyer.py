@@ -437,8 +437,9 @@ def download_my_award_sheet(round_id: int, db: Session = Depends(get_db), buyer=
 
 
 @router.get("/rounds/{round_id}/template")
-def download_template(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+async def download_template(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
     """Buyer downloads the bid template for a round."""
+    import asyncio
     from app.services.template_generator import generate_bid_template
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
@@ -446,7 +447,7 @@ def download_template(round_id: int, db: Session = Depends(get_db), buyer=Depend
     if not r.master_file_uploaded:
         raise HTTPException(400, "Template not yet available — master file not uploaded")
     try:
-        data = generate_bid_template(db, round_id)
+        data = await asyncio.to_thread(generate_bid_template, db, round_id)
     except Exception as exc:
         raise HTTPException(500, detail=f"Template generation failed: {type(exc).__name__}: {exc}")
     filename = f"bid_template_{round_id}.xlsx"

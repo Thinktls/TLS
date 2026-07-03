@@ -8,7 +8,7 @@ Returns bytes.
 import io
 from datetime import timezone, timedelta
 from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side, Protection
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side, Protection as _Prot
 from openpyxl.utils import get_column_letter
 from sqlalchemy.orm import Session
 from app.models.master_item import MasterItem
@@ -30,20 +30,24 @@ _INSTR_BG = "F0F4FA"   # instructions sheet background
 _ACCENT   = "1F497D"   # dark blue (same as header)
 _BORDER_C = "BFBFBF"   # medium gray for all borders
 
-def _thin_border():
-    s = Side(style="thin", color=_BORDER_C)
-    return Border(left=s, right=s, top=s, bottom=s)
+_thin_s      = Side(style="thin",   color=_BORDER_C)
+_hdr_s       = Side(style="medium", color="1F497D")
+THIN_BORDER  = Border(left=_thin_s, right=_thin_s, top=_thin_s, bottom=_thin_s)
+HDR_BORDER   = Border(left=_hdr_s,  right=_hdr_s,  top=_hdr_s,  bottom=_hdr_s)
 
-def _hdr_border():
-    s = Side(style="medium", color="1F497D")
-    return Border(left=s, right=s, top=s, bottom=s)
+HDR_FILL      = PatternFill("solid", fgColor=_HDR_BG)
+LOCK_FILL     = PatternFill("solid", fgColor=_LOCK_BG)
+EDIT_FILL     = PatternFill("solid", fgColor=_EDIT_BG)
+ALT_FILL      = PatternFill("solid", fgColor=_ALT_BG)
+ALT_FILL_LOCK = PatternFill("solid", fgColor="EBEBEB")
+INSTR_FILL    = PatternFill("solid", fgColor=_INSTR_BG)
+WHITE_FILL    = PatternFill("solid", fgColor=_WHITE)
 
-HDR_FILL   = PatternFill("solid", fgColor=_HDR_BG)
-LOCK_FILL  = PatternFill("solid", fgColor=_LOCK_BG)
-EDIT_FILL  = PatternFill("solid", fgColor=_EDIT_BG)
-ALT_FILL   = PatternFill("solid", fgColor=_ALT_BG)
-INSTR_FILL = PatternFill("solid", fgColor=_INSTR_BG)
-WHITE_FILL = PatternFill("solid", fgColor=_WHITE)
+LOCKED   = _Prot(locked=True)
+UNLOCKED = _Prot(locked=False)
+
+# (round_id) → (item_count, bytes): invalidated when item count changes
+_template_cache: dict[int, tuple[int, bytes]] = {}
 
 HDR_FONT   = Font(name="Calibri", bold=True,  color=_HDR_FONT, size=10)
 LOCK_FONT  = Font(name="Calibri", bold=False, color="595959",  size=10)
@@ -77,6 +81,11 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         .order_by(MasterItem.row_number)
         .all()
     )
+
+    # Return cached bytes if the item list hasn't changed since last generation
+    cached = _template_cache.get(round_id)
+    if cached and cached[0] == len(items):
+        return cached[1]
 
     wb = Workbook()
 
@@ -211,8 +220,8 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         cell.font      = HDR_FONT
         cell.fill      = HDR_FILL
         cell.alignment = CENTER
-        cell.border    = _hdr_border()
-        cell.protection = Protection(locked=True)
+        cell.border    = HDR_BORDER
+        cell.protection = LOCKED
     ws.row_dimensions[1].height = 22
 
     # Freeze the header row
@@ -241,16 +250,16 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
 
         for col_idx, value in enumerate(all_values, start=1):
             cell = ws.cell(row=seq_row, column=col_idx, value=value)
-            cell.border = _thin_border()
+            cell.border = THIN_BORDER
             if col_idx in editable:
                 cell.fill       = EDIT_FILL
                 cell.font       = EDIT_FONT
-                cell.protection = Protection(locked=False)
+                cell.protection = UNLOCKED
                 cell.alignment  = CENTER
             else:
-                cell.fill       = LOCK_FILL if not alt else PatternFill("solid", fgColor="EBEBEB")
+                cell.fill       = ALT_FILL_LOCK if alt else LOCK_FILL
                 cell.font       = LOCK_FONT
-                cell.protection = Protection(locked=True)
+                cell.protection = LOCKED
                 cell.alignment  = LEFT if col_idx == 4 else CENTER
         ws.row_dimensions[seq_row].height = 16
 
@@ -273,4 +282,6 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
 
     buf = io.BytesIO()
     wb.save(buf)
-    return buf.getvalue()
+    result = buf.getvalue()
+    _template_cache[round_id] = (len(items), result)
+    return result
