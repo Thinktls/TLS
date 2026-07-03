@@ -148,9 +148,26 @@ function SubmitBidInner() {
       <div style={{ maxWidth: "860px" }} className="animate-in">
 
         {/* Header */}
-        <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Submit a Bid</h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Upload a priced file or enter prices directly online.</p>
+        <div style={{ marginBottom: "20px" }}>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.3 }}>Submit a Bid</h1>
+          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Choose a round, then upload your priced file or enter prices directly on-screen.</p>
+        </div>
+
+        {/* How it works */}
+        <div style={{ display: "flex", gap: "0", marginBottom: "20px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+          {[
+            { n: "1", title: "Select a Round", body: "Choose the active bid round you were invited to." },
+            { n: "2", title: "Get Your Template", body: "Download the pre-filled Excel file with all items to price." },
+            { n: "3", title: "Upload & Submit", body: "Fill in your prices and upload the file — or enter prices on-screen." },
+          ].map(({ n, title, body }, i) => (
+            <div key={n} style={{ flex: 1, padding: "14px 18px", borderRight: i < 2 ? "1px solid var(--border)" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <span style={{ width: "20px", height: "20px", borderRadius: "50%", background: "rgba(61,129,227,0.2)", color: "#60a5fa", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</span>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-2)" }}>{title}</span>
+              </div>
+              <p style={{ fontSize: "0.71rem", color: "var(--text-4)", margin: 0, lineHeight: 1.45, paddingLeft: "28px" }}>{body}</p>
+            </div>
+          ))}
         </div>
 
         {rounds.length === 0 ? (
@@ -187,8 +204,10 @@ function SubmitBidInner() {
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <button
                         onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/template`, `bid_file_round_${selectedRound}.xlsx`)}
-                        className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px" }}>
-                        ↓ Download Bid File
+                        className="btn-brand"
+                        style={{ fontSize: "0.75rem", padding: "6px 16px" }}
+                        title="Download the Excel pricing template — fill in your prices and upload it back">
+                        ↓ Get Pricing Template
                       </button>
                       {hasSubmission && (
                         <button onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/my-submission/download`, `my_bid_round_${selectedRound}.xlsx`)}
