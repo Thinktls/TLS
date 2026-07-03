@@ -16,6 +16,14 @@ from app.core.config import settings
 
 
 def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
+    # Clear existing deals so re-runs don't produce duplicates.
+    from app.models.approval_override import ApprovalOverride
+    db.query(ApprovalOverride).filter(ApprovalOverride.bid_round_id == bid_round_id).delete(synchronize_session=False)
+    db.query(Deal).filter(Deal.bid_round_id == bid_round_id).delete(synchronize_session=False)
+    # Reset is_winner flag on all lines before re-selecting
+    db.query(BidLine).filter(BidLine.bid_round_id == bid_round_id).update({"is_winner": False}, synchronize_session=False)
+    db.flush()
+
     # selectinload(BidLine.bid_file) fires one IN-query for all distinct
     # bid_file_ids after loading lines — eliminates the N+1 that previously
     # hit the DB once per line when accessing l.bid_file.uploaded_at.
@@ -79,12 +87,21 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
         # Filter out below-reserve bids and anomalies from valid candidates
         valid_lines = [l for l in lines if not l.is_anomaly]
         if master.reserve_price:
-            below_reserve = [l for l in valid_lines if l.unit_price < master.reserve_price]
+            # Respect admin-approved exceptions: if a line was manually resolved
+            # (exception_resolved=True, match_status="matched"), keep it as a
+            # valid candidate even if it is below reserve.
+            below_reserve = [
+                l for l in valid_lines
+                if l.unit_price < master.reserve_price and not l.exception_resolved
+            ]
             for l in below_reserve:
                 l.match_status = "exception"
                 l.exception_type = "below_reserve"
                 l.exception_notes = f"Bid ${l.unit_price:.2f} is below reserve ${master.reserve_price:.2f}"
-            valid_lines = [l for l in valid_lines if l.unit_price >= master.reserve_price]
+            valid_lines = [
+                l for l in valid_lines
+                if l.unit_price >= master.reserve_price or l.exception_resolved
+            ]
 
         if not valid_lines:
             continue
