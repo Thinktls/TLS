@@ -13,6 +13,7 @@ pivot tables, and non-standard column names.
 """
 import io
 import logging
+import re
 import pandas as pd
 from rapidfuzz import fuzz
 from app.services.normalizer import normalize_part_number, normalize_description
@@ -192,6 +193,16 @@ _JUNK_ROW_PREFIXES = (
     "n/a", "na", "none", "tbd", "tbc", "see below", "continued",
 )
 
+# Columns in admin-uploaded files that are buyer-fill-in placeholders (Offer, Bid Unit, …).
+# These carry no spec data and always contain zeros or blanks in the admin copy — exclude
+# them from extra_columns so they don't pollute the generated bid template as locked columns.
+_BUYER_PLACEHOLDER_COLS = {
+    "offer", "offer ext", "offer ext.", "offer extended",
+    "bid", "bid unit", "bid ext", "bid ext.", "bid extended",
+    "bid price", "your bid", "your offer", "your price",
+    "unit price", "unit price ($)", "price",
+}
+
 # Sheet name keywords — aggregated/summary tabs preferred; raw unit/detail tabs penalised.
 _SHEET_BONUS_KEYWORDS = [
     "summary", "overview", "bid", "quote", "price list", "pricing",
@@ -238,8 +249,21 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
     # (CPU, Memory, Storage, etc.) flows through to master_items.extra_columns
     # and eventually into the generated bid template — mirroring the behaviour
     # already present on the unit-level and buyer-file paths.
+    # Exclude buyer-placeholder columns (Offer, Bid Unit, Offer Ext, …): these are
+    # always zero/blank in admin-uploaded files and add noise to the bid template.
     mapped_master_cols = set(mapping.values())
-    extra_master_col_names = [c for c in df.columns if c not in mapped_master_cols]
+    # Strip pandas duplicate-column suffixes (.1, .2, …) for comparison purposes so that
+    # "Row Labels.1" is excluded when "Row Labels" is already a mapped field, and
+    # "Bid Ext.1" is excluded when "Bid Ext" is in the placeholder set.
+    _strip_col_suffix = lambda c: re.sub(r"\.\d+$", "", c).strip()
+    _mapped_base = {_strip_col_suffix(c).lower() for c in mapped_master_cols}
+    extra_master_col_names = [
+        c for c in df.columns
+        if c not in mapped_master_cols
+        and c.lower().strip() not in _BUYER_PLACEHOLDER_COLS
+        and _strip_col_suffix(c).lower() not in _BUYER_PLACEHOLDER_COLS
+        and _strip_col_suffix(c).lower() not in _mapped_base
+    ]
 
     rows = []
     for idx, row in df.iterrows():
@@ -282,12 +306,26 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
         else:
             consolidated[key] = row.copy()
 
-    return list(consolidated.values())
+    result = list(consolidated.values())
+
+    # For Summary-style files (Drive Summary / Memory Summary) the chosen sheet only has
+    # Model+Qty+Offer columns — no Description or Manufacturer.  Pull those from any sibling
+    # Detail sheet in the same workbook so the generated bid template shows meaningful labels.
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext in ("xlsx", "xls"):
+        _enrich_descriptions_from_excel(file_bytes, filename, result)
+
+    return result
 
 
 def _is_unit_level(df: pd.DataFrame) -> bool:
     """Return True if the DataFrame has a serial/UID column (one row per physical unit)."""
-    return _find_column(df, _SERIAL_ALIASES) is not None
+    col = _find_column(df, _SERIAL_ALIASES)
+    # Don't let fuzzy matching pick a buyer-placeholder column (e.g. "Bid Unit" ≈ "unit id")
+    # as the serial identifier — those are price-fill columns, not unique per-unit IDs.
+    if col is not None and col.lower().strip() in _BUYER_PLACEHOLDER_COLS:
+        col = None
+    return col is not None
 
 
 def _all_identifier_columns(df: pd.DataFrame) -> set[str]:
@@ -846,6 +884,122 @@ def _candidates_word(buf: io.BytesIO) -> list[pd.DataFrame]:
     except Exception as e:
         logger.warning("Word parse error: %s", e)
     return out
+
+
+# ── description enrichment ────────────────────────────────────────────────────
+
+def _enrich_descriptions_from_excel(file_bytes: bytes, filename: str, items: list[dict]) -> None:
+    """
+    For Summary-only files (e.g. ThinkTLS Drive Bid, Memory files) whose chosen sheet
+    has no Description or Manufacturer column, look for a sibling Detail/inventory sheet
+    in the same workbook that does.  Build a lookup keyed by normalized part number and
+    fill blank description/manufacturer fields in-place.  Stops after the first sheet
+    that successfully enriches at least one item.
+    """
+    blank_desc_count = sum(1 for r in items if not (r.get("description") or "").strip())
+    if blank_desc_count < len(items) * 0.5:
+        return  # majority already have descriptions — nothing to do
+
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    engine = "openpyxl" if ext == "xlsx" else None
+    try:
+        xf = pd.ExcelFile(io.BytesIO(file_bytes), engine=engine)
+    except Exception:
+        return
+
+    # Scan ALL sheets first, accumulating lookup dicts — files like the ThinkTLS Feb
+    # Memory workbook have one inventory sheet per DIMM capacity category, so a single
+    # sheet only covers a fraction of the master items.
+    master_norms = {item["part_number_normalized"] for item in items}
+    desc_lookup: dict[str, str] = {}
+    mfr_lookup:  dict[str, str] = {}
+
+    for sheet in _visible_sheet_names(xf):
+        try:
+            raw = xf.parse(sheet, header=None, nrows=5)
+            if raw.empty:
+                continue
+            # Find which row is the header (look for a row containing both a part-number
+            # alias AND a description alias within the first _HEADER_ROW_SCAN_DEPTH rows).
+            hdr_idx = None
+            for hdr in range(min(_HEADER_ROW_SCAN_DEPTH, len(raw))):
+                trial = raw.iloc[hdr].tolist()
+                names = [str(v).strip().lower() for v in trial if str(v).lower() not in ("nan", "none", "")]
+                has_pn   = any(alias in names for alias in MASTER_COLUMN_ALIASES["part_number"])
+                has_desc = any(alias in names for alias in MASTER_COLUMN_ALIASES["description"])
+                if has_pn and has_desc:
+                    hdr_idx = hdr
+                    break
+            if hdr_idx is None:
+                continue
+
+            df = _clean(xf.parse(sheet, header=hdr_idx))
+            desc_col = _find_column(df, MASTER_COLUMN_ALIASES["description"])
+            mfr_col  = _find_column(df, MASTER_COLUMN_ALIASES["manufacturer"])
+            if not desc_col:
+                continue
+
+            # Try every potential PN column in alias order; use the first one whose
+            # normalized values actually overlap with the master items' PNs.
+            # This handles sheets where "SKU" = internal IDs but "Model" = catalog PN.
+            pn_col = None
+            cols_lower = {c.lower().strip(): c for c in df.columns}
+            for alias in MASTER_COLUMN_ALIASES["part_number"]:
+                cand = cols_lower.get(alias)
+                if cand is None:
+                    continue
+                sample_norms = {
+                    normalize_part_number(str(v).strip())
+                    for v in df[cand].dropna().astype(str).head(50)
+                    if str(v).strip().lower() not in ("nan", "none", "")
+                }
+                if sample_norms & master_norms:
+                    pn_col = cand
+                    break
+            # Fuzzy fallback — verify overlap before accepting
+            if pn_col is None:
+                cand = _find_column(df, MASTER_COLUMN_ALIASES["part_number"])
+                if cand:
+                    sample_norms = {
+                        normalize_part_number(str(v).strip())
+                        for v in df[cand].dropna().astype(str).head(50)
+                        if str(v).strip().lower() not in ("nan", "none", "")
+                    }
+                    if sample_norms & master_norms:
+                        pn_col = cand
+            if not pn_col:
+                continue
+
+            for _, row in df.iterrows():
+                pn   = normalize_part_number(str(row.get(pn_col, "")).strip())
+                desc = normalize_description(str(row.get(desc_col, "")).strip())
+                mfr  = str(row.get(mfr_col, "")).strip() if mfr_col else ""
+                if pn and desc and pn not in desc_lookup:
+                    desc_lookup[pn] = desc
+                if pn and mfr and pn not in mfr_lookup:
+                    mfr_lookup[pn] = mfr
+
+        except Exception as e:
+            logger.debug("Enrichment sheet '%s' skipped: %s", sheet, e)
+            continue
+
+    if not desc_lookup:
+        return
+
+    filled = 0
+    for item in items:
+        key = item["part_number_normalized"]
+        if not (item.get("description") or "").strip() and key in desc_lookup:
+            item["description"] = desc_lookup[key]
+            filled += 1
+        if not (item.get("manufacturer") or "").strip() and key in mfr_lookup:
+            item["manufacturer"] = mfr_lookup[key]
+
+    if filled > 0:
+        logger.info(
+            "[file_parser] enriched %d/%d descriptions from %d-sheet workbook",
+            filled, len(items), len(list(_visible_sheet_names(xf))),
+        )
 
 
 # ── value coercers ────────────────────────────────────────────────────────────

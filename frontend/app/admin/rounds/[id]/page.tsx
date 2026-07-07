@@ -553,9 +553,9 @@ export default function RoundDetail() {
                 {uploading ? "Uploading…" : round.master_file_uploaded ? "Replace File" : "Upload Master File"}
               </button>
               {round.master_file_uploaded && (
-                <button onClick={() => downloadFile(`/rounds/${id}/generate-template`, `bid_template_${round.name.replace(/\s+/g, "_")}_${id}.xlsx`)} className="btn-brand" style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                <button onClick={() => downloadFile(`/rounds/${id}/generate-template`, `bid_template_${round.name.replace(/\s+/g, "_")}_${id}.xlsx`)} className="btn-brand" style={{ fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0 }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Pricing Template
+                  Download Pricing Template
                 </button>
               )}
             </div>

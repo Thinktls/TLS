@@ -119,6 +119,17 @@ export default function NewRound() {
       setError("Please enter a commodity name.");
       return;
     }
+    if (form.submission_deadline) {
+      const dl = new Date(form.submission_deadline);
+      if (isNaN(dl.getTime())) {
+        setError("Invalid deadline date. Please enter a valid date and time.");
+        return;
+      }
+      if (dl <= new Date()) {
+        setError("Submission deadline must be in the future.");
+        return;
+      }
+    }
     setWorking(true);
     clearError();
     try {

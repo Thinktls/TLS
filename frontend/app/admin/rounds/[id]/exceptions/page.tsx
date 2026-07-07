@@ -350,20 +350,24 @@ export default function ExceptionsPage() {
         </div>
 
         {/* How-to callout */}
-        <div style={{ padding: "12px 16px", background: "rgba(61,129,227,0.06)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px", marginBottom: "20px", display: "flex", gap: "24px", flexWrap: "wrap" }}>
-          {[
-            { icon: "🤖", title: "AI Match", body: "The AI suggests a catalog item. Review and click Accept." },
-            { icon: "🔍", title: "Find in Catalog", body: "Search your master list and manually link the line." },
-            { icon: "✕", title: "Remove from Round", body: "Reject lines you can't or don't want to fulfill." },
-          ].map(({ icon, title, body }) => (
-            <div key={title} style={{ display: "flex", gap: "8px", alignItems: "flex-start", flex: "1 1 180px" }}>
-              <span style={{ fontSize: "1rem", lineHeight: 1 }}>{icon}</span>
-              <div>
-                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-2)", margin: "0 0 2px" }}>{title}</p>
-                <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>{body}</p>
+        <div style={{ padding: "12px 16px", background: "rgba(61,129,227,0.06)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px", marginBottom: "20px" }}>
+          <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 10px" }}>How to handle each flag</p>
+          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+            {[
+              { icon: "🤖", title: "Accept AI Match", body: "The AI found a matching catalog item. Click Accept to remap this bid to that item so it can compete." },
+              { icon: "✓", title: "Approve Price / Reserve", body: "For price anomalies or below-reserve bids — click Approve to override and let the bid enter competition." },
+              { icon: "🔍", title: "Find in Catalog", body: "Search your master item list and manually link this bid line to the correct catalog entry." },
+              { icon: "✕", title: "Remove from Round", body: "Reject lines that can't be fulfilled or are clearly invalid — they won't appear in winner selection." },
+            ].map(({ icon, title, body }) => (
+              <div key={title} style={{ display: "flex", gap: "8px", alignItems: "flex-start", flex: "1 1 160px" }}>
+                <span style={{ fontSize: "1rem", lineHeight: 1 }}>{icon}</span>
+                <div>
+                  <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-2)", margin: "0 0 2px" }}>{title}</p>
+                  <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>{body}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Stat pills */}
@@ -435,7 +439,7 @@ export default function ExceptionsPage() {
                       {ex.raw_part_number}
                     </p>
                     <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.45)", margin: "0 0 6px" }}>{ex.description}</p>
-                    <p style={{ fontSize: "0.74rem", color: "rgba(255,255,255,0.28)", margin: 0, lineHeight: 1.45 }}>
+                    <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", margin: 0, lineHeight: 1.45 }}>
                       {TYPE_DESCRIPTIONS[ex.exception_type] || "Review this line and take an action below."}
                     </p>
                   </div>
@@ -451,7 +455,7 @@ export default function ExceptionsPage() {
                 {ex.exception_notes && (
                   <div style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "8px", marginBottom: "12px" }}>
                     <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.5 }}>
-                      <strong style={{ color: "rgba(255,255,255,0.55)" }}>System note: </strong>{ex.exception_notes}
+                      <strong style={{ color: "rgba(255,255,255,0.55)" }}>Why flagged: </strong>{ex.exception_notes}
                     </p>
                   </div>
                 )}
@@ -461,9 +465,10 @@ export default function ExceptionsPage() {
                   <div style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "10px", padding: "12px 16px", marginBottom: "12px" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: "0.72rem", color: "#a78bfa", fontWeight: 700, margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        <p style={{ fontSize: "0.72rem", color: "#a78bfa", fontWeight: 700, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                           🤖 AI Found a Match <ConfidenceBadge score={ex.ai_match_confidence} />
                         </p>
+                        <p style={{ fontSize: "0.7rem", color: "rgba(196,181,253,0.5)", margin: "0 0 3px" }}>Catalog item to remap to:</p>
                         <p style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "rgba(196,181,253,0.95)", margin: "0 0 4px", fontWeight: 600 }}>
                           {ex.ai_match_suggestion}
                         </p>
@@ -493,9 +498,10 @@ export default function ExceptionsPage() {
                 {/* Fuzzy suggested match block */}
                 {ex.suggested_match && !ex.ai_match_suggestion && (
                   <div style={{ background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.2)", borderRadius: "10px", padding: "12px 16px", marginBottom: "12px" }}>
-                    <p style={{ color: "#60a5fa", fontWeight: 700, margin: "0 0 4px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      Text-Similarity Match — {ex.match_score?.toFixed(0)}% score
+                    <p style={{ color: "#60a5fa", fontWeight: 700, margin: "0 0 6px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      Similar Item Found in Catalog — {ex.match_score?.toFixed(0)}% match
                     </p>
+                    <p style={{ fontSize: "0.7rem", color: "rgba(147,197,253,0.5)", margin: "0 0 3px" }}>Catalog item to remap to:</p>
                     <p style={{ fontFamily: "monospace", fontSize: "0.84rem", color: "rgba(147,197,253,0.9)", margin: "0 0 4px", fontWeight: 600 }}>
                       {ex.suggested_match.part_number}
                     </p>
@@ -515,7 +521,34 @@ export default function ExceptionsPage() {
                       style={{ marginBottom: "10px", fontSize: "0.78rem", padding: "7px 12px" }}
                     />
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                      {ex.suggested_match && (
+                      {/* Below-reserve: allow admin to override the floor price */}
+                      {ex.exception_type === "below_reserve" && (
+                        <button
+                          type="button"
+                          onClick={() => resolve(ex.id, "approve_match")}
+                          disabled={isWorking}
+                          className="btn-brand"
+                          style={{ fontSize: "0.78rem", padding: "7px 16px", background: "#059669" }}
+                          title="Override the reserve floor and allow this bid to compete"
+                        >
+                          ✓ Approve Below-Reserve Bid
+                        </button>
+                      )}
+                      {/* Price anomaly: confirm the unusual price is intentional */}
+                      {ex.exception_type === "price_anomaly" && (
+                        <button
+                          type="button"
+                          onClick={() => resolve(ex.id, "approve_match")}
+                          disabled={isWorking}
+                          className="btn-brand"
+                          style={{ fontSize: "0.78rem", padding: "7px 16px", background: "#7c3aed" }}
+                          title="Confirm this price is intentional and allow it to compete"
+                        >
+                          ✓ Accept Price
+                        </button>
+                      )}
+                      {/* Fuzzy text-similarity match confirm */}
+                      {ex.suggested_match && ex.exception_type !== "below_reserve" && ex.exception_type !== "price_anomaly" && (
                         <button
                           type="button"
                           onClick={() => resolve(ex.id, "approve_match")}

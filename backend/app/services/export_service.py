@@ -156,6 +156,14 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
         .order_by(BidLine.master_item_id)
         .all()
     )
+    # Use deals table as authoritative win source (covers award-lot and single-deal overrides)
+    won_master_ids = {
+        d.master_item_id
+        for d in db.query(Deal).filter(
+            Deal.bid_round_id == bid_round_id,
+            Deal.winning_buyer_id == buyer_id,
+        ).all()
+    }
 
     # Plain styles — no dark backgrounds, standard business Excel
     plain_header_fill = PatternFill("solid", fgColor="2E5090")
@@ -189,16 +197,17 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
 
     for row_idx, line in enumerate(lines, start=2):
         master = db.query(MasterItem).filter(MasterItem.id == line.master_item_id).first()
-        result = "WON" if line.is_winner else "LOST"
+        did_win = line.master_item_id in won_master_ids
+        result = "WON" if did_win else "LOST"
         values = [
             master.part_number if master else line.raw_part_number,
             master.description if master else line.description,
             line.quantity,
             line.unit_price,
             result,
-            line.fluffed_loss_price if not line.is_winner else "",
+            line.fluffed_loss_price if not did_win else "",
         ]
-        row_font = plain_won_font if line.is_winner else plain_lost_font
+        row_font = plain_won_font if did_win else plain_lost_font
         for col_idx, val in enumerate(values, start=1):
             cell = ws.cell(row=row_idx, column=col_idx, value=val)
             cell.fill = no_fill
@@ -207,7 +216,7 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
             cell.alignment = Alignment(horizontal="left", vertical="center")
 
     # Summary row
-    won = sum(1 for l in lines if l.is_winner)
+    won = len(won_master_ids)
     lost = len(lines) - won
     summary_row = len(lines) + 3
     summary_cell = ws.cell(row=summary_row, column=1, value=f"Total Won: {won}   |   Total Lost: {lost}")

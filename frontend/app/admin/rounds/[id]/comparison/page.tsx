@@ -150,17 +150,15 @@ export default function ComparisonPage() {
           borderRadius: "var(--radius-xl)",
           overflow: "hidden",
         }}>
-          {/* Sticky header */}
+          {/* Single horizontal scroll context — header and body scroll together */}
           <div style={{ overflowX: "auto" }}>
             <div style={{ width: totalWidth, minWidth: "100%" }}>
+              {/* Header — sits above body in normal flow, scrolls horizontally with it */}
               <div style={{
                 display: "flex",
                 height: HEADER_H,
                 background: "rgba(30,58,95,0.6)",
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
-                position: "sticky",
-                top: 0,
-                zIndex: 10,
               }}>
                 <HeaderCell width={COL_W_ITEM}>Model / Part</HeaderCell>
                 {isUnitLevel && <HeaderCell width={COL_W_GRADE} center>Grade</HeaderCell>}
@@ -181,15 +179,14 @@ export default function ComparisonPage() {
                 ))}
               </div>
 
-              {/* Virtualized rows */}
+              {/* Virtualized rows — vertical scroll only; horizontal handled by parent */}
               <div
                 ref={parentRef}
-                style={{ height: Math.min(rows.length * ROW_H, 600), overflowY: "auto", overflowX: "auto" }}
+                style={{ height: Math.min(rows.length * ROW_H, 600), overflowY: "auto" }}
               >
                 <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
                   {items.map((virtualRow) => {
                     const row = rows[virtualRow.index];
-                    // Find winner price for this item
                     const winnerEntry = Object.values(row.bids).find((b) => b.is_winner);
                     const winnerPrice = winnerEntry?.unit_price;
 

@@ -380,37 +380,46 @@ def download_my_submission(round_id: int, db: Session = Depends(get_db), buyer=D
 
 @router.get("/my-results")
 def my_results(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    # Wins from deals table — correct after award-lot and single-deal overrides
+    won_deals = db.query(Deal).filter(Deal.winning_buyer_id == buyer.id).all()
+    won_keys = {(d.bid_round_id, d.master_item_id) for d in won_deals}
+
     lines = (
         db.query(BidLine)
         .filter(BidLine.buyer_id == buyer.id, BidLine.match_status == "matched")
         .all()
     )
-
-    master_ids = {l.master_item_id for l in lines if l.master_item_id}
+    master_ids = {l.master_item_id for l in lines if l.master_item_id} | {d.master_item_id for d in won_deals}
     masters_map = {
         m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids)).all()
     }
+    lines_index = {(l.bid_round_id, l.master_item_id): l for l in lines if l.master_item_id}
 
     results = []
+    for d in won_deals:
+        master = masters_map.get(d.master_item_id)
+        own_line = lines_index.get((d.bid_round_id, d.master_item_id))
+        results.append({
+            "part_number": d.part_number or (master.part_number if master else ""),
+            "description": d.description or (master.description if master else ""),
+            "outcome": "WON",
+            "your_price": own_line.unit_price if own_line else d.winning_price,
+            "winning_price": d.winning_price,
+        })
+
     for l in lines:
+        if (l.bid_round_id, l.master_item_id) in won_keys:
+            continue  # already counted as WON
+        if not l.fluffed_loss_price:
+            continue
         master = masters_map.get(l.master_item_id) if l.master_item_id else None
-        if l.is_winner:
-            results.append({
-                "part_number": master.part_number if master else l.raw_part_number,
-                "description": master.description if master else l.description,
-                "outcome": "WON",
-                "your_price": l.unit_price,
-                "winning_price": l.unit_price,
-            })
-        elif l.fluffed_loss_price:
-            # Buyer only sees the fluffed price, never the real winning price
-            results.append({
-                "part_number": master.part_number if master else l.raw_part_number,
-                "description": master.description if master else l.description,
-                "outcome": "LOST",
-                "your_price": l.unit_price,
-                "winning_price": l.fluffed_loss_price,  # intentionally fluffed
-            })
+        results.append({
+            "part_number": master.part_number if master else l.raw_part_number,
+            "description": master.description if master else l.description,
+            "outcome": "LOST",
+            "your_price": l.unit_price,
+            "winning_price": l.fluffed_loss_price,
+        })
 
     return {"results": results, "won": len([r for r in results if r["outcome"] == "WON"]), "lost": len([r for r in results if r["outcome"] == "LOST"])}
 
@@ -460,28 +469,54 @@ async def download_template(round_id: int, db: Session = Depends(get_db), buyer=
 
 @router.get("/my-results/{round_id}")
 def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+    # Wins come from the deals table — authoritative even after admin award-lot overrides
+    won_deals = (
+        db.query(Deal)
+        .filter(Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id)
+        .all()
+    )
+    won_master_ids = {d.master_item_id for d in won_deals}
+
+    # Own bid lines for the round (to show LOST results with fluffed prices)
     lines = (
         db.query(BidLine)
         .filter(BidLine.bid_round_id == round_id, BidLine.buyer_id == buyer.id, BidLine.match_status == "matched")
         .all()
     )
-    master_ids_r = {l.master_item_id for l in lines if l.master_item_id}
+    master_ids_r = {l.master_item_id for l in lines if l.master_item_id} | won_master_ids
     masters_map_r = {
         m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids_r)).all()
     }
+    lines_by_master = {l.master_item_id: l for l in lines if l.master_item_id}
 
     results = []
+    # WON: from deals (correctly reflects award-lot and other admin overrides)
+    for d in won_deals:
+        master = masters_map_r.get(d.master_item_id)
+        own_line = lines_by_master.get(d.master_item_id)
+        results.append({
+            "part_number": d.part_number or (master.part_number if master else ""),
+            "description": d.description or (master.description if master else ""),
+            "quantity": d.quantity,
+            "outcome": "WON",
+            "your_price": own_line.unit_price if own_line else d.winning_price,
+            "winning_price": d.winning_price,
+        })
+
+    # LOST: bid lines where this buyer bid but the deal went to someone else
     for l in lines:
+        if l.master_item_id in won_master_ids:
+            continue  # already counted as WON
         master = masters_map_r.get(l.master_item_id) if l.master_item_id else None
-        entry = {
+        results.append({
             "part_number": master.part_number if master else l.raw_part_number,
             "description": master.description if master else l.description,
             "quantity": l.quantity,
-            "outcome": "WON" if l.is_winner else "LOST",
+            "outcome": "LOST",
             "your_price": l.unit_price,
-            "winning_price": l.unit_price if l.is_winner else l.fluffed_loss_price,
-        }
-        results.append(entry)
+            "winning_price": l.fluffed_loss_price,
+        })
+
     return {
         "round_id": round_id,
         "results": results,
