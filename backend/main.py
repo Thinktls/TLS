@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,9 +28,7 @@ app = FastAPI(title="ThinkTLS Bid Desk API", version="1.0.0", lifespan=lifespan)
 # Compress JSON/text responses ≥ 1 kB — cuts payload size 50-70%
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-import os as _os
-
-_frontend_url = _os.environ.get("FRONTEND_URL", "http://localhost:3000")
+_frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 _cors_origins = list({
     "http://localhost:3000",
     "http://localhost:3001",

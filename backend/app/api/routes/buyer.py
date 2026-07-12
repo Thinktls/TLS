@@ -16,7 +16,7 @@ import os
 import asyncio
 import mimetypes
 from datetime import datetime, timezone
-from app.api.routes.bid_rounds import _validate_upload
+from app.api.routes.bid_rounds import validate_upload
 from app.core.executors import file_parsing_executor
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -136,7 +136,7 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
     if not assigned:
         raise HTTPException(403, "You are not assigned to this round")
     content = await file.read()
-    _validate_upload(content, file.filename)
+    validate_upload(content, file.filename)
     loop = asyncio.get_running_loop()
     try:
         # CPU-bound parsing on a DEDICATED executor — never the default one login depends on.
@@ -180,7 +180,7 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
         raise HTTPException(400, "Submission deadline has passed")
 
     content = await file.read()
-    _validate_upload(content, file.filename)
+    validate_upload(content, file.filename)
     file_size = len(content)
 
     # Resubmission: clear every previous bid line for this buyer in this round — pending,

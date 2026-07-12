@@ -1,7 +1,7 @@
 import logging
-from pydantic_settings import BaseSettings
-from pydantic import field_validator
 from functools import lru_cache
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _log = logging.getLogger(__name__)
 
@@ -64,8 +64,7 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str = "admin@thinktls.com"
     ADMIN_PASSWORD: str = "changeme123"
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 @lru_cache()

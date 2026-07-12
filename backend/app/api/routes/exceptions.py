@@ -3,7 +3,8 @@ Exception queue — admin reviews and resolves flagged bid lines.
 """
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy import func, case
+from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 
 from app.db.session import get_db
@@ -26,9 +27,9 @@ class BulkResolveRequest(BaseModel):
     line_ids: List[int] | None = None  # None = all unresolved in round
 
 
-def _serialize_line(l: BidLine, db: Session) -> dict:
-    buyer = db.query(User).filter(User.id == l.buyer_id).first()
-    master = db.query(MasterItem).filter(MasterItem.id == l.master_item_id).first() if l.master_item_id else None
+def _serialize_line(l: BidLine) -> dict:
+    buyer = l.buyer       # pre-loaded via joinedload in calling query
+    master = l.master_item  # pre-loaded via joinedload in calling query
     return {
         "id": l.id,
         "raw_part_number": l.raw_part_number,
@@ -61,37 +62,46 @@ def list_exceptions(
     db: Session = Depends(get_db),
     _=Depends(require_admin),
 ):
-    q = db.query(BidLine).filter(
-        BidLine.bid_round_id == round_id,
-        BidLine.match_status == "exception",
+    q = (
+        db.query(BidLine)
+        .filter(BidLine.bid_round_id == round_id, BidLine.match_status == "exception")
+        .options(joinedload(BidLine.buyer), joinedload(BidLine.master_item))
     )
     if exception_type and exception_type != "all":
         q = q.filter(BidLine.exception_type == exception_type)
     if resolved is not None:
         q = q.filter(BidLine.exception_resolved == resolved)
-    lines = q.all()
-    return [_serialize_line(l, db) for l in lines]
+    return [_serialize_line(l) for l in q.all()]
 
 
 @router.get("/rounds/{round_id}/stats")
 def exception_stats(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
-    all_lines = db.query(BidLine).filter(
-        BidLine.bid_round_id == round_id,
-        BidLine.match_status == "exception",
-    ).all()
-    stats: dict = {"total": len(all_lines), "resolved": 0, "unresolved": 0, "by_type": {}}
-    for l in all_lines:
-        if l.exception_resolved:
-            stats["resolved"] += 1
-        else:
-            stats["unresolved"] += 1
-        t = l.exception_type or "unknown"
-        stats["by_type"][t] = stats["by_type"].get(t, 0) + 1
-    # ai suggestions available (confidence stored)
-    stats["ai_suggestions_available"] = sum(
-        1 for l in all_lines if l.ai_match_confidence and l.ai_match_confidence >= 85 and not l.exception_resolved
-    )
-    return stats
+    base = (BidLine.bid_round_id == round_id, BidLine.match_status == "exception")
+    counts = db.query(
+        func.count().label("total"),
+        func.count(case((BidLine.exception_resolved == True, 1))).label("resolved"),
+        func.count(case((BidLine.exception_resolved == False, 1))).label("unresolved"),
+        func.count(case((
+            (BidLine.ai_match_confidence >= 85) & (~BidLine.exception_resolved),
+            1,
+        ))).label("ai_available"),
+    ).filter(*base).one()
+
+    by_type = {
+        (t or "unknown"): c
+        for t, c in db.query(BidLine.exception_type, func.count())
+        .filter(*base)
+        .group_by(BidLine.exception_type)
+        .all()
+    }
+
+    return {
+        "total": counts.total,
+        "resolved": counts.resolved,
+        "unresolved": counts.unresolved,
+        "by_type": by_type,
+        "ai_suggestions_available": counts.ai_available,
+    }
 
 
 @router.get("/rounds/{round_id}/search-master")

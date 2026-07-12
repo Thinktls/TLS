@@ -1,35 +1,50 @@
+import io
+import logging
+import mimetypes
 import os
 import shutil
 import asyncio
-from datetime import datetime, timezone
-from app.core.executors import file_parsing_executor
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
-from app.db.session import get_db
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy import text, func, case
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.core.executors import file_parsing_executor
 from app.core.security import require_admin, get_current_user
-from app.models.bid_round import BidRound, round_buyers
-from app.models.master_item import MasterItem
+from app.db.session import get_db, SessionLocal
+from app.models.approval_override import ApprovalOverride
 from app.models.bid_file import BidFile
 from app.models.bid_line import BidLine
+from app.models.bid_round import BidRound, round_buyers
 from app.models.deal import Deal
-from app.models.approval_override import ApprovalOverride
+from app.models.master_item import MasterItem
 from app.models.user import User
-from app.services.file_parser import parse_master_file
-from app.services.matcher import match_bid_lines
-from app.services.winner_selector import select_winners
-from app.services.template_generator import generate_bid_template
+from app.services.ai_matcher import run_ai_matching
+from app.services.buyer_scorer import recalculate_buyer_scores
+from app.services.email_service import (
+    send_bid_invitation, send_round_results,
+    send_approval_ready_email, send_exception_alert,
+)
 from app.services.export_service import (
     export_deals_excel, export_deals_csv, export_bid_comparison_excel,
     export_buyer_award_sheet, export_all_award_sheets_zip,
     export_razor_csv, export_margin_report, export_disposition_report,
     export_erp_line_report,
 )
-from app.services.email_service import send_bid_invitation, send_round_results, send_approval_ready_email
+from app.services.file_parser import parse_master_file
+from app.services.matcher import match_bid_lines
+from app.services.template_generator import generate_bid_template
+from app.services.winner_selector import select_winners
+
+_log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/rounds", tags=["bid_rounds"])
 
@@ -43,7 +58,7 @@ _XLSX_MAGIC = b"PK\x03\x04"
 _XLS_MAGIC = b"\xd0\xcf\x11\xe0"
 
 
-def _validate_upload(content: bytes, filename: str) -> None:
+def validate_upload(content: bytes, filename: str) -> None:
     """Raise HTTPException if the upload is not a valid bid file."""
     ext = os.path.splitext(filename)[1].lower()
     if ext not in _ALLOWED_EXTENSIONS:
@@ -118,11 +133,6 @@ def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
     Global KPI summary for the reporting dashboard.
     Returns aggregated stats across all rounds.
     """
-    from datetime import datetime, timedelta, timezone
-    from sqlalchemy import func as sqlfunc
-    from app.models.deal import Deal
-    from app.models.user import User as UserModel
-
     now = datetime.now(timezone.utc)
     thirty_days_ago = now - timedelta(days=30)
 
@@ -199,17 +209,15 @@ def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
 @router.get("/report/monthly-deal-value")
 def report_monthly_deal_value(db: Session = Depends(get_db), _=Depends(require_admin)):
     """Monthly approved deal value for the last 12 months."""
-    from datetime import datetime, timedelta, timezone
-    from app.models.deal import Deal
-
     now = datetime.now(timezone.utc)
     months = []
     for i in range(11, -1, -1):
-        first_day = (now.replace(day=1) - timedelta(days=i * 28)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if first_day.month == 12:
-            last_day = first_day.replace(year=first_day.year + 1, month=1, day=1)
-        else:
-            last_day = first_day.replace(month=first_day.month + 1, day=1)
+        total_months = now.year * 12 + now.month - i
+        year_m = (total_months - 1) // 12
+        month_m = (total_months - 1) % 12 + 1
+        first_day = datetime(year_m, month_m, 1, tzinfo=timezone.utc)
+        last_day = datetime(year_m + 1, 1, 1, tzinfo=timezone.utc) if month_m == 12 \
+                   else datetime(year_m, month_m + 1, 1, tzinfo=timezone.utc)
         total = (
             db.query(Deal)
             .filter(Deal.status == "approved", Deal.created_at >= first_day, Deal.created_at < last_day)
@@ -238,7 +246,7 @@ async def upload_master_file(round_id: int, file: UploadFile = File(...), db: Se
         raise HTTPException(404, "Round not found")
 
     content = await file.read()
-    _validate_upload(content, file.filename)
+    validate_upload(content, file.filename)
     try:
         # Parsing a large multi-sheet workbook is CPU-bound and can take several seconds.
         # Run it on a DEDICATED executor (not asyncio's default one) — sharing the default
@@ -365,8 +373,6 @@ def get_round_buyers(round_id: int, db: Session = Depends(get_db), _=Depends(req
 @router.get("/{round_id}/participation")
 def get_round_participation(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     """Real-time buyer participation status for a round."""
-    from sqlalchemy import func as sqlfunc
-
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
@@ -387,7 +393,7 @@ def get_round_participation(round_id: int, db: Session = Depends(get_db), _=Depe
     # Fetch latest bid file per buyer in one query (subquery approach)
     if buyer_ids:
         subq = (
-            db.query(BidFile.buyer_id, sqlfunc.max(BidFile.uploaded_at).label("max_at"))
+            db.query(BidFile.buyer_id, func.max(BidFile.uploaded_at).label("max_at"))
             .filter(BidFile.bid_round_id == round_id, BidFile.buyer_id.in_(buyer_ids))
             .group_by(BidFile.buyer_id)
             .subquery()
@@ -401,7 +407,7 @@ def get_round_participation(round_id: int, db: Session = Depends(get_db), _=Depe
         bid_file_map = {bf.buyer_id: bf for bf in latest_files}
 
         counts_raw = (
-            db.query(BidLine.buyer_id, sqlfunc.count(BidLine.id).label("cnt"))
+            db.query(BidLine.buyer_id, func.count(BidLine.id).label("cnt"))
             .filter(BidLine.bid_round_id == round_id, BidLine.buyer_id.in_(buyer_ids))
             .group_by(BidLine.buyer_id)
             .all()
@@ -507,27 +513,27 @@ def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Sessi
     if not assigned:
         raise HTTPException(400, "No new buyers pending invitation — all assigned buyers have already been invited")
 
-    from app.core.config import settings as _settings
-    from datetime import timezone as _tz, timedelta as _td
-    _EST = _tz(_td(hours=-5))
+    _EST = timezone(timedelta(hours=-5))
     if r.submission_deadline:
-        _dl_est = r.submission_deadline.astimezone(_EST)
-        deadline_str = _dl_est.strftime("%m/%d/%Y %I:%M %p") + " EST"
+        deadline_str = r.submission_deadline.astimezone(_EST).strftime("%m/%d/%Y %I:%M %p") + " EST"
     else:
         deadline_str = "See admin for deadline"
-    upload_url = f"{_settings.FRONTEND_URL}/portal/bid?round={round_id}"
+    upload_url = f"{settings.FRONTEND_URL}/portal/bid?round={round_id}"
+
+    buyer_ids = [row.buyer_id for row in assigned]
+    buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids), User.is_active == True).all()}
 
     sent = 0
     for row in assigned:
-        buyer = db.query(User).filter(User.id == row.buyer_id).first()
-        if not buyer or not buyer.is_active:
+        buyer = buyers.get(row.buyer_id)
+        if not buyer:
             continue
         background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url)
         db.execute(
             text("UPDATE round_buyers SET invite_status='sent', invited_at=now() WHERE round_id=:rid AND buyer_id=:bid"),
             {"rid": round_id, "bid": buyer.id},
         )
-        buyer.last_invited_date = datetime.utcnow()
+        buyer.last_invited_date = datetime.now(timezone.utc)
         sent += 1
 
     db.commit()
@@ -547,28 +553,29 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
         text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
     ).fetchall()
 
-    from app.core.config import settings
-    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+    # Pre-fetch all buyers and matched lines in bulk — no per-buyer queries in the loop
+    buyer_ids = [row.buyer_id for row in assigned]
+    buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids), User.is_active == True).all()}
 
-    # Pre-fetch master items once — needed for part_number/description in loss emails
-    masters_idx = {
-        m.id: m for m in db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
-    }
+    masters_idx = {m.id: m for m in db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()}
 
+    all_matched = db.query(BidLine).filter(
+        BidLine.bid_round_id == round_id, BidLine.match_status == "matched"
+    ).all()
+    lines_by_buyer: dict[int, list] = defaultdict(list)
+    for line in all_matched:
+        lines_by_buyer[line.buyer_id].append(line)
+
+    portal_url = f"{settings.FRONTEND_URL}/portal/results?round={round_id}"
     sent = 0
     for row in assigned:
-        buyer = db.query(User).filter(User.id == row.buyer_id).first()
-        if not buyer or not buyer.is_active:
+        buyer = buyers.get(row.buyer_id)
+        if not buyer:
             continue
-        buyer_lines = db.query(BidLine).filter(
-            BidLine.bid_round_id == round_id,
-            BidLine.buyer_id == buyer.id,
-            BidLine.match_status == "matched",
-        ).all()
+        buyer_lines = lines_by_buyer.get(buyer.id, [])
         won = sum(1 for l in buyer_lines if l.is_winner)
         lost = len(buyer_lines) - won
 
-        # Build per-item loss detail list — only items where buyer bid AND has a fluffed price
         lost_items = []
         for line in buyer_lines:
             if not line.is_winner and line.unit_price is not None and line.fluffed_loss_price is not None:
@@ -580,7 +587,6 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
                     "winning_price": line.fluffed_loss_price,
                 })
 
-        portal_url = f"{frontend_url}/portal/results?round={round_id}"
         background_tasks.add_task(
             send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url, lost_items
         )
@@ -607,11 +613,6 @@ def process_round(round_id: int, background_tasks: BackgroundTasks, db: Session 
 
 
 def _run_processing(round_id: int):
-    import logging as _log
-    from app.db.session import SessionLocal
-    from app.services.buyer_scorer import recalculate_buyer_scores
-    from app.services.ai_matcher import run_ai_matching
-    _logger = _log.getLogger(__name__)
     db = SessionLocal()
     try:
         master_items = db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
@@ -623,9 +624,8 @@ def _run_processing(round_id: int):
         match_bid_lines(bid_lines, master_items)
         db.commit()
 
-        # Tier 3: AI matching for remaining exceptions
         ai_summary = run_ai_matching(db, round_id)
-        _logger.info(f"Round {round_id} AI matching: {ai_summary}")
+        _log.info(f"Round {round_id} AI matching: {ai_summary}")
 
         select_winners(db, round_id)
         recalculate_buyer_scores(db, round_id)
@@ -636,31 +636,25 @@ def _run_processing(round_id: int):
             r.completed_at = datetime.now(timezone.utc)
             db.commit()
 
-            # Notify admin about processing completion
-            from app.services.email_service import send_exception_alert
-            from app.core.config import settings
-            frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-            admin_email = getattr(settings, "ADMIN_EMAIL", None)
             exceptions_count = db.query(BidLine).filter(
                 BidLine.bid_round_id == round_id,
                 BidLine.match_status == "exception",
                 BidLine.exception_resolved == False,
             ).count()
-            if exceptions_count > 0 and admin_email:
+            if exceptions_count > 0:
                 send_exception_alert(
-                    admin_email, r.name, exceptions_count,
-                    f"{frontend_url}/admin/rounds/{round_id}/exceptions"
+                    settings.ADMIN_EMAIL, r.name, exceptions_count,
+                    f"{settings.FRONTEND_URL}/admin/rounds/{round_id}/exceptions"
                 )
-            elif exceptions_count == 0 and admin_email:
-                from app.models.deal import Deal
+            else:
                 deal_count = db.query(Deal).filter(Deal.bid_round_id == round_id).count()
                 send_approval_ready_email(
-                    admin_email, r.name, deal_count,
-                    f"{frontend_url}/admin/rounds/{round_id}"
+                    settings.ADMIN_EMAIL, r.name, deal_count,
+                    f"{settings.FRONTEND_URL}/admin/rounds/{round_id}"
                 )
 
     except Exception as exc:
-        _logger.error(f"Processing failed for round {round_id}: {exc}", exc_info=True)
+        _log.error(f"Processing failed for round {round_id}: {exc}", exc_info=True)
         try:
             r = db.query(BidRound).filter(BidRound.id == round_id).first()
             if r:
@@ -685,13 +679,10 @@ def trigger_ai_match(round_id: int, background_tasks: BackgroundTasks, db: Sessi
 
 
 def _run_ai_match_only(round_id: int):
-    from app.db.session import SessionLocal
-    from app.services.ai_matcher import run_ai_matching
     db = SessionLocal()
     try:
         summary = run_ai_matching(db, round_id)
-        import logging
-        logging.getLogger(__name__).info(f"Manual AI match round {round_id}: {summary}")
+        _log.info(f"Manual AI match round {round_id}: {summary}")
     finally:
         db.close()
 
@@ -732,7 +723,6 @@ def download_bid_file(round_id: int, file_id: int, db: Session = Depends(get_db)
         raise HTTPException(404, "File not found")
     if not bf.file_path or not os.path.exists(bf.file_path):
         raise HTTPException(404, "File is no longer on disk")
-    import mimetypes
     mime, _ = mimetypes.guess_type(bf.filename)
     mime = mime or "application/octet-stream"
     def _iter():
@@ -759,10 +749,6 @@ def reconstruct_bid_file(round_id: int, file_id: int, db: Session = Depends(get_
         .order_by(BidLine.id)
         .all()
     )
-
-    import io
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -900,8 +886,6 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
         .all()
     )
 
-    # Pre-fetch all buyers involved in this round in a single query
-    from collections import defaultdict
     buyer_ids = {l.buyer_id for l in lines}
     buyer_map: dict[int, str] = {
         b.id: (b.company_name or str(b.id))
@@ -992,27 +976,34 @@ def list_bid_lines(
 
 @router.get("/{round_id}/summary")
 def round_summary(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
-    lines = db.query(BidLine).filter(BidLine.bid_round_id == round_id).all()
-    deals = db.query(Deal).filter(Deal.bid_round_id == round_id).all()
-    exceptions = [l for l in lines if l.match_status == "exception"]
+    counts = db.query(
+        func.count().label("total"),
+        func.count(case((BidLine.match_status == "matched", 1))).label("matched"),
+        func.count(case((BidLine.match_status == "exception", 1))).label("exceptions"),
+        func.count(case((BidLine.is_winner == True, 1))).label("winners"),
+    ).filter(BidLine.bid_round_id == round_id).one()
 
-    return {
-        "total_bid_lines": len(lines),
-        "matched": len([l for l in lines if l.match_status == "matched"]),
-        "exceptions": len(exceptions),
-        "winners": len([l for l in lines if l.is_winner]),
-        "deals": len(deals),
-        "total_deal_value": round(sum(d.total_value for d in deals), 2),
-        "exception_breakdown": _exception_breakdown(exceptions),
+    breakdown = {
+        (t or "unknown"): c
+        for t, c in db.query(BidLine.exception_type, func.count())
+        .filter(BidLine.bid_round_id == round_id, BidLine.match_status == "exception")
+        .group_by(BidLine.exception_type)
+        .all()
     }
 
+    deal_agg = db.query(func.count().label("cnt"), func.sum(Deal.total_value).label("val")).filter(
+        Deal.bid_round_id == round_id
+    ).one()
 
-def _exception_breakdown(lines):
-    breakdown = {}
-    for l in lines:
-        t = l.exception_type or "unknown"
-        breakdown[t] = breakdown.get(t, 0) + 1
-    return breakdown
+    return {
+        "total_bid_lines": counts.total,
+        "matched": counts.matched,
+        "exceptions": counts.exceptions,
+        "winners": counts.winners,
+        "deals": deal_agg.cnt or 0,
+        "total_deal_value": round(float(deal_agg.val or 0), 2),
+        "exception_breakdown": breakdown,
+    }
 
 
 @router.get("/{round_id}/processing-status")
@@ -1026,15 +1017,14 @@ def processing_status(round_id: int, db: Session = Depends(get_db), _=Depends(re
     if not r:
         raise HTTPException(404, "Round not found")
 
-    from sqlalchemy import func as sqlfunc
-    total = db.query(sqlfunc.count(BidLine.id)).filter(BidLine.bid_round_id == round_id).scalar() or 0
-    matched = db.query(sqlfunc.count(BidLine.id)).filter(
+    total = db.query(func.count(BidLine.id)).filter(BidLine.bid_round_id == round_id).scalar() or 0
+    matched = db.query(func.count(BidLine.id)).filter(
         BidLine.bid_round_id == round_id, BidLine.match_status == "matched"
     ).scalar() or 0
-    exceptions = db.query(sqlfunc.count(BidLine.id)).filter(
+    exceptions = db.query(func.count(BidLine.id)).filter(
         BidLine.bid_round_id == round_id, BidLine.match_status == "exception"
     ).scalar() or 0
-    deals = db.query(sqlfunc.count(Deal.id)).filter(Deal.bid_round_id == round_id).scalar() or 0
+    deals = db.query(func.count(Deal.id)).filter(Deal.bid_round_id == round_id).scalar() or 0
 
     pct = round((matched + exceptions) / total * 100, 1) if total > 0 else 0
 
