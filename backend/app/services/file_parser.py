@@ -14,6 +14,7 @@ pivot tables, and non-standard column names.
 import io
 import logging
 import re
+from collections import Counter
 import pandas as pd
 from rapidfuzz import fuzz
 from app.services.normalizer import normalize_part_number, normalize_description
@@ -203,6 +204,14 @@ _BUYER_PLACEHOLDER_COLS = {
     "unit price", "unit price ($)", "price",
 }
 
+
+def _is_pivot_noise_col(col_name: str) -> bool:
+    """Pivot-table aggregation columns like "Count of Model" / "Count of SKU" duplicate the
+    Qty column and carry no product spec — they must never become locked spec columns in the
+    generated bid template. Strips any pandas duplicate suffix (.1, .2) before matching."""
+    c = re.sub(r"\.\d+$", "", str(col_name)).strip().lower()
+    return c.startswith("count of ") or c in ("count of model", "count", "count of")
+
 # Sheet name keywords — aggregated/summary tabs preferred; raw unit/detail tabs penalised.
 _SHEET_BONUS_KEYWORDS = [
     "summary", "overview", "bid", "quote", "price list", "pricing",
@@ -221,6 +230,13 @@ def _sheet_score_bonus(sheet_name: str) -> int:
     if any(k in name for k in _SHEET_PENALTY_KEYWORDS):
         return -2
     return 0
+
+
+# Extra score awarded to a side-by-side pivot bid table (e.g. the ThinkTLS memory
+# "Bid Tables" sheet). A pivot layout with dedicated bid-entry columns is a deliberate,
+# curated bid sheet — it must win over the same workbook's raw unit-level detail sheets,
+# which otherwise tie on field count and can win by candidate order alone.
+_PIVOT_BLOCK_BONUS = 4
 
 
 def _is_junk_row(pn_val: str) -> bool:
@@ -263,6 +279,7 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
         and c.lower().strip() not in _BUYER_PLACEHOLDER_COLS
         and _strip_col_suffix(c).lower() not in _BUYER_PLACEHOLDER_COLS
         and _strip_col_suffix(c).lower() not in _mapped_base
+        and not _is_pivot_noise_col(c)
     ]
 
     rows = []
@@ -449,9 +466,17 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
     if _is_unit_level(df):
         return _aggregate_buyer_unit_level(df, mapping)
 
-    # Columns not covered by standard mapping — preserved so buyers see all their data
+    # Columns not covered by standard mapping — preserved so buyers see all their data.
+    # Exclude pivot-count noise ("Count of Model") and per-line extension columns ("Bid Ext",
+    # "Offer Ext") so a re-uploaded pivot bid file doesn't carry those artifacts as spec data.
     mapped_cols = set(mapping.values())
-    extra_col_names = [c for c in df.columns if c not in mapped_cols]
+    _strip_suffix = lambda c: re.sub(r"\.\d+$", "", c).strip().lower()
+    extra_col_names = [
+        c for c in df.columns
+        if c not in mapped_cols
+        and _strip_suffix(c) not in _BUYER_PLACEHOLDER_COLS
+        and not _is_pivot_noise_col(c)
+    ]
 
     rows = []
     for idx, row in df.iterrows():
@@ -657,6 +682,21 @@ def _load_dataframe(file_bytes: bytes, filename: str, hint_aliases: dict) -> pd.
                 prev_score = _score_df(prev, hint_aliases) + prev.attrs.get("_sheet_bonus", 0)
                 if score > prev_score:
                     per_sheet[sheet] = df
+
+        # A sheet that was split into ≥2 side-by-side pivot blocks must NOT also contribute its
+        # flattened whole-sheet parse. Flattening a multi-section pivot only captures the first
+        # section (mapping "Row Labels"/"Qty" to section 0 and suffixing the rest .1/.2/…), so
+        # merging that flattened copy back with the blocks double-counts section 0's quantities
+        # and injects duplicate junk columns. The pivot blocks are the correct decomposition —
+        # drop the plain candidate for those sheets. (A lone false-positive block, i.e. a normal
+        # table with one stray empty column, keeps its plain candidate — only ≥2 blocks qualify.)
+        pivot_block_counts = Counter(
+            name.split("__pivot")[0] for name in per_sheet if "__pivot" in name
+        )
+        for base, cnt in pivot_block_counts.items():
+            if cnt >= 2:
+                per_sheet.pop(base, None)
+
         candidates = list(per_sheet.values())
         logger.info("[file_parser] Excel sheets found: %s", list(per_sheet.keys()))
 
@@ -788,7 +828,7 @@ def _candidates_pivot_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> li
                             # Tag with a key unique per (sheet, block) — distinct from the plain
                             # _candidates_excel candidate for this same sheet, so the per-sheet
                             # dedup in _load_dataframe never collapses or collides the two.
-                            df.attrs["_sheet_bonus"] = _sheet_score_bonus(sheet)
+                            df.attrs["_sheet_bonus"] = _sheet_score_bonus(sheet) + _PIVOT_BLOCK_BONUS
                             df.attrs["_sheet_name"] = f"{sheet}__pivot{block_idx}"
                             out.append(df)
                             break

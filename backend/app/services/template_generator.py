@@ -6,6 +6,7 @@ Clean, professional design: white/light backgrounds, thin borders, no dark fills
 Returns bytes.
 """
 import io
+import hashlib
 from datetime import timezone, timedelta
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side, Protection as _Prot
@@ -46,8 +47,28 @@ WHITE_FILL    = PatternFill("solid", fgColor=_WHITE)
 LOCKED   = _Prot(locked=True)
 UNLOCKED = _Prot(locked=False)
 
-# (round_id) → (item_count, bytes): invalidated when item count changes
-_template_cache: dict[int, tuple[int, bytes]] = {}
+# (round_id) → (content_fingerprint, bytes). Keyed on a hash of every item field that
+# affects the rendered template — NOT just the row count. Keying on count alone returned a
+# stale template whenever an admin re-uploaded an edited master file with the same number of
+# rows (e.g. corrected a description, quantity, or spec value), so buyers downloaded the old data.
+_template_cache: dict[int, tuple[str, bytes]] = {}
+
+
+def _items_fingerprint(items) -> str:
+    """Stable hash of the rendered content of every master item. Any change to a value that
+    appears in the template (part number, manufacturer, description, quantity, or any spec
+    column) produces a different fingerprint, so the cache self-invalidates on re-upload."""
+    h = hashlib.sha256()
+    for it in items:
+        extra = it.extra_columns or {}
+        extra_repr = "|".join(f"{k}={extra[k]}" for k in sorted(extra))
+        h.update(
+            f"{it.row_number}\x1f{it.part_number}\x1f{it.manufacturer}\x1f"
+            f"{it.description}\x1f{it.quantity}\x1f{it.category}\x1f{extra_repr}\x1e".encode(
+                "utf-8", "replace"
+            )
+        )
+    return h.hexdigest()
 
 HDR_FONT   = Font(name="Calibri", bold=True,  color=_HDR_FONT, size=10)
 LOCK_FONT  = Font(name="Calibri", bold=False, color="595959",  size=10)
@@ -82,9 +103,10 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         .all()
     )
 
-    # Return cached bytes if the item list hasn't changed since last generation
+    # Return cached bytes only if the exact item content is unchanged since last generation
+    fingerprint = _items_fingerprint(items)
     cached = _template_cache.get(round_id)
-    if cached and cached[0] == len(items):
+    if cached and cached[0] == fingerprint:
         return cached[1]
 
     wb = Workbook()
@@ -283,5 +305,5 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
     buf = io.BytesIO()
     wb.save(buf)
     result = buf.getvalue()
-    _template_cache[round_id] = (len(items), result)
+    _template_cache[round_id] = (fingerprint, result)
     return result

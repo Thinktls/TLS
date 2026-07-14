@@ -93,6 +93,112 @@ def test_file_parsing_preserves_exact_row_count(num_rows):
     assert len(part_numbers) == len(set(part_numbers)), "Duplicate part numbers in parsed output."
 
 
+# ── Side-by-side pivot bid tables must not double-count section 0 ────────────────
+# Incident: the ThinkTLS memory "Bid Tables" sheet holds several pivot bid tables laid out
+# side-by-side, separated by blank spacer columns (e.g. "64GB DDR4", "32GB DDR4", ...).
+# The parser split it into per-section blocks AND kept a flattened whole-sheet parse of the
+# same sheet; flattening a multi-section pivot only captures the first section (suffixing the
+# rest .1/.2/…), and merging that flattened copy back with the blocks DOUBLED the first
+# section's quantities and injected junk "Count of Model" spec columns into the template.
+
+def _make_pivot_xlsx() -> bytes:
+    """Two pivot bid tables side-by-side, separated by a blank spacer column — mirrors the
+    real ThinkTLS memory 'Bid Tables' layout. Each block: Row Labels | Count of Model | Qty |
+    Bid Unit | Bid Ext. Section A quantities are distinctive so any doubling is unmissable."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Bid Tables"
+    hdr = ["Row Labels", "Count of Model", "Qty", "Bid Unit", "Bid Ext"]
+    # header row (col 0-4 = section A, col 5 = spacer, col 6-10 = section B)
+    ws.append(hdr + [None] + hdr)
+    section_a = [("A-100", 3), ("A-200", 111), ("A-300", 7)]
+    section_b = [("B-100", 5), ("B-200", 9)]
+    for i in range(max(len(section_a), len(section_b))):
+        row = []
+        if i < len(section_a):
+            pn, q = section_a[i]; row += [pn, q, q, None, 0]
+        else:
+            row += [None] * 5
+        row += [None]  # spacer
+        if i < len(section_b):
+            pn, q = section_b[i]; row += [pn, q, q, None, 0]
+        else:
+            row += [None] * 5
+        ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_side_by_side_pivot_not_double_counted():
+    rows = parse_master_file(_make_pivot_xlsx(), "memory_bid_tables.xlsx")
+    by_pn = {r["part_number"]: r for r in rows}
+    # All part numbers from BOTH sections present exactly once.
+    assert set(by_pn) == {"A-100", "A-200", "A-300", "B-100", "B-200"}, (
+        f"Pivot sections not all captured exactly once: got {sorted(by_pn)}"
+    )
+    # Section-0 quantity must be its real value, not doubled (111, never 222).
+    assert by_pn["A-200"]["quantity"] == 111, (
+        f"A-200 qty={by_pn['A-200']['quantity']} — the flattened-vs-pivot double-count "
+        "regression is back (expected 111, doubling would give 222)."
+    )
+    # No pivot-count junk column leaked into the template spec columns.
+    for r in rows:
+        for k in (r.get("extra_columns") or {}):
+            assert "count of" not in k.lower(), f"Pivot noise column '{k}' leaked into extra_columns"
+
+
+# ── Template cache must invalidate when item CONTENT changes ─────────────────────
+# Incident: the bid-template cache was keyed on row COUNT only. When an admin re-uploaded an
+# edited master file with the same number of rows (fixed a description / quantity / spec),
+# download_template served the STALE cached template, so buyers downloaded the old data.
+# Fix: cache key is now a content fingerprint of every rendered field.
+
+def test_template_cache_invalidates_on_content_edit():
+    from types import SimpleNamespace
+    from app.services import template_generator as tg
+
+    def _item(desc):
+        return SimpleNamespace(
+            id=1, bid_round_id=1, row_number=1, part_number="PN1", part_number_normalized="PN1",
+            description=desc, manufacturer="DELL", quantity=5, reserve_price=None,
+            category="", extra_columns=None,
+        )
+
+    class _Q:
+        def __init__(self, res): self.res = res
+        def filter(self, *a, **k): return self
+        def order_by(self, *a, **k): return self
+        def all(self): return self.res if isinstance(self.res, list) else []
+        def first(self): return self.res if not isinstance(self.res, list) else None
+
+    class _DB:
+        def __init__(self, rnd, items): self.rnd, self.items = rnd, items
+        def query(self, model):
+            return _Q(self.rnd if "BidRound" in getattr(model, "__name__", "") else self.items)
+
+    rnd = SimpleNamespace(id=1, name="R", commodity="c", customer="x", submission_deadline=None)
+    tg._template_cache.clear()
+
+    def _desc_in_template(tpl_bytes):
+        ws = openpyxl.load_workbook(io.BytesIO(tpl_bytes))["Bid Template"]
+        headers = [c.value for c in ws[1]]
+        return ws.cell(row=2, column=headers.index("Description") + 1).value
+
+    first = tg.generate_bid_template(_DB(rnd, [_item("Original Widget")]), 1)
+    assert _desc_in_template(first) == "Original Widget"
+
+    # Same row count, edited description — must NOT return the stale cached bytes.
+    edited = tg.generate_bid_template(_DB(rnd, [_item("CORRECTED Widget")]), 1)
+    assert _desc_in_template(edited) == "CORRECTED Widget", (
+        "Stale-template-cache regression: an edited master with the same row count still "
+        "served the old cached template. Cache must key on content, not row count."
+    )
+    # Identical content should still hit the cache (byte-identical output).
+    again = tg.generate_bid_template(_DB(rnd, [_item("CORRECTED Widget")]), 1)
+    assert again == edited
+
+
 # ── Export N+1 query regression ─────────────────────────────────────────────────
 # Incident: export_disposition_report queried Deal + BidLine per master item (3 queries
 # x N). At 1818 real master items this measured 14.0s. Fixed via batch-fetch up front.
