@@ -45,7 +45,13 @@ export default function LoginPage() {
       const res = await api.post("/auth/login", { email, password });
       saveAuth(res.data);
       router.push(res.data.role === "admin" ? "/admin" : "/portal");
+      // Leave the button in its "Signing in…" state through the redirect — resetting it here
+      // would briefly flash "Sign In" again before the new page mounts.
     } catch (err: unknown) {
+      // On ANY failure the button must return to the enabled "Sign In" state so the user can
+      // retry immediately. Without this the button stayed stuck on "Signing in…" (disabled)
+      // after a wrong password, timeout, or cold-start error — which felt like a frozen app.
+      setLoading(false);
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
         if (status === 401) {
