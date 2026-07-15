@@ -93,6 +93,45 @@ def test_file_parsing_preserves_exact_row_count(num_rows):
     assert len(part_numbers) == len(set(part_numbers)), "Duplicate part numbers in parsed output."
 
 
+# ── Upload must preserve EVERY column and EVERY data row (full fidelity) ─────────
+# Requirement: a real client file (laptops/servers) carries many spec columns (CPU, memory,
+# storage, networking, grade, serial, …) and thousands of rows. Uploading must take the file
+# "exact" — no spec column silently dropped, no data row silently skipped — regardless of what
+# extra columns a future file adds. Only the reserve/price placeholder columns are omitted.
+
+def _make_unit_level_xlsx(num_rows: int, spec_cols: list[str]) -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    # Serial makes it a unit-level (1 row per unit) file; every other column is arbitrary spec data.
+    ws.append(["Model", "Serial", "MFG"] + spec_cols)
+    for i in range(num_rows):
+        ws.append([f"MODEL-{i%40}", f"SN{i:06d}", "DELL"] + [f"{c}-val-{i}" for c in spec_cols])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_upload_preserves_all_columns_and_all_rows():
+    # 12 arbitrary spec columns the parser has never seen named before.
+    spec_cols = [f"Spec Column {chr(65+i)}" for i in range(12)]
+    num_rows = 750
+    content = _make_unit_level_xlsx(num_rows, spec_cols)
+    rows = parse_master_file(content, "big_unit_file.xlsx")
+
+    # Every physical unit row survives 1:1 (unit-level files never aggregate).
+    assert len(rows) == num_rows, (
+        f"Unit-level upload lost rows: {num_rows} in, {len(rows)} out. No data row may be skipped."
+    )
+    # Every arbitrary spec column is preserved on every row (mapped fields + extra_columns),
+    # so nothing in the source file is missed.
+    for r in rows:
+        preserved = set(r.get("extra_columns") or {})
+        # Model/MFG map to standard fields; the 12 spec columns must all be in extra_columns.
+        missing = set(spec_cols) - preserved
+        assert not missing, f"Spec columns dropped from upload: {sorted(missing)} — file must be taken exact."
+        assert r["manufacturer"] == "DELL"
+
+
 # ── Side-by-side pivot bid tables must not double-count section 0 ────────────────
 # Incident: the ThinkTLS memory "Bid Tables" sheet holds several pivot bid tables laid out
 # side-by-side, separated by blank spacer columns (e.g. "64GB DDR4", "32GB DDR4", ...).
