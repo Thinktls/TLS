@@ -78,9 +78,13 @@ async def approve_deal(deal_id: int, db: Session = Depends(get_db), admin=Depend
 
 
 def _send_results_to_all_buyers(round_id: int):
-    """Background task: send win/loss notice emails to every assigned buyer."""
+    """Background task: send win/loss notice emails to every assigned buyer, including the
+    per-item loss detail (your bid vs the fluffed winning price) so losers see where they were
+    outbid. Batch-fetches all data up front — no per-buyer queries in the loop."""
     import logging
+    from collections import defaultdict
     from app.models.bid_round import BidRound
+    from app.models.master_item import MasterItem
     _log = logging.getLogger(__name__)
     db = SessionLocal()
     try:
@@ -90,22 +94,52 @@ def _send_results_to_all_buyers(round_id: int):
         assigned = db.execute(
             text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
         ).fetchall()
-        frontend_url = settings.FRONTEND_URL
-        for row in assigned:
-            buyer = db.query(User).filter(User.id == row.buyer_id).first()
-            if not buyer or not buyer.is_active:
+        buyer_ids = [row.buyer_id for row in assigned]
+        if not buyer_ids:
+            return
+
+        # Batch-fetch everything once (avoids the previous 3-queries-per-buyer N+1).
+        buyers = {
+            b.id: b for b in db.query(User)
+            .filter(User.id.in_(buyer_ids), User.is_active == True).all()
+        }
+        masters = {
+            m.id: m for m in db.query(MasterItem)
+            .filter(MasterItem.bid_round_id == round_id).all()
+        }
+        # Which master items each buyer actually won — read from the deals themselves so the
+        # counts stay correct after any award-lot / winning-buyer override.
+        won_items_by_buyer: dict[int, set] = defaultdict(set)
+        for d in db.query(Deal).filter(Deal.bid_round_id == round_id).all():
+            if d.winning_buyer_id:
+                won_items_by_buyer[d.winning_buyer_id].add(d.master_item_id)
+        # All matched bid lines grouped by buyer.
+        lines_by_buyer: dict[int, list] = defaultdict(list)
+        for line in db.query(BidLine).filter(
+            BidLine.bid_round_id == round_id, BidLine.match_status == "matched"
+        ).all():
+            lines_by_buyer[line.buyer_id].append(line)
+
+        portal_url = f"{settings.FRONTEND_URL}/portal/results?round={round_id}"
+        for buyer_id in buyer_ids:
+            buyer = buyers.get(buyer_id)
+            if not buyer:
                 continue
-            won = db.query(Deal).filter(
-                Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id
-            ).count()
-            total_lines = db.query(BidLine).filter(
-                BidLine.bid_round_id == round_id,
-                BidLine.buyer_id == buyer.id,
-                BidLine.match_status == "matched",
-            ).count()
-            lost = max(0, total_lines - won)
-            portal_url = f"{frontend_url}/portal/results?round={round_id}"
-            send_round_results(buyer.email, buyer.full_name, r.name, won, lost, portal_url)
+            won_ids = won_items_by_buyer.get(buyer_id, set())
+            buyer_lines = lines_by_buyer.get(buyer_id, [])
+            lost_lines = [l for l in buyer_lines if l.master_item_id not in won_ids]
+            lost_items = []
+            for line in lost_lines:
+                if line.unit_price is not None and line.fluffed_loss_price is not None:
+                    master = masters.get(line.master_item_id)
+                    lost_items.append({
+                        "part_number": master.part_number if master else line.raw_part_number,
+                        "description": (master.description if master else line.description) or "",
+                        "your_price": line.unit_price,
+                        "winning_price": line.fluffed_loss_price,
+                    })
+            won, lost = len(won_ids), len(lost_lines)
+            send_round_results(buyer.email, buyer.full_name, r.name, won, lost, portal_url, lost_items)
             _log.info(f"[AutoResults] Sent results for round {round_id} to {buyer.email}: won={won} lost={lost}")
     except Exception as exc:
         _log.error(f"[AutoResults] Failed to send results for round {round_id}: {exc}", exc_info=True)
@@ -312,28 +346,5 @@ def _deal_out_fast(d: Deal, buyers_map: dict, override_counts: dict) -> dict:
         "winning_buyer_id": d.winning_buyer_id,
         "master_item_id": d.master_item_id,
         "override_count": override_counts.get(d.id, 0),
-        "notes": d.notes,
-    }
-
-
-def _deal_out(d: Deal, db: Session) -> dict:
-    buyer = db.query(User).filter(User.id == d.winning_buyer_id).first()
-    overrides = db.query(ApprovalOverride).filter(ApprovalOverride.deal_id == d.id).count()
-    return {
-        "id": d.id,
-        "part_number": d.part_number,
-        "description": d.description,
-        "quantity": d.quantity,
-        "winning_price": d.winning_price,
-        "total_value": d.total_value,
-        "status": d.status,
-        "razor_push_status": d.razor_push_status,
-        "razor_deal_id": d.razor_deal_id,
-        "approved_by": d.approved_by,
-        "approved_at": d.approved_at,
-        "winner_company": buyer.company_name if buyer else "",
-        "winner_email": buyer.email if buyer else "",
-        "winning_buyer_id": d.winning_buyer_id,
-        "override_count": overrides,
         "notes": d.notes,
     }

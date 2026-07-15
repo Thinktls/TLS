@@ -261,9 +261,12 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
     bid_file.lines_parsed = len(rows)
     bid_file.processed_at = datetime.now(timezone.utc)
 
-    # Update buyer activity
+    # Update buyer activity. Only count participation on the FIRST submission for this round —
+    # a resubmission (prev_files present) is the same round, not a new one, so incrementing again
+    # would inflate total_rounds_participated (and the buyer score derived from it).
     buyer.last_bid_at = datetime.now(timezone.utc)
-    buyer.total_rounds_participated += 1
+    if not prev_files:
+        buyer.total_rounds_participated += 1
 
     # Mark buyer as having uploaded in the participation tracker
     db.execute(
