@@ -132,11 +132,11 @@ export default function ComparisonPage() {
         {/* Legend */}
         <div style={{ display: "flex", gap: "16px", marginBottom: "12px", fontSize: "0.75rem" }}>
           {[
-            { color: "#34d399", bg: "rgba(52,211,153,0.12)", label: "Winner" },
-            { color: "#f87171", bg: "rgba(239,68,68,0.1)", label: "Below reserve" },
-            { color: "#fbbf24", bg: "rgba(251,191,36,0.1)", label: "Anomaly" },
-          ].map(({ color, bg, label }) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            { color: "#34d399", bg: "rgba(52,211,153,0.12)", label: "Winner", tip: "Highest valid bid on this item — the awarded price." },
+            { color: "#f87171", bg: "rgba(239,68,68,0.1)", label: "Below reserve", tip: "Bid is under your minimum acceptable price and can't win without an override." },
+            { color: "#fbbf24", bg: "rgba(251,191,36,0.1)", label: "Anomaly", tip: "Possible price typo — this bid is far above or below the others on the same item." },
+          ].map(({ color, bg, label, tip }) => (
+            <div key={label} title={tip} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "help" }}>
               <div style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px solid ${color}` }} />
               <span style={{ color: "rgba(255,255,255,0.5)" }}>{label}</span>
             </div>

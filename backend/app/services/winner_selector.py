@@ -4,7 +4,10 @@ Winner selection engine:
   - Reserve price floor enforced
   - Tiebreaker = earliest upload timestamp
   - Fluff engine: losing buyers told (real_price * (1 + fluff_pct/100))
-  - Anomaly detection: z-score > 2.5, or >10x median, or <20% of median
+  - Anomaly detection: a bid is flagged when it is >2.5 std-devs from the group mean,
+    or more than 10× the group mean, or less than 20% of the group mean. Flagged bids
+    are routed to the exception queue with a plain-English reason (no statistics jargon)
+    so an admin can tell at a glance why it was flagged and what to check.
 """
 import statistics
 from sqlalchemy.orm import Session, selectinload
@@ -62,9 +65,11 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
         prices = [l.unit_price for l in lines if l.unit_price]
         if len(prices) >= 2:
             mean_price = statistics.mean(prices)
+            median_price = statistics.median(prices)  # shown to admins — more intuitive than the mean
             stdev = statistics.stdev(prices) if len(prices) >= 3 else None
             min_price = min(prices)
             max_price = max(prices)
+            bid_count = len(prices)
             for line in lines:
                 if line.unit_price is None:
                     continue
@@ -76,13 +81,31 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
                     line.is_anomaly = True
                     line.match_status = "exception"
                     line.exception_type = "price_anomaly"
+                    # Plain-English reason — no "z-score"/"median"/"std-dev" jargon. Every note
+                    # states the flagged price, how it compares to the other bids, the most likely
+                    # cause, and what the admin should do.
+                    others = [p for p in prices if p != line.unit_price] or prices
                     if extreme_high or line.unit_price > mean_price * 10:
-                        ratio = line.unit_price / min(p for p in prices if p != line.unit_price)
-                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {ratio:.0f}× other bids (${min_price:.2f}–${max_price:.2f}) — likely data entry error"
+                        ratio = line.unit_price / (min(others) or 1)
+                        line.exception_notes = (
+                            f"This bid of ${line.unit_price:,.2f} is about {ratio:.0f}× higher than the "
+                            f"other {bid_count - 1} bid(s) on this item (which ranged ${min_price:,.2f}–${max_price:,.2f}). "
+                            f"This usually means an extra digit or zero was typed by mistake. "
+                            f"Accept it only if the price is genuinely intended."
+                        )
                     elif line.unit_price < mean_price * 0.2:
-                        line.exception_notes = f"Bid ${line.unit_price:.2f} is {(1-line.unit_price/mean_price)*100:.0f}% below median ${mean_price:.2f} — possible magnitude error"
+                        pct = (1 - line.unit_price / median_price) * 100 if median_price else 0
+                        line.exception_notes = (
+                            f"This bid of ${line.unit_price:,.2f} is about {pct:.0f}% lower than the typical "
+                            f"bid on this item (${median_price:,.2f}). This often means a decimal point or a "
+                            f"zero was dropped. Confirm the price before allowing it to compete."
+                        )
                     else:
-                        line.exception_notes = f"Bid ${line.unit_price:.2f} has z-score {z:.2f} (group mean ${mean_price:.2f}) — statistical outlier"
+                        line.exception_notes = (
+                            f"This bid of ${line.unit_price:,.2f} stands out from the other bids on this item, "
+                            f"which cluster around ${median_price:,.2f} (range ${min_price:,.2f}–${max_price:,.2f}). "
+                            f"Flagged as a possible typo — review it before it competes."
+                        )
 
         # Filter out below-reserve bids and anomalies from valid candidates
         valid_lines = [l for l in lines if not l.is_anomaly]

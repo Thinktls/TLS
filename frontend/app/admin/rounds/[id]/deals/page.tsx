@@ -125,7 +125,7 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
                     {b.is_winner ? "★ " : ""}{b.buyer_company || b.buyer_email || `Buyer ${b.buyer_id}`}
                   </span>
                   {b.is_anomaly && (
-                    <span style={{ marginLeft: "6px", fontSize: "0.65rem", color: "#c084fc", background: "rgba(168,85,247,0.15)", padding: "1px 6px", borderRadius: "4px" }}>
+                    <span title="This bid was flagged as a possible price typo (far from the other bids). See the Exceptions page for the reason." style={{ marginLeft: "6px", fontSize: "0.65rem", color: "#c084fc", background: "rgba(168,85,247,0.15)", padding: "1px 6px", borderRadius: "4px", cursor: "help" }}>
                       anomaly
                     </span>
                   )}

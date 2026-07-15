@@ -241,7 +241,7 @@ export default function BuyerRoundBidsPage() {
                       ) : (
                         <span className="badge badge-draft">{line.match_status}</span>
                       )}
-                      {line.is_anomaly && <span className="badge badge-closed" style={{ marginLeft: "4px" }}>anomaly</span>}
+                      {line.is_anomaly && <span title="Flagged as a possible price typo — this bid is far from the others on the same item. See the Exceptions page for the full reason." className="badge badge-closed" style={{ marginLeft: "4px", cursor: "help" }}>anomaly</span>}
                     </td>
                     <td style={{ textAlign: "center" }}>
                       {line.is_winner ? <span style={{ color: "#34d399", fontSize: "1rem" }}>★</span> : <span style={{ color: "var(--text-4)" }}>—</span>}

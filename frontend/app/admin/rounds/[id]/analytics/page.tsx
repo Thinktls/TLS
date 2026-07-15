@@ -375,7 +375,7 @@ export default function RoundAnalyticsPage() {
                         <td>
                           <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.82rem" }}>{row.part_number}</div>
                           <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>{row.description}</div>
-                          {row.has_anomaly && <span style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: 700 }}>⚠ ANOMALY</span>}
+                          {row.has_anomaly && <span title="One or more bids on this item look like a price typo (far above or below the others). Review it on the Exceptions page." style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: 700, cursor: "help" }}>⚠ ANOMALY</span>}
                         </td>
                         <td style={{ textAlign: "center", color: "rgba(255,255,255,0.6)" }}>{row.bids}</td>
                         <td style={{ color: "#f87171", fontWeight: 600 }}>${fmt(row.min_price)}</td>

@@ -62,7 +62,7 @@ const TYPE_DESCRIPTIONS: Record<string, string> = {
   unmatched: "Buyer submitted a part number that doesn't exist in your master catalog. Use AI Match or search manually to link it.",
   partial_match: "Part number is similar to one in your catalog but didn't match exactly. Review and confirm if correct.",
   duplicate: "This part number was submitted more than once by the same buyer. Only one bid can win.",
-  price_anomaly: "This bid price is statistically unusual compared to other bids on the same item — may be a typo.",
+  price_anomaly: "One buyer's price on this item is far from what everyone else bid — usually a typo like an extra zero or a dropped decimal. Read the reason below, then Accept Price if it's correct or Remove it from the round.",
   below_reserve: "Buyer's bid is below your minimum acceptable price. Cannot win without admin override.",
   overbid: "Bid is significantly higher than other bids — may be a data entry error. Confirm before awarding.",
   rejected: "This bid line was manually rejected and removed from consideration.",

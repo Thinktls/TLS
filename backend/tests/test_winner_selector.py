@@ -191,6 +191,14 @@ def test_anomaly_detection_zscore(db):
     anomaly_line = [l for l in lines if l.unit_price == 5.0][0]
     assert anomaly_line.is_anomaly == True
 
+    # The reason shown to the admin must be plain English — no statistics jargon — and must
+    # name the flagged price and the likely cause so it's understandable at a glance.
+    note = anomaly_line.exception_notes or ""
+    assert "$5.00" in note
+    assert "typical bid" in note.lower() or "lower than" in note.lower()
+    for jargon in ("z-score", "z score", "std-dev", "standard deviation", "median $"):
+        assert jargon not in note.lower(), f"Anomaly note still contains jargon: {jargon!r} -> {note}"
+
 
 def test_no_bids_no_deal(db):
     r = _make_round(db)
