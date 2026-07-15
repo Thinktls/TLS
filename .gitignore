@@ -22,3 +22,6 @@ dist/
 
 # Uploads
 /tmp/
+
+# Vercel local project link (deploys run from repo root: `vercel --prod`)
+.vercel
