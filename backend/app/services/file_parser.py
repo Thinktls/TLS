@@ -251,6 +251,19 @@ _PIVOT_BLOCK_BONUS = 6
 _UNIT_LEVEL_SHEET_BONUS = 4
 
 
+def _cell_text(val) -> str:
+    """Normalise a cell to display text, mapping pandas' empty markers to "".
+
+    Extra columns keep an entry for EVERY source column on EVERY row, blanks included.
+    Dropping blank cells made a column's position in the generated template depend on which
+    row happened to hold the first value — e.g. "Drive bays" is empty on the first server, so
+    it was pushed to the end of the template instead of sitting where the admin's file has it.
+    Worse, a column blank on every scanned row vanished from the buyer's template entirely.
+    """
+    text = str(val).strip()
+    return "" if text in ("nan", "None", "NaT") else text
+
+
 def _is_junk_row(pn_val: str) -> bool:
     """Return True for total/footer rows that should be skipped."""
     v = pn_val.lower().strip().rstrip(":")
@@ -300,9 +313,8 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
         if not raw_pn or raw_pn.lower() in ("nan", "none", "") or _is_junk_row(raw_pn):
             continue
         extra = {
-            col: str(row.get(col, "")).strip()
+            col: _cell_text(row.get(col, ""))
             for col in extra_master_col_names
-            if str(row.get(col, "")).strip() not in ("", "nan", "None")
         }
         rows.append({
             "part_number": raw_pn,
@@ -328,9 +340,15 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
             if row["reserve_price"] is not None:
                 if existing["reserve_price"] is None or row["reserve_price"] < existing["reserve_price"]:
                     existing["reserve_price"] = row["reserve_price"]
-            # Merge extra_columns: incoming fills in any keys missing from the first-seen row
+            # Merge extra_columns: keep the first-seen VALUE for a column, but let a later row
+            # fill a column the first row left blank. Every row now carries every column (blank
+            # ones as ""), so a plain dict merge would let that "" mask a real value further
+            # down — the first row wins on presence, not on emptiness.
             if row.get("extra_columns"):
-                merged = {**(row["extra_columns"] or {}), **(existing["extra_columns"] or {})}
+                merged = dict(existing["extra_columns"] or {})
+                for col, val in (row["extra_columns"] or {}).items():
+                    if val and not merged.get(col):
+                        merged[col] = val
                 existing["extra_columns"] = merged or None
         else:
             consolidated[key] = row.copy()
@@ -391,13 +409,22 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     if not pn_col and not desc_col:
         raise ValueError("Unit-level file has no part number or description column.")
 
-    # Only the reserve price is excluded — it's admin-only (floor price buyers must not see).
+    # Two kinds of column are excluded:
+    #  - the reserve price: admin-only (the floor price buyers must never see);
+    #  - the buyer's own price-entry box ("Offer", "Bid Unit", …): it is blank in the admin's
+    #    file and the template already provides it as the editable "Unit Price ($)" column, so
+    #    carrying it through would render a dead, locked duplicate next to the real one.
     # Every other original column (model/title, UID/serial, grade, manufacturer, all spec
     # columns) flows into extra_columns with its EXACT original name and in the original
     # column order, so the generated buyer template mirrors the admin file column-for-column
     # with no renaming and no columns combined or hidden.
     system_only = {reserve_col} if reserve_col else set()
-    extra_col_names = [c for c in df.columns if c not in system_only]
+    extra_col_names = [
+        c for c in df.columns
+        if c not in system_only
+        and re.sub(r"\.\d+$", "", str(c)).strip().lower() not in _BUYER_PLACEHOLDER_COLS
+        and not _is_pivot_noise_col(c)
+    ]
 
     rows = []
     for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
@@ -437,9 +464,8 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
             pn_raw = f"{pn_raw}-{unit_id}"
 
         extra = {
-            col: str(row.get(col, "")).strip()
+            col: _cell_text(row.get(col, ""))
             for col in extra_col_names
-            if str(row.get(col, "")).strip() not in ("", "nan", "None")
         }
 
         rows.append({

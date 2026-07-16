@@ -99,13 +99,22 @@ def test_file_parsing_preserves_exact_row_count(num_rows):
 # "exact" — no spec column silently dropped, no data row silently skipped — regardless of what
 # extra columns a future file adds. Only the reserve/price placeholder columns are omitted.
 
-def _make_unit_level_xlsx(num_rows: int, spec_cols: list[str]) -> bytes:
+def _make_unit_level_xlsx(num_rows: int, spec_cols: list[str], blank_col: str | None = None) -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
     # Serial makes it a unit-level (1 row per unit) file; every other column is arbitrary spec data.
-    ws.append(["Model", "Serial", "MFG"] + spec_cols)
+    cols = ["Model", "Serial", "MFG"] + spec_cols
+    ws.append(cols)
     for i in range(num_rows):
-        ws.append([f"MODEL-{i%40}", f"SN{i:06d}", "DELL"] + [f"{c}-val-{i}" for c in spec_cols])
+        vals = []
+        for c in spec_cols:
+            # blank_col is empty on the FIRST rows and only filled later — this is the real
+            # "Drive bays" shape that used to shove a column to the end of the template.
+            if c == blank_col:
+                vals.append("" if i < 3 else f"late-{i}")
+            else:
+                vals.append(f"{c}-val-{i}")
+        ws.append([f"MODEL-{i%40}", f"SN{i:06d}", "DELL"] + vals)
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -130,6 +139,55 @@ def test_upload_preserves_all_columns_and_all_rows():
         missing = set(spec_cols) - preserved
         assert not missing, f"Spec columns dropped from upload: {sorted(missing)} — file must be taken exact."
         assert r["manufacturer"] == "DELL"
+
+
+# ── Template columns must mirror the admin's file, in the SAME ORDER ─────────────
+# Incident: a drive file uploaded as Part Number|Manufacturer|Uid|Serial|Condition|Description
+# came back to the buyer as Uid|Serial|Condition|Description|Part Number|Manufacturer. Two
+# separate causes, both fixed: (1) extra_columns was physically `jsonb`, which discards key
+# order; (2) blank cells were skipped per row, so a column blank on the first rows ("Drive
+# bays" on the first server) was pushed to the end of the template — or vanished entirely if
+# blank on every row scanned.
+
+def test_extra_columns_keep_source_order_including_blank_columns():
+    spec_cols = ["Alpha Spec", "Blank Until Later", "Zeta Spec", "Mid Spec"]
+    content = _make_unit_level_xlsx(20, spec_cols, blank_col="Blank Until Later")
+    rows = parse_master_file(content, "order_test.xlsx")
+
+    # Every row carries every source column, in the file's own order — including the column
+    # that is blank on the early rows. The template's column order is derived from this.
+    expected = ["Model", "Serial", "MFG"] + spec_cols
+    for r in rows:
+        got = list((r.get("extra_columns") or {}).keys())
+        assert got == expected, (
+            f"extra_columns order drifted from the source file.\n expected: {expected}\n got:      {got}"
+        )
+
+    # The blank column must exist on the early rows (as ""), not be dropped — otherwise it
+    # only appears once a later row has a value, which is what reordered the template.
+    first = rows[0]["extra_columns"]
+    assert "Blank Until Later" in first
+    assert first["Blank Until Later"] == ""
+    assert rows[-1]["extra_columns"]["Blank Until Later"].startswith("late-")
+
+
+def test_buyer_price_column_not_duplicated_as_spec_column():
+    """An admin file's own price box ("Offer") must not survive as a locked spec column —
+    the template already renders it as the editable "Unit Price ($)". Keeping both put a dead
+    duplicate next to the real one."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Offer", "Model", "Serial", "MFG", "CPU Type"])
+    for i in range(10):
+        ws.append([None, f"MODEL-{i}", f"SN{i:04d}", "DELL", "i7"])
+    buf = io.BytesIO()
+    wb.save(buf)
+
+    rows = parse_master_file(buf.getvalue(), "offer_col.xlsx")
+    for r in rows:
+        keys = {k.lower() for k in (r.get("extra_columns") or {})}
+        assert "offer" not in keys, "Buyer price placeholder 'Offer' leaked in as a spec column"
+        assert "CPU Type" in (r.get("extra_columns") or {})
 
 
 # ── Side-by-side pivot bid tables must not double-count section 0 ────────────────
