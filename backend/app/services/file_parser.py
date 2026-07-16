@@ -236,7 +236,19 @@ def _sheet_score_bonus(sheet_name: str) -> int:
 # "Bid Tables" sheet). A pivot layout with dedicated bid-entry columns is a deliberate,
 # curated bid sheet — it must win over the same workbook's raw unit-level detail sheets,
 # which otherwise tie on field count and can win by candidate order alone.
-_PIVOT_BLOCK_BONUS = 4
+# Must stay above _UNIT_LEVEL_SHEET_BONUS so a pivot bid sheet still beats a sibling
+# unit-level detail sheet in the same workbook.
+_PIVOT_BLOCK_BONUS = 6
+
+# Extra score for a sheet that is unit-level — one row per physical unit, carrying its own
+# Serial/UID. When a workbook has both an aggregated "Summary" sheet and a per-unit "Detail"
+# sheet (the ThinkTLS drive and memory files have exactly this shape), the detail sheet is the
+# complete data: every unit, plus UID/Serial/Condition. The summary collapses ~15 drives into
+# one model row, which loses the per-unit identifiers entirely.
+# ThinkTLS require that whatever the admin uploads reaches the buyer intact — never cut down —
+# and that every template behave like the (already unit-level) server file, so the per-unit
+# sheet must win over the summary despite the summary's name bonus.
+_UNIT_LEVEL_SHEET_BONUS = 4
 
 
 def _is_junk_row(pn_val: str) -> bool:
@@ -788,7 +800,10 @@ def _candidates_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> list[pd.
                 # Fall through to the next-best header row only if this one yields no usable
                 # table, mirroring the old loop which simply skipped empty parses.
                 if len(df) > 0 and len(df.columns) > 1:
-                    df.attrs["_sheet_bonus"] = bonus
+                    # The unit-level bonus depends on the sheet's COLUMNS, so it can only be
+                    # judged once the sheet is actually parsed.
+                    unit_bonus = _UNIT_LEVEL_SHEET_BONUS if _is_unit_level(df) else 0
+                    df.attrs["_sheet_bonus"] = bonus + unit_bonus
                     df.attrs["_sheet_name"] = sheet  # used for deduplication
                     out.append(df)
                     break
