@@ -500,18 +500,45 @@ def download_template(round_id: int, db: Session = Depends(get_db), _=Depends(re
 
 
 @router.post("/{round_id}/send-invitations")
-def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db), admin=Depends(require_admin)):
+def send_invitations(
+    round_id: int,
+    background_tasks: BackgroundTasks,
+    resend: bool = Query(
+        False,
+        description="Send to every assigned buyer again, including ones already invited.",
+    ),
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    """Email the bid invitation to assigned buyers.
+
+    By default only buyers still marked 'pending' are contacted, so clicking twice doesn't
+    spam anyone. That also meant the second click failed with an error and sent nothing —
+    which read as "invitations don't work" whenever a buyer needed the mail again (lost it,
+    it went to spam, or the deadline moved). `resend=true` re-sends to every assigned buyer.
+    """
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
     if not r.master_file_uploaded:
         raise HTTPException(400, "Upload master file before sending invitations")
 
-    assigned = db.execute(
-        text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid AND invite_status = 'pending'"), {"rid": round_id}
-    ).fetchall()
-    if not assigned:
-        raise HTTPException(400, "No new buyers pending invitation — all assigned buyers have already been invited")
+    if resend:
+        assigned = db.execute(
+            text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
+        ).fetchall()
+        if not assigned:
+            raise HTTPException(400, "No buyers are assigned to this round yet — assign buyers first.")
+    else:
+        assigned = db.execute(
+            text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid AND invite_status = 'pending'"), {"rid": round_id}
+        ).fetchall()
+        if not assigned:
+            raise HTTPException(
+                400,
+                "Every assigned buyer has already been invited. Use Resend Invitations to "
+                "email them again (for example if a buyer lost the mail or the deadline changed).",
+            )
 
     _EST = timezone(timedelta(hours=-5))
     if r.submission_deadline:
@@ -530,14 +557,27 @@ def send_invitations(round_id: int, background_tasks: BackgroundTasks, db: Sessi
             continue
         background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url)
         db.execute(
-            text("UPDATE round_buyers SET invite_status='sent', invited_at=now() WHERE round_id=:rid AND buyer_id=:bid"),
+            # Never downgrade a buyer who has already uploaded back to 'sent' — on a resend that
+            # would wipe their progress out of the participation tracker and make it look like
+            # they never bid.
+            text(
+                "UPDATE round_buyers "
+                "SET invite_status = CASE WHEN invite_status='uploaded' THEN 'uploaded' ELSE 'sent' END, "
+                "    invited_at = now() "
+                "WHERE round_id=:rid AND buyer_id=:bid"
+            ),
             {"rid": round_id, "bid": buyer.id},
         )
         buyer.last_invited_date = datetime.now(timezone.utc)
         sent += 1
 
     db.commit()
-    return {"sent": sent, "message": f"Invitations queued for {sent} buyer(s)"}
+    verb = "Re-sent" if resend else "Invitations queued for"
+    return {
+        "sent": sent,
+        "resend": resend,
+        "message": f"{verb} {sent} buyer(s)" if resend else f"Invitations queued for {sent} buyer(s)",
+    }
 
 
 @router.post("/{round_id}/send-results")

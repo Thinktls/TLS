@@ -328,11 +328,17 @@ export default function RoundDetail() {
     }
   }
 
-  async function sendInvitations() {
+  async function sendInvitations(resend = false) {
+    // Re-sending emails buyers who were already invited, so ask first.
+    if (resend && !window.confirm(
+      "Re-send the bid invitation email to EVERY buyer assigned to this round?\n\n" +
+      "Buyers who were already invited will receive the email again. Use this if a buyer " +
+      "lost the invitation, it landed in spam, or the deadline changed."
+    )) return;
     setSending(true);
     try {
-      const res = await api.post(`/rounds/${id}/send-invitations`);
-      flash(`✓ Invitations sent to ${res.data.sent} buyer(s)`); load();
+      const res = await api.post(`/rounds/${id}/send-invitations${resend ? "?resend=true" : ""}`);
+      flash(`✓ Invitation email ${resend ? "re-sent" : "sent"} to ${res.data.sent} buyer(s)`); load();
     } catch (err: any) {
       flash(`Error: ${err.response?.data?.detail || "Failed to send invitations"}`, "err");
     } finally { setSending(false); }
@@ -595,10 +601,20 @@ export default function RoundDetail() {
                 {showBuyerPicker ? "Cancel" : "Assign Buyers"}
               </button>
               {assignedBuyers.length > 0 && round.master_file_uploaded && (
-                <button onClick={sendInvitations} disabled={sending} className="btn-brand" style={{ fontSize: "0.78rem" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                  {sending ? "Sending…" : "Send Invitations"}
-                </button>
+                <>
+                  <button onClick={() => sendInvitations(false)} disabled={sending} className="btn-brand" style={{ fontSize: "0.78rem" }}
+                    title="Email the bid invitation to buyers who haven't been invited yet">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    {sending ? "Sending…" : "Send Invitations"}
+                  </button>
+                  {/* Once everyone is invited the button above deliberately refuses to send again.
+                      Buyers still need the mail re-sent (lost it, spam, deadline changed), so give
+                      that its own explicit action instead of leaving the admin stuck on an error. */}
+                  <button onClick={() => sendInvitations(true)} disabled={sending} className="btn-ghost" style={{ fontSize: "0.78rem" }}
+                    title="Email the invitation again to EVERY assigned buyer, including those already invited">
+                    ↻ Resend Invitations
+                  </button>
+                </>
               )}
             </div>
           </div>
