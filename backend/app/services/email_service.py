@@ -68,6 +68,15 @@ def send_round_results(buyer_email: str, buyer_name: str, round_name: str, won_c
     _send(buyer_email, buyer_name, subject, html)
 
 
+def send_lines_removed(buyer_email: str, buyer_name: str, round_name: str, items: list, portal_url: str):
+    """Tell a buyer that specific line(s) of their bid were removed and won't compete."""
+    from app.services.email_templates import lines_removed_email
+    if not items:
+        return
+    subject, html = lines_removed_email(buyer_name, round_name, items, portal_url)
+    _send(buyer_email, buyer_name, subject, html)
+
+
 def send_exception_alert(admin_email: str, round_name: str, exception_count: int, review_url: str):
     _send(admin_email, "ThinkTLS Admin", f"ThinkTLS: {exception_count} exceptions need review — {round_name}", f"""
     <h2>Exceptions require your attention</h2>

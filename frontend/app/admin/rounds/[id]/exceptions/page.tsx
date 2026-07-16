@@ -181,6 +181,16 @@ export default function ExceptionsPage() {
   const [loadError, setLoadError] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [resolving, setResolving] = useState<number | null>(null);
+
+  // Honour ?type=<exception_type> so links can deep-link to one kind of exception — the
+  // analytics page points its per-buyer anomaly badges straight here.
+  // Read from window.location in an effect rather than useSearchParams(): that hook opts the
+  // whole route into client-side rendering unless it's wrapped in a Suspense boundary, and
+  // this is a one-shot read of an optional param on mount.
+  useEffect(() => {
+    const type = new URLSearchParams(window.location.search).get("type");
+    if (type) setActiveFilter(type);
+  }, []);
   const [bulkWorking, setBulkWorking] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
   const [searchingLine, setSearchingLine] = useState<number | null>(null);

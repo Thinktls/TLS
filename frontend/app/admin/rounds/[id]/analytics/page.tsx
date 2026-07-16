@@ -47,6 +47,7 @@ interface PriceRow {
   winning_price: number | null;
   reserve_price: number | null;
   has_anomaly: boolean;
+  anomaly_buyers?: { buyer_id: number; name: string; price: number | null; resolved: boolean }[];
 }
 
 interface TimelineRow {
@@ -375,7 +376,33 @@ export default function RoundAnalyticsPage() {
                         <td>
                           <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.82rem" }}>{row.part_number}</div>
                           <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem" }}>{row.description}</div>
-                          {row.has_anomaly && <span title="One or more bids on this item look like a price typo (far above or below the others). Review it on the Exceptions page." style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: 700, cursor: "help" }}>⚠ ANOMALY</span>}
+                          {/* Name whose bid was flagged and link straight to where it can be
+                              approved — a bare "ANOMALY" badge gave the admin nothing to act on. */}
+                          {row.has_anomaly && (
+                            <div style={{ marginTop: "3px" }}>
+                              {(row.anomaly_buyers ?? []).map((ab) => (
+                                <a
+                                  key={ab.buyer_id}
+                                  href={`/admin/rounds/${id}/exceptions?type=price_anomaly`}
+                                  title={`${ab.name} bid ${ab.price != null ? `$${ab.price.toFixed(2)}` : "—"} on this item, which looks like a price typo. Click to review and approve or remove it.`}
+                                  style={{
+                                    display: "inline-block", marginRight: "6px",
+                                    fontSize: "0.65rem", fontWeight: 700,
+                                    color: ab.resolved ? "#34d399" : "#fbbf24",
+                                    textDecoration: "none",
+                                    borderBottom: "1px dotted currentColor",
+                                  }}
+                                >
+                                  {ab.resolved ? "✓" : "⚠"} {ab.name}
+                                  {ab.price != null ? ` · $${ab.price.toFixed(2)}` : ""}
+                                  {ab.resolved ? " (approved)" : " — review"}
+                                </a>
+                              ))}
+                              {(row.anomaly_buyers ?? []).length === 0 && (
+                                <span title="A bid on this item looks like a price typo. Review it on the Exceptions page." style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: 700, cursor: "help" }}>⚠ ANOMALY</span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td style={{ textAlign: "center", color: "rgba(255,255,255,0.6)" }}>{row.bids}</td>
                         <td style={{ color: "#f87171", fontWeight: 600 }}>${fmt(row.min_price)}</td>

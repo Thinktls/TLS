@@ -1178,9 +1178,14 @@ def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(requ
 
     # Buyer performance table
     participating_buyer_ids = {l.buyer_id for l in all_lines}
+    # One query for every participating buyer instead of one per buyer inside the loop. The map
+    # is reused below to name which buyer's file an anomaly came from.
+    buyer_map = {
+        b.id: b for b in db.query(User).filter(User.id.in_(participating_buyer_ids)).all()
+    } if participating_buyer_ids else {}
     buyer_rows = []
     for buyer_id in participating_buyer_ids:
-        buyer = db.query(User).filter(User.id == buyer_id).first()
+        buyer = buyer_map.get(buyer_id)
         if not buyer:
             continue
         buyer_lines = [l for l in matched if l.buyer_id == buyer_id]
@@ -1204,7 +1209,15 @@ def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(requ
     # Price distribution per master item (for items with >= 2 bids)
     price_dist = []
     for master in masters:
-        item_lines = [l for l in matched if l.master_item_id == master.id and l.unit_price]
+        # Include anomalous bids alongside the matched ones. An anomaly is routed to the
+        # exception queue (match_status="exception"), so filtering on "matched" alone dropped
+        # it here — which meant has_anomaly could never be true and the ⚠ badge was dead code.
+        # The outlier price is also precisely what makes this item's spread worth looking at.
+        item_lines = [
+            l for l in all_lines
+            if l.master_item_id == master.id and l.unit_price
+            and (l.match_status == "matched" or l.is_anomaly)
+        ]
         if len(item_lines) < 2:
             continue
         prices = [l.unit_price for l in item_lines]
@@ -1221,6 +1234,20 @@ def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(requ
             "winning_price": winner_line.unit_price if winner_line else None,
             "reserve_price": master.reserve_price,
             "has_anomaly": any(l.is_anomaly for l in item_lines),
+            # Name WHOSE bid was flagged. A bare "anomaly" badge told the admin something was
+            # wrong on this item but not whose file to look at, so they had no way to act on it.
+            "anomaly_buyers": [
+                {
+                    "buyer_id": l.buyer_id,
+                    "name": (
+                        (buyer_map[l.buyer_id].company_name or buyer_map[l.buyer_id].full_name)
+                        if l.buyer_id in buyer_map else f"Buyer {l.buyer_id}"
+                    ),
+                    "price": l.unit_price,
+                    "resolved": bool(l.exception_resolved),
+                }
+                for l in item_lines if l.is_anomaly
+            ],
         })
     price_dist.sort(key=lambda x: x["spread_pct"], reverse=True)
 

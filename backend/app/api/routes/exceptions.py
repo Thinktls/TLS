@@ -2,16 +2,54 @@
 Exception queue — admin reviews and resolves flagged bid lines.
 """
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, case
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 
+from app.core.config import settings
 from app.db.session import get_db
 from app.core.security import require_admin
 from app.models.bid_line import BidLine
+from app.models.bid_round import BidRound
 from app.models.master_item import MasterItem
 from app.models.user import User
+from app.services.email_service import send_lines_removed
+
+
+def _notify_lines_removed(background_tasks: BackgroundTasks, db: Session, round_id: int, lines: list[BidLine]) -> None:
+    """Email each affected buyer that their line(s) were removed from the round.
+
+    Removing a line silently pulled a buyer's price out of the running with no word to them —
+    for a flagged price typo that's exactly when they'd want the chance to correct it. Grouped
+    into one email per buyer so a bulk reject can't fire hundreds of separate messages.
+    """
+    if not lines:
+        return
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    round_name = r.name if r else f"Round #{round_id}"
+    buyer_ids = {l.buyer_id for l in lines if l.buyer_id}
+    if not buyer_ids:
+        return
+    buyers = {
+        b.id: b for b in db.query(User)
+        .filter(User.id.in_(buyer_ids), User.is_active == True).all()
+    }
+    portal_url = f"{settings.FRONTEND_URL}/portal/submission?round={round_id}"
+    by_buyer: dict[int, list] = {}
+    for l in lines:
+        by_buyer.setdefault(l.buyer_id, []).append({
+            "part_number": l.raw_part_number,
+            "price": l.unit_price,
+            "reason": l.exception_notes,
+        })
+    for buyer_id, items in by_buyer.items():
+        buyer = buyers.get(buyer_id)
+        if not buyer:
+            continue
+        background_tasks.add_task(
+            send_lines_removed, buyer.email, buyer.full_name, round_name, items, portal_url
+        )
 
 router = APIRouter(prefix="/exceptions", tags=["exceptions"])
 
@@ -138,6 +176,7 @@ def search_master_items(
 def resolve_exception(
     line_id: int,
     req: ResolveRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     admin=Depends(require_admin),
 ):
@@ -184,13 +223,21 @@ def resolve_exception(
         line.exception_notes = req.notes
 
     db.commit()
-    return {"status": "resolved", "new_match_status": line.match_status}
+    # Tell the buyer once the removal is actually persisted, never before.
+    if req.action == "reject":
+        _notify_lines_removed(background_tasks, db, line.bid_round_id, [line])
+    return {
+        "status": "resolved",
+        "new_match_status": line.match_status,
+        "buyer_notified": req.action == "reject",
+    }
 
 
 @router.post("/rounds/{round_id}/bulk-resolve")
 def bulk_resolve(
     round_id: int,
     req: BulkResolveRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     admin=Depends(require_admin),
 ):
@@ -208,6 +255,7 @@ def bulk_resolve(
 
     lines = q.all()
     resolved_count = 0
+    rejected: list[BidLine] = []   # buyers of these get one grouped "line removed" email
 
     for line in lines:
         if req.action == "approve_suggested":
@@ -234,7 +282,15 @@ def bulk_resolve(
             line.exception_type = "rejected"
             line.exception_resolved = True
             line.exception_resolved_by = admin.email
+            rejected.append(line)
             resolved_count += 1
 
     db.commit()
-    return {"resolved": resolved_count, "action": req.action}
+    # One grouped email per affected buyer, sent only after the rejections are persisted.
+    if rejected:
+        _notify_lines_removed(background_tasks, db, round_id, rejected)
+    return {
+        "resolved": resolved_count,
+        "action": req.action,
+        "buyers_notified": len({l.buyer_id for l in rejected}) if rejected else 0,
+    }

@@ -98,7 +98,15 @@ def _select_winners_loop(db, bid_round_id, by_item, master_map, buyer_map, deals
                 line.z_score = round(z, 4)
                 # Extreme ratio check works with 2 bids: flag the high bid when it's ≥10x the low bid
                 extreme_high = (len(prices) == 2 and max_price > min_price * 10 and line.unit_price == max_price)
-                if z > 2.5 or line.unit_price > mean_price * 10 or line.unit_price < mean_price * 0.2 or extreme_high:
+                too_high = line.unit_price > mean_price * 10
+                # "Suspiciously low" is judged against the MEDIAN, and only once there are ≥3
+                # bids to establish a norm. Against the mean with just 2 bids, one buyer's typo
+                # poisoned the other: $100 vs a mistyped $5,000 gives a mean of $2,550, so the
+                # perfectly good $100 bid fell under 20% of it and was flagged too — both bids
+                # were then excluded from winning and the item got NO winner at all. The median
+                # is not dragged by the outlier the way the mean is.
+                too_low = len(prices) >= 3 and line.unit_price < median_price * 0.2
+                if z > 2.5 or too_high or too_low or extreme_high:
                     line.is_anomaly = True
                     line.match_status = "exception"
                     line.exception_type = "price_anomaly"
@@ -106,7 +114,7 @@ def _select_winners_loop(db, bid_round_id, by_item, master_map, buyer_map, deals
                     # states the flagged price, how it compares to the other bids, the most likely
                     # cause, and what the admin should do.
                     others = [p for p in prices if p != line.unit_price] or prices
-                    if extreme_high or line.unit_price > mean_price * 10:
+                    if extreme_high or too_high:
                         ratio = line.unit_price / (min(others) or 1)
                         line.exception_notes = (
                             f"This bid of ${line.unit_price:,.2f} is about {ratio:.0f}× higher than the "
@@ -114,7 +122,7 @@ def _select_winners_loop(db, bid_round_id, by_item, master_map, buyer_map, deals
                             f"This usually means an extra digit or zero was typed by mistake. "
                             f"Accept it only if the price is genuinely intended."
                         )
-                    elif line.unit_price < mean_price * 0.2:
+                    elif too_low:
                         pct = (1 - line.unit_price / median_price) * 100 if median_price else 0
                         line.exception_notes = (
                             f"This bid of ${line.unit_price:,.2f} is about {pct:.0f}% lower than the typical "

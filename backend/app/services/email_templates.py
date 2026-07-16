@@ -330,6 +330,66 @@ def results_email(
     )
 
 
+def lines_removed_email(
+    full_name: str, round_name: str, items: list, portal_url: str,
+) -> tuple[str, str]:
+    """Returns (subject, html). Sent when an admin removes bid line(s) from a round.
+
+    A removed line silently stopped competing — the buyer had no idea their price was out,
+    which for a flagged price typo is exactly the moment they'd want to know. items: dicts
+    with part_number, price, reason.
+    """
+    first = full_name.split()[0] if full_name else "there"
+    n = len(items)
+    rows = ""
+    for it in items[:25]:
+        price = it.get("price")
+        price_str = f"${price:,.2f}" if isinstance(price, (int, float)) else "—"
+        rows += f"""<tr>
+          <td style="padding:8px 10px;font-size:11px;font-family:monospace;color:#334155;border-bottom:1px solid #f1f5f9;">{str(it.get('part_number') or '')[:44]}</td>
+          <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#475569;border-bottom:1px solid #f1f5f9;text-align:right;">{price_str}</td>
+          <td style="padding:8px 10px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9;">{str(it.get('reason') or 'Removed by ThinkTLS')[:90]}</td>
+        </tr>"""
+    more = (f'<p style="font-size:11px;color:#94a3b8;margin:8px 0 0;">…and {n - 25} more. '
+            f'See your full submission in the portal.</p>') if n > 25 else ""
+
+    content = f"""
+      <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">
+        {'A Line Was' if n == 1 else 'Some Lines Were'} Removed From Your Bid</h1>
+      <p style="margin:0 0 20px;font-size:13px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">{round_name}</p>
+
+      <p style="font-size:15px;color:#334155;line-height:1.7;">Hi {first},</p>
+      <p style="font-size:15px;color:#334155;line-height:1.7;">
+        {'One line has' if n == 1 else f'{n} lines have'} been removed from your submission for
+        <strong>{round_name}</strong> and will not compete for an award. This usually happens when a
+        price looks like a data-entry error (for example an extra digit or a missing decimal).
+        The rest of your bid is unaffected.
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin:20px 0;">
+        <thead>
+          <tr style="background:#f8fafc;">
+            <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:left;">Part #</th>
+            <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:right;">Your Bid</th>
+            <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:left;">Reason</th>
+          </tr>
+        </thead>
+        <tbody>{rows}</tbody>
+      </table>
+      {more}
+
+      <p style="font-size:15px;color:#334155;line-height:1.7;">
+        If the price was correct as submitted, reply to this email and we can review it before the round closes.
+      </p>
+
+      {_cta_button("View My Submission", portal_url)}
+    """
+    subject = (
+        f"ThinkTLS: {'a line was' if n == 1 else f'{n} lines were'} removed from your bid — {round_name}"
+    )
+    return subject, _base(content, preview_text=f"{n} line(s) removed from your bid for {round_name}")
+
+
 def password_reset_email(full_name: str, reset_url: str) -> tuple[str, str]:
     """Returns (subject, html). Sent on forgot-password request."""
     first = full_name.split()[0]

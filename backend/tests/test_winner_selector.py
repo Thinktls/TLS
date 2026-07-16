@@ -191,6 +191,12 @@ def test_anomaly_detection_zscore(db):
     anomaly_line = [l for l in lines if l.unit_price == 5.0][0]
     assert anomaly_line.is_anomaly == True
 
+    # The three legitimate bids must NOT be dragged in with it.
+    for good in [l for l in lines if l.unit_price != 5.0]:
+        assert good.is_anomaly != True, (
+            f"Legitimate bid ${good.unit_price} was flagged as an anomaly alongside the outlier"
+        )
+
     # The reason shown to the admin must be plain English — no statistics jargon — and must
     # name the flagged price and the likely cause so it's understandable at a glance.
     note = anomaly_line.exception_notes or ""
@@ -198,6 +204,37 @@ def test_anomaly_detection_zscore(db):
     assert "typical bid" in note.lower() or "lower than" in note.lower()
     for jargon in ("z-score", "z score", "std-dev", "standard deviation", "median $"):
         assert jargon not in note.lower(), f"Anomaly note still contains jargon: {jargon!r} -> {note}"
+
+
+def test_two_bids_one_typo_does_not_poison_the_honest_bid(db):
+    """A 2-bid item where one buyer mistypes a huge price must flag ONLY the typo.
+
+    Regression: "too low" was measured against the MEAN. With bids of $100 and a mistyped
+    $5,000 the mean is $2,550, so the perfectly good $100 bid also fell under 20% of it and was
+    flagged. Both bids were then excluded from winning and the item produced NO deal at all —
+    one buyer's typo silently knocked out the other buyer AND the sale.
+    """
+    r = _make_round(db)
+    good_buyer = _make_buyer(db, "honest@test.com")
+    typo_buyer = _make_buyer(db, "typo@test.com")
+    master = _make_master(db, r.id)
+
+    good_line = _make_line(db, _make_bid_file(db, r.id, good_buyer.id), r.id, good_buyer.id, master.id, 100.0)
+    typo_line = _make_line(db, _make_bid_file(db, r.id, typo_buyer.id), r.id, typo_buyer.id, master.id, 5000.0)
+    db.commit()
+
+    deals = select_winners(db, r.id)
+    db.refresh(good_line); db.refresh(typo_line)
+
+    assert typo_line.is_anomaly == True, "The 50x mistyped bid should be flagged"
+    assert good_line.is_anomaly != True, (
+        "The honest $100 bid was flagged as an anomaly because the other buyer's typo dragged "
+        "the mean up — 'too low' must not be judged against an outlier-skewed mean"
+    )
+    # The item must still sell, to the only legitimate bidder.
+    assert len(deals) == 1, "The item produced no deal — both bids were wrongly excluded"
+    assert deals[0].winning_buyer_id == good_buyer.id
+    assert deals[0].winning_price == 100.0
 
 
 def test_no_bids_no_deal(db):
