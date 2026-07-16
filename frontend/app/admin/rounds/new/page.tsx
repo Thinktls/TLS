@@ -160,11 +160,26 @@ export default function NewRound() {
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await api.post(`/rounds/${roundId}/master-file`, fd);
+      // Large workbooks take much longer to parse on the hosted (shared-CPU) backend than the
+      // default client timeout allowed, so uploads get their own generous timeout. The backend
+      // keeps the connection alive for 120s.
+      const res = await api.post(`/rounds/${roundId}/master-file`, fd, { timeout: 180000 });
       setMasterCount(res.data.total);
       setMasterFile(file);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Upload failed — check file format");
+      // Only blame the file format when the server actually said so. A timeout or a dropped
+      // connection returns no response body — reporting that as "check file format" sent us
+      // hunting a non-existent problem with a perfectly valid file.
+      const detail = err.response?.data?.detail;
+      if (detail) {
+        setError(detail);
+      } else if (err.code === "ECONNABORTED") {
+        setError("Upload timed out while the server was processing this file. Large files can take a minute — please try again.");
+      } else if (!err.response) {
+        setError("Cannot reach the server. Check your connection and try again.");
+      } else {
+        setError(`Upload failed (error ${err.response.status}). Please try again.`);
+      }
     } finally {
       setWorking(false);
     }

@@ -90,11 +90,16 @@ function SubmitBidInner() {
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await api.post(`/buyer/rounds/${selectedRound}/parse-preview`, fd);
+      // Big workbooks need well over the default client timeout to parse on the shared-CPU host.
+      const res = await api.post(`/buyer/rounds/${selectedRound}/parse-preview`, fd, { timeout: 180000 });
       setPreview(res.data);
       setStep("preview");
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Could not parse file. Try downloading the Bid File and filling in prices.");
+      const detail = err.response?.data?.detail;
+      if (detail) setError(detail);
+      else if (err.code === "ECONNABORTED") setError("Timed out while the server was reading this file. Large files can take a minute — please try again.");
+      else if (!err.response) setError("Cannot reach the server. Check your connection and try again.");
+      else setError("Could not parse file. Try downloading the Bid Template and filling in prices.");
       setSelectedFile(null);
     } finally { setUploading(false); }
   }
@@ -105,12 +110,16 @@ function SubmitBidInner() {
     const fd = new FormData();
     fd.append("file", selectedFile);
     try {
-      const res = await api.post(`/buyer/rounds/${selectedRound}/bid`, fd);
+      const res = await api.post(`/buyer/rounds/${selectedRound}/bid`, fd, { timeout: 180000 });
       setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:#34d399;font-weight:600">View full submission →</a>`);
       setStep("done");
       setHasSubmission(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Submission failed.");
+      const detail = err.response?.data?.detail;
+      if (detail) setError(detail);
+      else if (err.code === "ECONNABORTED") setError("Timed out while the server was processing your bid. Large files can take a minute — please try again.");
+      else if (!err.response) setError("Cannot reach the server. Check your connection and try again.");
+      else setError("Submission failed. Please try again.");
     } finally { setSubmitting(false); }
   }
 
@@ -206,8 +215,8 @@ function SubmitBidInner() {
                         onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/template`, `bid_file_round_${selectedRound}.xlsx`)}
                         className="btn-brand"
                         style={{ fontSize: "0.75rem", padding: "6px 16px" }}
-                        title="Download the Excel pricing template — fill in your prices and upload it back">
-                        ↓ Get Pricing Template
+                        title="Download the Excel bid template — fill in your prices and upload it back">
+                        ↓ Download Bid Template
                       </button>
                       {hasSubmission && (
                         <button onClick={() => downloadFile(`/buyer/rounds/${selectedRound}/my-submission/download`, `my_bid_round_${selectedRound}.xlsx`)}

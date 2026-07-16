@@ -227,10 +227,17 @@ export default function RoundDetail() {
     setUploading(true);
     const fd = new FormData(); fd.append("file", file);
     try {
-      const res = await api.post(`/rounds/${id}/master-file`, fd);
+      // Big workbooks need far longer than the default client timeout on the shared-CPU host.
+      const res = await api.post(`/rounds/${id}/master-file`, fd, { timeout: 180000 });
       flash(`✓ Uploaded ${res.data.total.toLocaleString()} line items`); load();
     } catch (err: any) {
-      flash(`Error: ${err.response?.data?.detail || "Upload failed"}`, "err");
+      // Distinguish a real server rejection from a timeout / unreachable server, instead of
+      // reporting every failure as a generic upload error.
+      const detail = err.response?.data?.detail;
+      if (detail) flash(`Error: ${detail}`, "err");
+      else if (err.code === "ECONNABORTED") flash("Upload timed out while the server was processing this file — please try again.", "err");
+      else if (!err.response) flash("Cannot reach the server. Check your connection and try again.", "err");
+      else flash(`Upload failed (error ${err.response.status})`, "err");
     } finally { setUploading(false); }
   }
 

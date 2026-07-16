@@ -644,7 +644,7 @@ def _load_dataframe(file_bytes: bytes, filename: str, hint_aliases: dict) -> pd.
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
     if ext in ("xlsx", "xls"):
-        candidates = _candidates_excel(io.BytesIO(file_bytes), ext)
+        candidates = _candidates_excel(io.BytesIO(file_bytes), ext, hint_aliases)
         candidates += _candidates_pivot_excel(io.BytesIO(file_bytes), ext, hint_aliases)
     elif ext == "csv":
         candidates = _candidates_csv(file_bytes)
@@ -655,7 +655,7 @@ def _load_dataframe(file_bytes: bytes, filename: str, hint_aliases: dict) -> pd.
     else:
         # Unknown extension — try all loaders
         candidates = (
-            _candidates_excel(io.BytesIO(file_bytes), "xlsx")
+            _candidates_excel(io.BytesIO(file_bytes), "xlsx", hint_aliases)
             + _candidates_csv(file_bytes)
             + _candidates_pdf(io.BytesIO(file_bytes))
             + _candidates_word(io.BytesIO(file_bytes))
@@ -742,22 +742,56 @@ def _visible_sheet_names(xf: pd.ExcelFile) -> list[str]:
         return list(xf.sheet_names)
 
 
-def _candidates_excel(buf: io.BytesIO, ext: str) -> list[pd.DataFrame]:
+def _candidates_excel(buf: io.BytesIO, ext: str, hint_aliases: dict) -> list[pd.DataFrame]:
+    """Return ONE candidate per sheet: the sheet parsed at its best-scoring header row.
+
+    This used to fully parse every sheet once per header-row guess — 15 complete parses of
+    every sheet. On the real ThinkTLS memory file (a 9,305-row "Memory Detail" sheet) that
+    cost ~4.1s of a 5.4s upload on a fast dev box, and on Render's shared CPU it ran past the
+    frontend's 35s HTTP timeout. A timed-out upload returns no response body, so the UI fell
+    back to its generic "Upload failed — check file format" message even though the file
+    parsed perfectly — which is exactly why only the largest file appeared to be "invalid".
+
+    Now: peek at just the first rows to score each candidate header row (scoring only ever
+    inspects column NAMES, never the data), then do a single full parse of the winning row.
+    The chosen frame is produced by the same xf.parse(sheet, header=N) call as before, so
+    dtypes and values are identical — only the 14 redundant parses per sheet are gone.
+    """
     out = []
     try:
         engine = "openpyxl" if ext == "xlsx" else None
         xf = pd.ExcelFile(buf, engine=engine)
         for sheet in _visible_sheet_names(xf):
             bonus = _sheet_score_bonus(sheet)
-            for hdr in range(_HEADER_ROW_SCAN_DEPTH):
+            try:
+                peek = xf.parse(sheet, header=None, nrows=_HEADER_ROW_SCAN_DEPTH + 1)
+            except Exception:
+                continue
+            if peek.empty:
+                continue
+
+            depth = min(_HEADER_ROW_SCAN_DEPTH, len(peek))
+            scores: dict[int, int] = {}
+            for hdr in range(depth):
+                names = [str(v).strip() for v in peek.iloc[hdr].tolist()]
+                # _score_df -> _find_column only reads df.columns, so an empty frame carrying
+                # these names scores exactly as the fully-parsed frame would.
+                scores[hdr] = _score_df(pd.DataFrame(columns=names), hint_aliases)
+
+            # Best score wins; ties resolve to the earliest header row — matching the previous
+            # "first candidate with the highest score" de-duplication behaviour exactly.
+            for hdr in sorted(range(depth), key=lambda h: (-scores[h], h)):
                 try:
                     df = _clean(xf.parse(sheet, header=hdr))
-                    if len(df) > 0 and len(df.columns) > 1:
-                        df.attrs["_sheet_bonus"] = bonus
-                        df.attrs["_sheet_name"] = sheet  # used for deduplication
-                        out.append(df)
                 except Exception:
-                    pass
+                    continue
+                # Fall through to the next-best header row only if this one yields no usable
+                # table, mirroring the old loop which simply skipped empty parses.
+                if len(df) > 0 and len(df.columns) > 1:
+                    df.attrs["_sheet_bonus"] = bonus
+                    df.attrs["_sheet_name"] = sheet  # used for deduplication
+                    out.append(df)
+                    break
     except Exception as e:
         logger.warning("Excel parse error: %s", e)
     return out
