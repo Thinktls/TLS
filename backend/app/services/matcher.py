@@ -4,7 +4,7 @@ Three-tier part number matching:
   2. rapidfuzz token_sort_ratio  >= 88 => auto-match, 65-87 => flag for review
   3. AI semantic match via configured AI backend (called only for flagged items)
 """
-from rapidfuzz import fuzz
+from rapidfuzz import fuzz, process
 from sqlalchemy.orm import Session
 from app.models.master_item import MasterItem
 from app.models.bid_line import BidLine
@@ -17,6 +17,11 @@ REVIEW_THRESHOLD = 65
 def match_bid_lines(bid_lines: list[BidLine], master_items: list[MasterItem]) -> list[BidLine]:
     master_index = {m.part_number_normalized: m for m in master_items}
     master_list = list(master_items)
+    # Pre-built choices for the fuzzy tier. rapidfuzz's process.extractOne scans these in C++;
+    # the previous Python `for m in master_list` loop cost ~8.6ms per line against 9,305
+    # masters, i.e. ~161s for a 18,610-line round on a dev box (many minutes on the hosted
+    # tier) whenever lines missed the exact-match index — the round appeared frozen at 0%.
+    master_choices = [m.part_number_normalized or "" for m in master_list]
 
     # Build duplicate detection index: (buyer_id, normalized_pn) → first line seen
     seen: dict[tuple, BidLine] = {}
@@ -46,14 +51,20 @@ def match_bid_lines(bid_lines: list[BidLine], master_items: list[MasterItem]) ->
                 )
             continue
 
-        # Tier 2: fuzzy
+        # Tier 2: fuzzy — single C++ pass over all master part numbers. score_cutoff lets
+        # rapidfuzz abandon candidates early; anything below REVIEW_THRESHOLD is "unmatched"
+        # either way, so cutting off there changes no outcome.
         best_score = 0.0
         best_master = None
-        for m in master_list:
-            score = fuzz.token_sort_ratio(pn, m.part_number_normalized)
-            if score > best_score:
-                best_score = score
-                best_master = m
+        if pn and master_choices:
+            hit = process.extractOne(
+                pn, master_choices,
+                scorer=fuzz.token_sort_ratio,
+                score_cutoff=REVIEW_THRESHOLD,
+            )
+            if hit:
+                _, best_score, best_idx = hit
+                best_master = master_list[best_idx]
 
         if best_score >= AUTO_MATCH_THRESHOLD:
             _assign_match(line, best_master, "fuzzy", best_score)
@@ -73,7 +84,12 @@ def match_bid_lines(bid_lines: list[BidLine], master_items: list[MasterItem]) ->
         else:
             line.match_status = "exception"
             line.exception_type = "unmatched"
-            line.exception_notes = f"Best fuzzy score was {best_score:.1f}% — below threshold"
+            # No candidate cleared REVIEW_THRESHOLD (the fuzzy pass cuts off there), so there
+            # is no meaningful "best score" to quote — don't invent one.
+            line.exception_notes = (
+                f"No catalog item resembles '{line.raw_part_number or pn}' "
+                f"(nothing scored above {REVIEW_THRESHOLD}% similarity)"
+            )
 
     return bid_lines
 

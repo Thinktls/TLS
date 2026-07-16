@@ -245,6 +245,52 @@ def test_side_by_side_pivot_not_double_counted():
             assert "count of" not in k.lower(), f"Pivot noise column '{k}' leaked into extra_columns"
 
 
+# ── Matching must stay fast at real round size ──────────────────────────────────
+# Incident: the fuzzy tier looped over every master item in Python for every bid line that
+# missed the exact-match index. Once drive/memory rounds became per-unit, a memory round is
+# 9,305 masters x 2 buyers = 18,610 lines — 173M comparisons. Measured 8.6ms/line, ~161s on a
+# dev box (many minutes on the hosted tier), and the UI just sat at "0%" looking frozen.
+# Fixed with rapidfuzz process.extractOne (C++ scan + score_cutoff): ~0.9ms/line.
+
+def test_fuzzy_matching_stays_fast_on_large_rounds():
+    from app.services.matcher import match_bid_lines
+    from app.models.bid_line import BidLine as _BidLine
+    from app.models.master_item import MasterItem as _MasterItem
+
+    masters = []
+    for i in range(1, 9306):
+        m = _MasterItem()
+        m.id = i
+        m.part_number = f"PN{i}"
+        m.part_number_normalized = f"HMA84GR7AFR4NUH{i:05d}"
+        m.quantity = 1
+        masters.append(m)
+
+    # Worst case: none of these hit the exact-match index, so every one goes through fuzzy.
+    lines = []
+    for i in range(200):
+        l = _BidLine()
+        l.buyer_id = 1
+        l.raw_part_number = f"NOMATCH-{i}"
+        l.normalized_part_number = f"NOMATCHXYZ{i:05d}"
+        l.quantity = 1
+        lines.append(l)
+
+    t0 = time.time()
+    match_bid_lines(lines, masters)
+    per_line_ms = (time.time() - t0) / len(lines) * 1000
+
+    # The Python-loop version measured ~8.6ms/line. 4ms is a wide margin over the ~0.9ms the
+    # rapidfuzz path costs, while still failing loudly if the O(N*M) loop ever comes back.
+    assert per_line_ms < 4.0, (
+        f"Fuzzy matching is {per_line_ms:.1f}ms per line against 9,305 masters — the "
+        f"per-line Python scan over every master item is back. At a real memory round "
+        f"(18,610 lines) this costs {per_line_ms * 18610 / 1000:.0f}s and the round appears "
+        f"frozen at 0%. Matching must use rapidfuzz process.extractOne."
+    )
+    assert all(l.match_status == "exception" for l in lines)
+
+
 # ── Template cache must invalidate when item CONTENT changes ─────────────────────
 # Incident: the bid-template cache was keyed on row COUNT only. When an admin re-uploaded an
 # edited master file with the same number of rows (fixed a description / quantity / spec),

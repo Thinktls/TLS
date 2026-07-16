@@ -201,13 +201,29 @@ export default function DealsPage() {
   }
 
   async function approveAll() {
+    // Approving emails every assigned buyer their win/loss result. That leaves the building
+    // and cannot be recalled, so make the admin confirm rather than firing on a single click.
+    const ok = window.confirm(
+      `Approve ${pendingCount} deal(s) for this round?\n\n` +
+      `This will:\n` +
+      `  1. Lock in the winner and price on every pending deal\n` +
+      `  2. EMAIL every assigned buyer their result — winners get what they won, ` +
+      `outbid buyers get each item with their bid vs the winning price\n` +
+      `  3. Recalculate buyer scores from these results\n` +
+      `  4. Unlock the exports (Razor CSV, deals workbook, award sheets)\n\n` +
+      `The emails send immediately and cannot be undone.`
+    );
+    if (!ok) return;
     setApprovingAll(true);
     try {
-      const res = await api.post(`/deals/rounds/${id}/approve-all`);
-      flash(`✓ ${res.data.approved} deal(s) approved`);
+      const res = await api.post(`/deals/rounds/${id}/approve-all`, null, { timeout: 180000 });
+      flash(`✓ ${res.data.approved} deal(s) approved — result emails are being sent to all assigned buyers. Exports are now available.`);
       load();
     } catch (err: any) {
-      flash(err.response?.data?.detail || "Failed", "err");
+      const detail = err.response?.data?.detail;
+      if (detail) flash(detail, "err");
+      else if (err.code === "ECONNABORTED") flash("Approval is taking longer than expected — refresh in a moment to confirm before retrying.", "err");
+      else flash("Approval failed. Please try again.", "err");
     } finally {
       setApprovingAll(false);
     }
@@ -312,6 +328,33 @@ export default function DealsPage() {
             )}
           </div>
         </div>
+
+        {/* Spell out what approving actually does. It emails every buyer, which is the one
+            step here that reaches outside the system and can't be taken back — the admin
+            should know that before clicking, not discover it afterwards. */}
+        {pendingCount > 0 && (
+          <div style={{
+            background: "rgba(5,150,105,0.06)",
+            border: "1px solid rgba(5,150,105,0.25)",
+            borderRadius: "var(--radius-lg, 12px)",
+            padding: "14px 18px",
+            marginBottom: "16px",
+          }}>
+            <p style={{ margin: "0 0 8px", fontSize: "0.8rem", fontWeight: 700, color: "#34d399" }}>
+              What happens when you click “Approve All ({pendingCount})”
+            </p>
+            <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "0.78rem", color: "var(--text-3, rgba(255,255,255,0.6))", lineHeight: 1.7 }}>
+              <li>Every pending deal is locked in — winning buyer and price are recorded to the audit trail.</li>
+              <li><strong style={{ color: "rgba(255,255,255,0.8)" }}>Each assigned buyer is emailed their result automatically.</strong> Winners see the items they won. Buyers who were outbid see each item with their bid next to the winning price.</li>
+              <li>Buyer scores are recalculated from this round’s wins and losses.</li>
+              <li>Exports unlock: Razor CSV, deals workbook, and per-buyer award sheets.</li>
+            </ol>
+            <p style={{ margin: "8px 0 0", fontSize: "0.72rem", color: "#fbbf24" }}>
+              The emails send immediately and cannot be recalled — review the deals below first.
+              Need one buyer to take everything? Use “Award Entire Lot” before approving.
+            </p>
+          </div>
+        )}
 
         {msg && (
           <div style={{

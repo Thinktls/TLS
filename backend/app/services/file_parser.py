@@ -236,9 +236,10 @@ def _sheet_score_bonus(sheet_name: str) -> int:
 # "Bid Tables" sheet). A pivot layout with dedicated bid-entry columns is a deliberate,
 # curated bid sheet — it must win over the same workbook's raw unit-level detail sheets,
 # which otherwise tie on field count and can win by candidate order alone.
-# Must stay above _UNIT_LEVEL_SHEET_BONUS so a pivot bid sheet still beats a sibling
-# unit-level detail sheet in the same workbook.
-_PIVOT_BLOCK_BONUS = 6
+# Must stay clear of _UNIT_LEVEL_SHEET_BONUS so a pivot bid sheet still beats a sibling
+# unit-level detail sheet in the same workbook (under BOTH the master and buyer alias maps,
+# which score sheets differently).
+_PIVOT_BLOCK_BONUS = 10
 
 # Extra score for a sheet that is unit-level — one row per physical unit, carrying its own
 # Serial/UID. When a workbook has both an aggregated "Summary" sheet and a per-unit "Detail"
@@ -248,7 +249,15 @@ _PIVOT_BLOCK_BONUS = 6
 # ThinkTLS require that whatever the admin uploads reaches the buyer intact — never cut down —
 # and that every template behave like the (already unit-level) server file, so the per-unit
 # sheet must win over the summary despite the summary's name bonus.
-_UNIT_LEVEL_SHEET_BONUS = 4
+#
+# It must also be big enough that the MASTER and BUYER alias maps agree on the same sheet.
+# They score differently: only the buyer map has a `unit_price` field, so a summary sheet's
+# "Offer" column earns it an extra point that the master map never sees. At a smaller bonus
+# the master picked "Memory Detail" (9,305 units) while the buyer picked "Memory Summary"
+# (230 models) out of the SAME workbook — so no bid line could ever match a master item, and
+# every one of them fell through to the expensive fuzzy tier. Both maps must land on the
+# per-unit sheet.
+_UNIT_LEVEL_SHEET_BONUS = 6
 
 
 def _cell_text(val) -> str:
@@ -494,9 +503,14 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
             "Expected headers like: 'Part Number', 'SKU', 'Part#', 'P/N', 'Model'."
         )
     if "unit_price" not in mapping:
+        # Most often this is the raw inventory workbook rather than the bid template — the
+        # inventory sheets list every unit but have nowhere to enter a price. Point the buyer
+        # at the template instead of just naming header spellings at them.
         raise ValueError(
-            "Could not find a price column. "
-            "Expected headers like: 'Unit Price', 'Price', 'Bid Price', 'Offer', 'Cost'."
+            "This file has no price column, so there's nothing to bid with. "
+            "Download the Bid Template for this round, enter your prices in the "
+            "'Unit Price ($)' column, and upload that file. "
+            "(A price column may also be named 'Price', 'Bid Price', 'Offer' or 'Cost'.)"
         )
 
     # Unit-level buyer files (ThinkTLS laptops, servers, desktops): one row per physical unit.
