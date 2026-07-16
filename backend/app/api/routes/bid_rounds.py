@@ -886,11 +886,20 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
         .all()
     )
 
-    buyer_ids = {l.buyer_id for l in lines}
+    # Columns cover every buyer ASSIGNED to the round, not just those with a matched line.
+    # A buyer who never submitted, or who skipped this device, previously just had no cell —
+    # indistinguishable from missing data. The admin must be able to see, per device, that a
+    # given buyer did not quote it.
+    assigned_ids = [
+        row.buyer_id for row in db.execute(
+            text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
+        ).fetchall()
+    ]
+    buyer_ids = {l.buyer_id for l in lines} | set(assigned_ids)
     buyer_map: dict[int, str] = {
-        b.id: (b.company_name or str(b.id))
+        b.id: (b.company_name or b.full_name or str(b.id))
         for b in db.query(User).filter(User.id.in_(buyer_ids)).all()
-    }
+    } if buyer_ids else {}
 
     by_item: dict = defaultdict(dict)
     for line in lines:
@@ -901,12 +910,21 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
             "is_winner": line.is_winner,
             "is_anomaly": line.is_anomaly,
             "bid_line_id": line.id,
+            # A submitted line with no price means the buyer returned the template but left
+            # this device blank — they saw it and chose not to quote it.
+            "quoted": line.unit_price is not None,
         }
 
     buyers = sorted(set(buyer_map.values()))
 
     rows = []
     for mi in master_items:
+        item_bids = by_item.get(mi.id, {})
+        # Spell out who did not quote THIS device: either no line at all, or a blank price.
+        not_quoted_by = sorted(
+            b for b in buyers
+            if b not in item_bids or not item_bids[b].get("quoted")
+        )
         row: dict = {
             "master_item_id": mi.id,
             "part_number": mi.part_number,
@@ -915,11 +933,29 @@ def get_comparison(round_id: int, db: Session = Depends(get_db), _=Depends(requi
             "quantity": mi.quantity,
             "reserve_price": mi.reserve_price,
             "extra_columns": mi.extra_columns,
-            "bids": by_item.get(mi.id, {}),
+            "bids": item_bids,
+            "not_quoted_by": not_quoted_by,
+            "quoted_count": len(buyers) - len(not_quoted_by),
         }
         rows.append(row)
 
-    return {"buyers": buyers, "rows": rows}
+    # Per-buyer coverage: how many of the round's devices each buyer actually put a price on.
+    total_items = len(master_items)
+    coverage = []
+    for company in buyers:
+        quoted = sum(
+            1 for r in rows
+            if company in r["bids"] and r["bids"][company].get("quoted")
+        )
+        coverage.append({
+            "buyer": company,
+            "quoted": quoted,
+            "not_quoted": total_items - quoted,
+            "total_items": total_items,
+            "quoted_pct": round(quoted / total_items * 100, 1) if total_items else 0.0,
+        })
+
+    return {"buyers": buyers, "rows": rows, "coverage": coverage, "total_items": total_items}
 
 
 @router.get("/{round_id}/bid-lines")

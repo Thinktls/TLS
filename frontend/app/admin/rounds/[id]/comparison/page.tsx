@@ -26,9 +26,19 @@ interface ComparisonRow {
   bids: Record<string, BidEntry>;
 }
 
+interface BuyerCoverage {
+  buyer: string;
+  quoted: number;
+  not_quoted: number;
+  total_items: number;
+  quoted_pct: number;
+}
+
 interface ComparisonData {
   buyers: string[];
   rows: ComparisonRow[];
+  coverage?: BuyerCoverage[];
+  total_items?: number;
 }
 
 const COL_W_ITEM  = 280;  // Model name + part number sub-line
@@ -135,6 +145,7 @@ export default function ComparisonPage() {
             { color: "#34d399", bg: "rgba(52,211,153,0.12)", label: "Winner", tip: "Highest valid bid on this item — the awarded price." },
             { color: "#f87171", bg: "rgba(239,68,68,0.1)", label: "Below reserve", tip: "Bid is under your minimum acceptable price and can't win without an override." },
             { color: "#fbbf24", bg: "rgba(251,191,36,0.1)", label: "Anomaly", tip: "Possible price typo — this bid is far above or below the others on the same item." },
+            { color: "rgba(255,255,255,0.3)", bg: "transparent", label: "not quoted", tip: "This buyer did not put a price on this device — either they left it blank or never bid on it." },
           ].map(({ color, bg, label, tip }) => (
             <div key={label} title={tip} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "help" }}>
               <div style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px solid ${color}` }} />
@@ -142,6 +153,40 @@ export default function ComparisonPage() {
             </div>
           ))}
         </div>
+
+        {/* Per-buyer coverage. With thousands of devices per round the admin needs to see, at a
+            glance, how much of the lot each buyer actually priced — not scroll for gaps. */}
+        {data?.coverage && data.coverage.length > 0 && (
+          <div style={{
+            display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px",
+          }}>
+            {data.coverage.map((c) => {
+              const full = c.not_quoted === 0;
+              return (
+                <div
+                  key={c.buyer}
+                  title={`${c.buyer} priced ${c.quoted.toLocaleString()} of ${c.total_items.toLocaleString()} devices in this round and did not quote ${c.not_quoted.toLocaleString()}.`}
+                  style={{
+                    padding: "6px 12px", borderRadius: "8px", cursor: "help",
+                    background: full ? "rgba(52,211,153,0.08)" : "rgba(251,191,36,0.07)",
+                    border: `1px solid ${full ? "rgba(52,211,153,0.25)" : "rgba(251,191,36,0.22)"}`,
+                    fontSize: "0.72rem",
+                  }}
+                >
+                  <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{c.buyer}</span>
+                  <span style={{ color: full ? "#34d399" : "#fbbf24", marginLeft: "8px" }}>
+                    quoted {c.quoted.toLocaleString()}/{c.total_items.toLocaleString()} ({c.quoted_pct}%)
+                  </span>
+                  {!full && (
+                    <span style={{ color: "rgba(255,255,255,0.35)", marginLeft: "6px" }}>
+                      · {c.not_quoted.toLocaleString()} not quoted
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Scrollable table container */}
         <div style={{
@@ -245,7 +290,26 @@ export default function ComparisonPage() {
                         {buyers.map((buyerName) => {
                           const entry = row.bids[buyerName];
                           if (!entry || entry.unit_price == null) {
-                            return <Cell key={buyerName} width={COL_W_BID} center muted>—</Cell>;
+                            // Say it outright. A bare "—" left the admin unable to tell "this
+                            // buyer chose not to price this device" from "data missing".
+                            const submitted = !!entry;
+                            return (
+                              <div
+                                key={buyerName}
+                                title={submitted
+                                  ? `${buyerName} submitted a bid for this round but left this device blank — they did not quote it.`
+                                  : `${buyerName} did not quote this device.`}
+                                style={{
+                                  width: COL_W_BID, flexShrink: 0, height: "100%",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  borderLeft: "1px solid rgba(255,255,255,0.04)",
+                                  fontSize: "0.68rem", fontStyle: "italic",
+                                  color: "rgba(255,255,255,0.28)", cursor: "help",
+                                }}
+                              >
+                                not quoted
+                              </div>
+                            );
                           }
                           const price = entry.unit_price;
                           const isWinner = entry.is_winner;
