@@ -25,7 +25,7 @@ interface Summary {
 }
 interface ProcessingStatus {
   status: string; total_lines: number; matched: number;
-  exceptions: number; deals: number; progress_pct: number;
+  exceptions: number; deals: number; progress_pct: number; stage?: string;
 }
 interface AssignedBuyer {
   id: number; full_name: string; email: string; company_name: string; invite_status: string;
@@ -209,7 +209,9 @@ export default function RoundDetail() {
             clearInterval(pollRef.current!); pollRef.current = null; load();
           }
         } catch { /* ignore */ }
-      }, 3000);
+        // 1.5s: the status query is a few cheap COUNTs, and a big round's deal count climbs
+        // steadily — polling this often is what makes the bar visibly move rather than lurch.
+      }, 1500);
     } else {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       setProcessingStatus(null);
@@ -479,7 +481,11 @@ export default function RoundDetail() {
           {round.status === "processing" && (
             <div style={{ marginTop: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.82rem", color: "#60a5fa", fontWeight: 600 }}>Matching bid lines and selecting winners…</span>
+                {/* Show the live stage from the server rather than one fixed sentence, so a long
+                    phase (winner selection on a big round) visibly reports what it's doing. */}
+                <span style={{ fontSize: "0.82rem", color: "#60a5fa", fontWeight: 600 }}>
+                  {processingStatus?.stage ? `${processingStatus.stage}…` : "Matching bid lines and selecting winners…"}
+                </span>
                 <span style={{ fontSize: "0.82rem", color: "var(--text-3)", fontFamily: "monospace" }}>
                   {processingStatus ? `${processingStatus.progress_pct}%` : "—"}
                 </span>

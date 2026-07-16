@@ -1026,7 +1026,36 @@ def processing_status(round_id: int, db: Session = Depends(get_db), _=Depends(re
     ).scalar() or 0
     deals = db.query(func.count(Deal.id)).filter(Deal.bid_round_id == round_id).scalar() or 0
 
-    pct = round((matched + exceptions) / total * 100, 1) if total > 0 else 0
+    # Processing has two phases that each take real time on a big round, so the bar tracks both.
+    # Reporting only (matched+exceptions)/total hit 100% the moment matching committed and then
+    # sat there for the whole winner-selection phase — the slowest part on a per-unit round
+    # (~9,305 deals) — which read as "stuck at 100%".
+    #   phase 1  matching        -> 0-50%
+    #   phase 2  winners/deals   -> 50-100%
+    # The phase-2 target is how many deals WILL exist: one per master item that has at least one
+    # priced, matched bid.
+    if total <= 0:
+        pct, stage = 0.0, "Waiting for bids"
+    else:
+        match_frac = (matched + exceptions) / total
+        if matched + exceptions < total:
+            pct = round(match_frac * 50, 1)
+            stage = f"Matching bid lines to your catalog ({matched + exceptions:,} of {total:,})"
+        else:
+            expected_deals = db.query(
+                func.count(func.distinct(BidLine.master_item_id))
+            ).filter(
+                BidLine.bid_round_id == round_id,
+                BidLine.match_status == "matched",
+                BidLine.unit_price.isnot(None),
+            ).scalar() or 0
+            if r.status == "complete":
+                pct, stage = 100.0, "Complete"
+            elif expected_deals <= 0:
+                pct, stage = 100.0, "No winning bids to award"
+            else:
+                pct = round(50 + min(deals / expected_deals, 1.0) * 50, 1)
+                stage = f"Selecting winners and creating deals ({deals:,} of {expected_deals:,})"
 
     return {
         "status": r.status,
@@ -1035,6 +1064,7 @@ def processing_status(round_id: int, db: Session = Depends(get_db), _=Depends(re
         "exceptions": exceptions,
         "deals": deals,
         "progress_pct": pct,
+        "stage": stage,
     }
 
 

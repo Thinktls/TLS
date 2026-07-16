@@ -53,6 +53,27 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
     }
 
     deals = []
+    # Commit deals in batches instead of only at the very end. A per-unit memory round creates
+    # ~9,305 deals; with a single trailing commit the admin's progress bar reads 0 deals for the
+    # whole phase and then jumps, so the UI looked frozen. Flushing periodically lets the
+    # processing-status poll watch the deal count climb.
+    #
+    # expire_on_commit must be off while we do that: committing mid-loop would otherwise expire
+    # every loaded master/buyer/bid-line, and the next attribute read would re-SELECT each one
+    # individually — turning a batched loop into thousands of queries. We only read attributes
+    # already loaded here, so suppressing expiry is safe. Restored in the finally block.
+    _DEAL_COMMIT_BATCH = 500
+    _prev_expire = db.expire_on_commit
+    db.expire_on_commit = False
+    try:
+        _select_winners_loop(db, bid_round_id, by_item, master_map, buyer_map, deals, _DEAL_COMMIT_BATCH)
+    finally:
+        db.expire_on_commit = _prev_expire
+    db.commit()
+    return deals
+
+
+def _select_winners_loop(db, bid_round_id, by_item, master_map, buyer_map, deals, commit_batch):
     for item_id, lines in by_item.items():
         master = master_map.get(item_id)
         if not master:
@@ -162,5 +183,7 @@ def select_winners(db: Session, bid_round_id: int) -> list[Deal]:
         db.add(deal)
         deals.append(deal)
 
-    db.commit()
-    return deals
+        # Publish progress periodically so the admin's progress bar advances during this phase
+        # rather than sitting still until every deal exists.
+        if len(deals) % commit_batch == 0:
+            db.commit()
