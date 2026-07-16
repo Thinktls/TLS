@@ -32,10 +32,12 @@ def _base(content: str, preview_text: str = "") -> str:
               <tr>
                 <td>
                   <span style="font-size:20px;font-weight:800;color:white;letter-spacing:-0.5px;">ThinkTLS</span>
-                  <span style="font-size:13px;font-weight:400;color:rgba(255,255,255,0.5);margin-left:8px;letter-spacing:0.5px;">BID DESK</span>
+                  <span style="font-size:13px;font-weight:400;color:rgba(255,255,255,0.5);margin-left:8px;letter-spacing:0.5px;">Bid Desk</span>
                 </td>
                 <td align="right">
-                  <span style="display:inline-block;background:rgba(61,129,227,0.25);color:{_BRAND_BLUE};font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:0.5px;">SECURE PORTAL</span>
+                  <!-- No promotional/urgency badge here: shouty all-caps chips next to a
+                       call-to-action are a classic spam-filter signal and read as marketing
+                       rather than a procurement notice. -->
                 </td>
               </tr>
             </table>
