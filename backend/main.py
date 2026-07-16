@@ -57,6 +57,15 @@ app.include_router(chat_router, prefix="/api")
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "ThinkTLS Bid Desk"}
+    # Report the deployed commit so it's possible to confirm from the outside WHICH code is
+    # actually live. Without this we had no way to tell whether a pushed fix had reached the
+    # hosted backend, which turned "is it deployed yet?" into guesswork during an incident.
+    # RENDER_GIT_COMMIT is injected automatically by Render; absent locally.
+    commit = os.environ.get("RENDER_GIT_COMMIT") or "local"
+    return {
+        "status": "ok",
+        "service": "ThinkTLS Bid Desk",
+        "commit": commit[:7],
+    }
 
 
