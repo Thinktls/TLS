@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
+import { fmtDatetime } from "@/lib/format";
 
 interface Round {
   id: number; name: string; commodity: string; status: string;
@@ -190,7 +191,7 @@ export default function BidRoundsPage() {
                         {" · "}
                         <span>{r.total_line_items.toLocaleString()} items</span>
                         {r.submission_deadline && (
-                          <span> · Due {new Date(r.submission_deadline).toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" })} EST</span>
+                          <span> · Due {fmtDatetime(r.submission_deadline)}</span>
                         )}
                       </p>
                     </div>

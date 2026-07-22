@@ -84,6 +84,28 @@ export default function LoginPage() {
         .glass-card:hover {
           border-color: rgba(255,255,255,0.18);
         }
+        /* The login card is dark by design (video background), but .glass-input's text colour
+           follows the app theme — so in LIGHT mode the typed email/password rendered as
+           near-black text on this dark card and was unreadable. Pin the login inputs to light
+           text regardless of theme. Scoped to .glass-card so no other page is affected. */
+        .glass-card .glass-input {
+          color: #ffffff;
+          background: rgba(255,255,255,0.06);
+          border-color: rgba(255,255,255,0.18);
+          -webkit-text-fill-color: #ffffff;
+        }
+        .glass-card .glass-input::placeholder { color: rgba(255,255,255,0.45); }
+        .glass-card .glass-input:focus {
+          background: rgba(255,255,255,0.10);
+          border-color: rgba(61,129,227,0.7);
+        }
+        /* Chrome autofill otherwise repaints the field near-white with dark text. */
+        .glass-card .glass-input:-webkit-autofill,
+        .glass-card .glass-input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #ffffff;
+          -webkit-box-shadow: 0 0 0 1000px rgba(30,34,44,0.95) inset;
+          caret-color: #ffffff;
+        }
         .back-link {
           display: inline-flex;
           align-items: center;

@@ -281,6 +281,82 @@ def export_razor_csv(db: Session, bid_round_id: int) -> bytes:
     return buf.getvalue().encode()
 
 
+def _lookup_ci(d: dict | None, *names: str) -> str:
+    """Case-insensitive lookup of the first present key among `names` in a spec dict."""
+    if not d:
+        return ""
+    lowered = {str(k).strip().lower(): v for k, v in d.items()}
+    for n in names:
+        v = lowered.get(n.lower())
+        if v not in (None, "", "nan", "None"):
+            return str(v)
+    return ""
+
+
+def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
+    """One Razor upload file PER CUSTOMER (winning buyer), each row a single awarded device
+    with Model, Serial, UID and Price — the format ThinkTLS uploads into Razor after a sale.
+
+    Model/Serial/UID come from the awarded master item's original columns (they vary in case
+    across files — UID vs Uid — so lookup is case-insensitive). Only approved deals are
+    included. Returns a ZIP of <Customer>_razor_<round>.csv files.
+    """
+    deals = (
+        db.query(Deal)
+        .filter(Deal.bid_round_id == bid_round_id, Deal.status == "approved")
+        .order_by(Deal.winning_buyer_id)
+        .all()
+    )
+    masters = {
+        m.id: m for m in db.query(MasterItem).filter(MasterItem.bid_round_id == bid_round_id).all()
+    }
+    buyer_ids = {d.winning_buyer_id for d in deals}
+    buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()} if buyer_ids else {}
+
+    # Group approved deals by customer
+    by_buyer: dict[int, list[Deal]] = {}
+    for d in deals:
+        by_buyer.setdefault(d.winning_buyer_id, []).append(d)
+
+    buf = io.BytesIO()
+    fieldnames = ["Model", "Serial", "UID", "Description", "Qty", "Price", "Total", "Deal Ref"]
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for buyer_id, buyer_deals in by_buyer.items():
+            buyer = buyers.get(buyer_id)
+            cust = (buyer.company_name or buyer.full_name or f"buyer{buyer_id}") if buyer else f"buyer{buyer_id}"
+
+            csv_buf = io.StringIO()
+            writer = csv.DictWriter(csv_buf, fieldnames=fieldnames)
+            writer.writeheader()
+            for d in buyer_deals:
+                extra = (masters.get(d.master_item_id).extra_columns if masters.get(d.master_item_id) else None)
+                # Prefer the item's own Model column; fall back to the deal's part number.
+                model = _lookup_ci(extra, "Model") or (d.part_number or "")
+                serial = _lookup_ci(extra, "Serial", "Serial Number", "Serial#")
+                uid = _lookup_ci(extra, "UID", "Uid", "Unit ID", "Asset Tag", "Asset#")
+                writer.writerow({
+                    "Model": model,
+                    "Serial": serial,
+                    "UID": uid,
+                    "Description": (d.description or "")[:120],
+                    "Qty": d.quantity,
+                    "Price": f"{d.winning_price:.2f}" if d.winning_price is not None else "",
+                    "Total": f"{d.total_value:.2f}" if d.total_value is not None else "",
+                    "Deal Ref": f"THINKTLS-{bid_round_id}-{d.id}",
+                })
+            safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in cust).strip().replace(" ", "_")
+            zf.writestr(f"{safe}_razor_{bid_round_id}.csv", csv_buf.getvalue())
+
+        # If the round has no approved deals yet, emit a readme so the ZIP isn't empty/confusing.
+        if not by_buyer:
+            zf.writestr(
+                "NO_APPROVED_DEALS.txt",
+                "No approved deals in this round yet. Approve deals first, then download again.",
+            )
+
+    return buf.getvalue()
+
+
 # ── Inventory Disposition Report ─────────────────────────────────────────────
 
 def export_disposition_report(db: Session, bid_round_id: int) -> bytes:

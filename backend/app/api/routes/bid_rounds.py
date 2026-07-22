@@ -17,6 +17,7 @@ from sqlalchemy import text, func, case
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.timeutil import format_et
 from app.core.executors import file_parsing_executor
 from app.core.security import require_admin, get_current_user
 from app.db.session import get_db, SessionLocal
@@ -36,7 +37,7 @@ from app.services.email_service import (
 from app.services.export_service import (
     export_deals_excel, export_deals_csv, export_bid_comparison_excel,
     export_buyer_award_sheet, export_all_award_sheets_zip,
-    export_razor_csv, export_margin_report, export_disposition_report,
+    export_razor_csv, export_razor_per_customer_zip, export_margin_report, export_disposition_report,
     export_erp_line_report,
 )
 from app.services.file_parser import parse_master_file
@@ -540,9 +541,10 @@ def send_invitations(
                 "email them again (for example if a buyer lost the mail or the deadline changed).",
             )
 
-    _EST = timezone(timedelta(hours=-5))
+    # Real Eastern time (DST-aware) so the deadline in the invitation email matches what the
+    # admin sees in the app — the old fixed -5 "EST" was an hour behind during daylight saving.
     if r.submission_deadline:
-        deadline_str = r.submission_deadline.astimezone(_EST).strftime("%m/%d/%Y %I:%M %p") + " EST"
+        deadline_str = format_et(r.submission_deadline)
     else:
         deadline_str = "See admin for deadline"
     upload_url = f"{settings.FRONTEND_URL}/portal/bid?round={round_id}"
@@ -1182,6 +1184,13 @@ def export_all_awards(round_id: int, db: Session = Depends(get_db), _=Depends(re
 def export_razor(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     data = export_razor_csv(db, round_id)
     return StreamingResponse(iter([data]), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=razor_sales_order_round_{round_id}.csv"})
+
+
+@router.get("/{round_id}/export/razor-per-customer.zip")
+def export_razor_per_customer(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Per-customer Razor upload files (Model, Serial, UID, Price) — one CSV per winning buyer."""
+    data = export_razor_per_customer_zip(db, round_id)
+    return StreamingResponse(iter([data]), media_type="application/zip", headers={"Content-Disposition": f"attachment; filename=razor_per_customer_round_{round_id}.zip"})
 
 
 @router.get("/{round_id}/export/margin-report.xlsx")

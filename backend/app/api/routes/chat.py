@@ -167,8 +167,10 @@ def _buyer_context(db: Session, buyer_id: int, round_id: Optional[int]) -> str:
 
         open_rounds = db.execute(text("""
             SELECT br.name, br.commodity,
+                   -- America/New_York is DST-aware (correct wall-clock). Label "ET" avoids
+                   -- claiming EST year-round; the abbreviation isn't reliably available here.
                    TO_CHAR(br.submission_deadline AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York',
-                           'MM/DD/YYYY HH12:MI AM') || ' EST' AS deadline
+                           'MM/DD/YYYY HH12:MI AM') || ' ET' AS deadline
             FROM bid_rounds br
             JOIN round_buyers rb ON rb.round_id = br.id
             WHERE rb.buyer_id = :uid AND br.status = 'open'

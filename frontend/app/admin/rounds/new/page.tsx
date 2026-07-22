@@ -25,7 +25,9 @@ const labelStyle: React.CSSProperties = {
   display: "block",
   fontSize: "0.8rem",
   fontWeight: 500,
-  color: "rgba(255,255,255,0.55)",
+  // Theme-aware: the form card is light in light mode, so a hardcoded white label was
+  // invisible (white-on-white) — which is why the field labels didn't show at all.
+  color: "var(--text-3)",
   marginBottom: "8px",
 };
 
@@ -66,7 +68,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           )}
         </div>
       ))}
-      <span style={{ marginLeft: "8px", fontSize: "0.78rem", color: "rgba(255,255,255,0.4)" }}>
+      <span style={{ marginLeft: "8px", fontSize: "0.78rem", color: "var(--text-4)" }}>
         Step {current} of {total}
       </span>
     </div>
@@ -322,7 +324,7 @@ export default function NewRound() {
             </div>
 
             <div>
-              <label style={labelStyle}>Submission Deadline</label>
+              <label style={labelStyle}>Due Date <span style={{ color: "var(--text-4)", fontWeight: 400 }}>(bids close at this time)</span></label>
               <input
                 type="datetime-local"
                 value={form.submission_deadline}
@@ -351,7 +353,12 @@ export default function NewRound() {
                 onChange={(e) => setForm({ ...form, reserve_price_enabled: e.target.checked })}
                 style={{ width: "16px", height: "16px", accentColor: "#3D81E3" }}
               />
-              <span style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.6)" }}>Enable reserve price floor</span>
+              <span style={{ fontSize: "0.85rem", color: "var(--text-2)" }}>
+                Enable reserve price floor
+                <span style={{ display: "block", fontSize: "0.72rem", color: "var(--text-4)", fontWeight: 400 }}>
+                  Set a minimum acceptable price per item; bids below it can’t win without an admin override.
+                </span>
+              </span>
             </label>
 
             <button type="submit" disabled={working} className="btn-brand" style={{ width: "100%", padding: "12px", fontSize: "0.9rem" }}>
@@ -364,7 +371,7 @@ export default function NewRound() {
         {step === 2 && (
           <div style={{ ...card, display: "flex", flexDirection: "column", gap: "20px" }}>
             <p style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.95rem", margin: 0 }}>Upload Master File</p>
-            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
               Upload the Excel/CSV containing all line items buyers will bid on. Required columns: Part Number, Description, Quantity.
             </p>
 
@@ -377,7 +384,7 @@ export default function NewRound() {
                 <span style={{ fontSize: "1.5rem" }}>✓</span>
                 <div>
                   <p style={{ fontWeight: 600, color: "#34d399", margin: "0 0 3px" }}>{masterCount.toLocaleString()} line items loaded</p>
-                  <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>{masterFile?.name}</p>
+                  <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: 0 }}>{masterFile?.name}</p>
                 </div>
                 <button
                   onClick={() => { setMasterCount(null); setMasterFile(null); }}
@@ -461,7 +468,7 @@ export default function NewRound() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <p style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.95rem", margin: 0 }}>Assign Buyers</p>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)" }}>
+                <span style={{ fontSize: "0.78rem", color: "var(--text-4)" }}>
                   {selectedBuyers.size} of {buyers.length} selected
                 </span>
                 {buyers.length > 0 && (
@@ -518,7 +525,7 @@ export default function NewRound() {
                 onChange={(e) => setSendInvites(e.target.checked)}
                 style={{ width: "15px", height: "15px", accentColor: "#3D81E3" }}
               />
-              <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.55)" }}>
+              <span style={{ fontSize: "0.82rem", color: "var(--text-3)" }}>
                 Send invitation emails to selected buyers when round opens
               </span>
             </label>
@@ -557,7 +564,7 @@ export default function NewRound() {
                   background: "rgba(255,255,255,0.02)",
                   borderRadius: "8px",
                 }}>
-                  <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.4)" }}>{label}</span>
+                  <span style={{ fontSize: "0.82rem", color: "var(--text-4)" }}>{label}</span>
                   <span style={{ fontSize: "0.82rem", color: "var(--text-1)", fontWeight: 500 }}>{value}</span>
                 </div>
               ))}

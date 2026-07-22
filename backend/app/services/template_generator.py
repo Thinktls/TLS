@@ -2,12 +2,12 @@
 Generate a bid template Excel file for a given round.
 Clean, professional design: white/light backgrounds, thin borders, no dark fills.
 - Sheet 1: Instructions (read-only)
-- Sheet 2: Bid Template — part numbers locked, only Unit Price and Quantity editable
+- Sheet 2: Bid Template — everything locked except the Unit Price ($) column
 Returns bytes.
 """
 import io
 import hashlib
-from datetime import timezone, timedelta
+from app.core.timeutil import format_et
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side, Protection as _Prot
 from openpyxl.utils import get_column_letter
@@ -81,14 +81,11 @@ CENTER = Alignment(horizontal="center", vertical="center", wrap_text=False)
 LEFT   = Alignment(horizontal="left",   vertical="center", wrap_text=True)
 RIGHT  = Alignment(horizontal="right",  vertical="center")
 
-_EST = timezone(timedelta(hours=-5))
-
-
 def _fmt_deadline(dt) -> str:
     if not dt:
         return "See invitation email"
-    est = dt.astimezone(_EST)
-    return est.strftime("%m/%d/%Y %I:%M %p") + " EST"
+    # Real Eastern time with DST — matches the app UI (was a fixed -5 "EST", an hour off in summer).
+    return format_et(dt)
 
 
 def generate_bid_template(db: Session, round_id: int) -> bytes:
@@ -164,9 +161,9 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         "How to complete this template:",
         "1.  Switch to the 'Bid Template' tab below.",
         "2.  Fill in your Unit Price ($) for each item you wish to bid on.",
-        "3.  You may also adjust Quantity if you want to bid on a partial lot.",
+        "3.  Each line is the full quantity — bids are all-or-nothing, there is no partial lot.",
         "4.  Leave Unit Price blank to opt out of a line — zero means you opt out.",
-        "5.  Do NOT modify Part Number, Description, or Manufacturer columns.",
+        "5.  Do NOT modify any column other than Unit Price ($).",
         "6.  Save this file and upload it via the buyer portal before the deadline.",
         "",
         "Questions? Email bids@thinktls.com and include the round number.",
@@ -220,21 +217,55 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
     if is_unit_level_round:
         # Original column names carry all the data — no generic renamed fixed columns needed.
         fixed_headers = ["Row #"]
-        fixed_widths  = [7]
     else:
         fixed_headers = ["Row #", "Part Number", "Manufacturer", "Description", "Avail Qty"]
-        fixed_widths  = [7, 22, 16, 50, 10]
 
-    buyer_headers   = ["Unit Price ($)", "Your Qty"]
-    buyer_widths    = [16,               10]
-    spec_widths     = [max(14, min(len(k) + 2, 30)) for k in spec_keys]
+    # Only "Unit Price ($)" is buyer-editable. "Your Qty" was removed: a buyer takes the full
+    # quantity of a line or doesn't bid on it — there is no partial quantity to enter, so the
+    # column was dead input that only added confusion.
+    buyer_headers = ["Unit Price ($)"]
 
     all_headers = fixed_headers + spec_keys + buyer_headers
-    all_widths  = fixed_widths  + spec_widths + buyer_widths
+
+    # Size every column to the width of its actual content so the file opens readable, rather
+    # than to a fixed guess that clipped long values (Description / Model Title) and left short
+    # ones oversized. openpyxl can't trigger Excel's runtime auto-fit, so we measure the data
+    # ourselves. Sampling the first rows keeps this fast on a 9,000-row template while still
+    # capturing representative widths.
+    _SAMPLE = 400
+
+    def _value_for(header: str, item) -> str:
+        if header == "Row #":
+            return "0000"
+        if header == "Part Number":
+            return item.part_number or ""
+        if header == "Manufacturer":
+            return item.manufacturer or ""
+        if header == "Description":
+            return item.description or ""
+        if header == "Avail Qty":
+            return str(item.quantity or "")
+        return str((item.extra_columns or {}).get(header, ""))
+
+    def _col_width(header: str, editable: bool = False) -> float:
+        longest = len(str(header))
+        for it in items[:_SAMPLE]:
+            v = _value_for(header, it)
+            if v:
+                longest = max(longest, len(v))
+        # +2 char padding; a little wider for the editable price column so it's obvious.
+        lo, hi = (14, 18) if editable else (8, 55)
+        return max(lo, min(longest + 2, hi))
+
+    all_widths = (
+        [_col_width(h) for h in fixed_headers]
+        + [_col_width(k) for k in spec_keys]
+        + [_col_width(h, editable=True) for h in buyer_headers]
+    )
 
     total_cols      = len(all_headers)
     editable_start  = len(fixed_headers) + len(spec_keys) + 1  # 1-indexed
-    editable        = {editable_start, editable_start + 1}
+    editable        = {editable_start}   # only Unit Price ($) is editable now
 
     for col_idx, (hdr, width) in enumerate(zip(all_headers, all_widths), start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
@@ -266,7 +297,7 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
             (item.extra_columns or {}).get(k, "")
             for k in spec_keys
         ]
-        buyer_values = [None, None]  # Unit Price, Your Qty — buyer fills these in
+        buyer_values = [None]  # Unit Price ($) — buyer fills this in
 
         all_values = fixed_values + spec_values + buyer_values
 
