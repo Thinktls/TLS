@@ -357,6 +357,36 @@ def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
     return buf.getvalue()
 
 
+def export_report_pack_zip(db: Session, bid_round_id: int) -> bytes:
+    """One ZIP with every report for a round, so an admin grabs everything in a single click
+    instead of downloading six files. Each part is wrapped so one failing export can't sink
+    the whole pack — its error is written into an _errors.txt note instead."""
+    parts: list[tuple[str, bytes]] = []
+    errors: list[str] = []
+
+    def _add(name: str, fn):
+        try:
+            parts.append((name, fn()))
+        except Exception as exc:  # keep building the pack even if one report fails
+            errors.append(f"{name}: {type(exc).__name__}: {exc}")
+
+    _add(f"deals_round_{bid_round_id}.xlsx", lambda: export_deals_excel(db, bid_round_id))
+    _add(f"bid_comparison_round_{bid_round_id}.xlsx", lambda: export_bid_comparison_excel(db, bid_round_id))
+    _add(f"disposition_round_{bid_round_id}.xlsx", lambda: export_disposition_report(db, bid_round_id))
+    _add(f"margin_round_{bid_round_id}.xlsx", lambda: export_margin_report(db, bid_round_id))
+    _add(f"razor_sales_order_round_{bid_round_id}.csv", lambda: export_razor_csv(db, bid_round_id))
+    _add(f"razor_per_customer_round_{bid_round_id}.zip", lambda: export_razor_per_customer_zip(db, bid_round_id))
+    _add(f"all_award_sheets_round_{bid_round_id}.zip", lambda: export_all_award_sheets_zip(db, bid_round_id))
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, data in parts:
+            zf.writestr(name, data)
+        if errors:
+            zf.writestr("_errors.txt", "Some reports could not be generated:\n\n" + "\n".join(errors))
+    return buf.getvalue()
+
+
 # ── Inventory Disposition Report ─────────────────────────────────────────────
 
 def export_disposition_report(db: Session, bid_round_id: int) -> bytes:

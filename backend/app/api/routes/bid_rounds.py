@@ -38,6 +38,7 @@ from app.services.export_service import (
     export_deals_excel, export_deals_csv, export_bid_comparison_excel,
     export_buyer_award_sheet, export_all_award_sheets_zip,
     export_razor_csv, export_razor_per_customer_zip, export_margin_report, export_disposition_report,
+    export_report_pack_zip,
     export_erp_line_report,
 )
 from app.services.file_parser import parse_master_file
@@ -1178,6 +1179,14 @@ def export_single_award(round_id: int, buyer_id: int, db: Session = Depends(get_
 def export_all_awards(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     data = export_all_award_sheets_zip(db, round_id)
     return StreamingResponse(iter([data]), media_type="application/zip", headers={"Content-Disposition": f"attachment; filename=all_award_sheets_round_{round_id}.zip"})
+
+
+@router.get("/{round_id}/export/report-pack.zip")
+def export_report_pack(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Everything for this round in one ZIP: deals, comparison, disposition, margin, Razor
+    (round + per-customer) and all award sheets."""
+    data = export_report_pack_zip(db, round_id)
+    return StreamingResponse(iter([data]), media_type="application/zip", headers={"Content-Disposition": f"attachment; filename=report_pack_round_{round_id}.zip"})
 
 
 @router.get("/{round_id}/export/razor.csv")

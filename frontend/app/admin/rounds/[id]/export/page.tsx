@@ -106,6 +106,15 @@ export default function ExportCenter() {
 
         <div style={{ height: "24px" }} />
 
+        {/* One-click bundle of every report below. */}
+        <button
+          onClick={() => downloadFile(`/rounds/${id}/export/report-pack.zip`, `report_pack_${slug}.zip`)}
+          className="btn-brand"
+          style={{ width: "100%", padding: "14px", fontSize: "0.9rem", marginBottom: "24px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+        >
+          ⬇ Download Full Report Pack (everything in one ZIP)
+        </button>
+
         <Section title="Bid Results">
           <ExportRow
             label="Deals Export (.xlsx)"
