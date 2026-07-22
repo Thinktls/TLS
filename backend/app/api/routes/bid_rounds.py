@@ -1245,6 +1245,25 @@ def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(requ
     anomalies = [l for l in all_lines if l.is_anomaly]
     approved_deals = [d for d in all_deals if d.status == "approved"]
 
+    # Pre-group once (O(n)) so the per-buyer and per-item sections below are dict lookups, not
+    # nested scans. Analytics on a per-device round (9,305 masters × 18,610 lines) previously
+    # ran the price-distribution scan as ~173M comparisons in Python and took ~142s — well past
+    # any HTTP timeout on the hosted tier.
+    from collections import defaultdict as _dd
+    matched_by_buyer: dict[int, list] = _dd(list)
+    for l in matched:
+        matched_by_buyer[l.buyer_id].append(l)
+    approved_deals_by_buyer: dict[int, list] = _dd(list)
+    for d in approved_deals:
+        approved_deals_by_buyer[d.winning_buyer_id].append(d)
+    bidfile_by_buyer: dict[int, object] = {}
+    for bf in bid_files:
+        bidfile_by_buyer.setdefault(bf.buyer_id, bf)
+    lines_by_master: dict[int, list] = _dd(list)
+    for l in all_lines:
+        if l.unit_price and (l.match_status == "matched" or l.is_anomaly):
+            lines_by_master[l.master_item_id].append(l)
+
     # Coverage: master items that received at least one valid matched bid
     master_ids_with_bids = {l.master_item_id for l in matched}
     coverage_pct = round(len(master_ids_with_bids) / len(masters) * 100, 1) if masters else 0.0
@@ -1273,11 +1292,11 @@ def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(requ
         buyer = buyer_map.get(buyer_id)
         if not buyer:
             continue
-        buyer_lines = [l for l in matched if l.buyer_id == buyer_id]
+        buyer_lines = matched_by_buyer.get(buyer_id, [])
         buyer_won = [l for l in buyer_lines if l.is_winner]
-        buyer_deals = [d for d in approved_deals if d.winning_buyer_id == buyer_id]
+        buyer_deals = approved_deals_by_buyer.get(buyer_id, [])
         total_value = round(sum(d.total_value for d in buyer_deals), 2)
-        bid_file = next((bf for bf in bid_files if bf.buyer_id == buyer_id), None)
+        bid_file = bidfile_by_buyer.get(buyer_id)
         buyer_rows.append({
             "id": buyer_id,
             "company_name": buyer.company_name or buyer.full_name,
@@ -1294,15 +1313,10 @@ def round_analytics(round_id: int, db: Session = Depends(get_db), _=Depends(requ
     # Price distribution per master item (for items with >= 2 bids)
     price_dist = []
     for master in masters:
-        # Include anomalous bids alongside the matched ones. An anomaly is routed to the
-        # exception queue (match_status="exception"), so filtering on "matched" alone dropped
-        # it here — which meant has_anomaly could never be true and the ⚠ badge was dead code.
-        # The outlier price is also precisely what makes this item's spread worth looking at.
-        item_lines = [
-            l for l in all_lines
-            if l.master_item_id == master.id and l.unit_price
-            and (l.match_status == "matched" or l.is_anomaly)
-        ]
+        # lines_by_master already holds each item's priced matched/anomalous bids (an anomaly is
+        # routed to the exception queue, so it must be included here or the ⚠ badge is dead code
+        # — and the outlier is exactly what makes an item's spread worth showing).
+        item_lines = lines_by_master.get(master.id, [])
         if len(item_lines) < 2:
             continue
         prices = [l.unit_price for l in item_lines]
