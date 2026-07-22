@@ -9,7 +9,8 @@ interface ResultLine {
   part_number: string; description: string | null; quantity: number | null;
   outcome: "WON" | "LOST"; your_price: number | null; winning_price: number | null;
 }
-interface ResultData { round_id: number; results: ResultLine[]; won: number; lost: number; }
+interface RollupRow { model: string; description: string; won: number; lost: number; won_value: number; }
+interface ResultData { round_id: number; results: ResultLine[]; rollup?: RollupRow[]; won: number; lost: number; }
 interface RoundRow { id: number; name: string; status: string; lines_submitted: number; lines_won: number; }
 
 function ResultsInner() {
@@ -19,7 +20,7 @@ function ResultsInner() {
   const [selected, setSelected] = useState<number | null>(preselect ? Number(preselect) : null);
   const [result, setResult] = useState<ResultData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [filterOutcome, setFilterOutcome] = useState<"all" | "WON" | "LOST">("all");
+  const [filterOutcome, setFilterOutcome] = useState<"all" | "WON" | "LOST" | "model">("all");
 
   useEffect(() => {
     api.get("/buyer/my-rounds").then(r => {
@@ -104,20 +105,52 @@ function ResultsInner() {
                 </div>
 
                 {/* Filter tabs */}
-                <div style={{ display: "flex", gap: "4px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "4px", width: "fit-content", marginBottom: "16px" }}>
-                  {(["all","WON","LOST"] as const).map(f => (
+                <div style={{ display: "flex", gap: "4px", background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "10px", padding: "4px", width: "fit-content", marginBottom: "16px", flexWrap: "wrap" }}>
+                  {(["all","WON","LOST","model"] as const).map(f => (
                     <button key={f} onClick={() => setFilterOutcome(f)} style={{
                       padding: "5px 14px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none",
                       background: filterOutcome === f ? "rgba(61,129,227,0.18)" : "transparent",
                       color: filterOutcome === f ? "white" : "var(--text-4)",
                       fontWeight: filterOutcome === f ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
                     }}>
-                      {f === "all" ? `All (${result.results.length})` : f === "WON" ? `Won (${result.won})` : `Lost (${result.lost})`}
+                      {f === "all" ? `All (${result.results.length})` : f === "WON" ? `Won (${result.won})` : f === "LOST" ? `Lost (${result.lost})` : `Summed by Model (${result.rollup?.length ?? 0})`}
                     </button>
                   ))}
                 </div>
 
-                {/* Table */}
+                {/* Summed-by-model view — one line per model with won/lost totals, so a buyer
+                    with thousands of per-device results sees the picture at a glance. */}
+                {filterOutcome === "model" ? (
+                  <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+                    <table className="dark-table">
+                      <thead>
+                        <tr>
+                          <th>Model</th><th>Description</th>
+                          <th style={{ textAlign: "right" }}>Won</th>
+                          <th style={{ textAlign: "right" }}>Lost</th>
+                          <th style={{ textAlign: "right" }}>Won Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(result.rollup ?? []).map((r, i) => (
+                          <tr key={i}>
+                            <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--text-1)" }}>{r.model}</td>
+                            <td style={{ maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-3)" }}>{r.description || "—"}</td>
+                            <td style={{ textAlign: "right", color: r.won > 0 ? "#34d399" : "var(--text-4)", fontWeight: r.won > 0 ? 700 : 400 }}>{r.won}</td>
+                            <td style={{ textAlign: "right", color: r.lost > 0 ? "#60a5fa" : "var(--text-4)" }}>{r.lost}</td>
+                            <td style={{ textAlign: "right", fontFamily: "monospace", color: "#34d399" }}>{r.won_value > 0 ? `$${r.won_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {(result.rollup ?? []).length === 0 && (
+                      <div style={{ padding: "40px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>No results yet.</div>
+                    )}
+                  </div>
+                ) : (<></>)}
+
+                {/* Per-line table (hidden in the summed-by-model view) */}
+                {filterOutcome !== "model" && (
                 <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
                   <table className="dark-table">
                     <thead>
@@ -152,6 +185,7 @@ function ResultsInner() {
                     <div style={{ padding: "40px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>No results match this filter.</div>
                   )}
                 </div>
+                )}
                 <p style={{ fontSize: "0.7rem", color: "var(--text-4)", marginTop: "10px" }}>
                   * Winning prices for lost lines reflect competitive market pricing and may include adjustments.
                 </p>

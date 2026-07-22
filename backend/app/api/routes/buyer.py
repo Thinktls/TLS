@@ -492,6 +492,17 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
     }
     lines_by_master = {l.master_item_id: l for l in lines if l.master_item_id}
 
+    def _model_of(master, fallback_pn: str) -> str:
+        # Recover the base model from the item's original columns — "Model" (server/laptop) or
+        # "Part Number" (drive/memory, whose per-device PN is that value + serial). Groups a
+        # buyer's per-device results into "Model ×N" the same way the admin deals rollup does.
+        if master and master.extra_columns:
+            low = {str(k).strip().lower(): v for k, v in master.extra_columns.items()}
+            m = str(low.get("model") or low.get("part number") or low.get("part#") or "").strip()
+            if m:
+                return m
+        return fallback_pn or "—"
+
     results = []
     # WON: from deals (correctly reflects award-lot and other admin overrides)
     for d in won_deals:
@@ -499,6 +510,7 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
         own_line = lines_by_master.get(d.master_item_id)
         results.append({
             "part_number": d.part_number or (master.part_number if master else ""),
+            "model": _model_of(master, d.part_number or (master.part_number if master else "")),
             "description": d.description or (master.description if master else ""),
             "quantity": d.quantity,
             "outcome": "WON",
@@ -513,6 +525,7 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
         master = masters_map_r.get(l.master_item_id) if l.master_item_id else None
         results.append({
             "part_number": master.part_number if master else l.raw_part_number,
+            "model": _model_of(master, (master.part_number if master else l.raw_part_number)),
             "description": master.description if master else l.description,
             "quantity": l.quantity,
             "outcome": "LOST",
@@ -520,9 +533,27 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
             "winning_price": l.fluffed_loss_price,
         })
 
+    # Summed-by-model rollup so the buyer sees "Model — won 12 / lost 4" instead of scrolling
+    # thousands of per-device rows.
+    roll: dict[str, dict] = {}
+    for r in results:
+        g = roll.setdefault(r["model"], {
+            "model": r["model"], "description": r["description"],
+            "won": 0, "lost": 0, "won_value": 0.0,
+        })
+        if r["outcome"] == "WON":
+            g["won"] += r["quantity"] or 1
+            g["won_value"] += (r["your_price"] or 0) * (r["quantity"] or 1)
+        else:
+            g["lost"] += r["quantity"] or 1
+    rollup = sorted(roll.values(), key=lambda x: (-x["won"], -x["lost"]))
+    for g in rollup:
+        g["won_value"] = round(g["won_value"], 2)
+
     return {
         "round_id": round_id,
         "results": results,
+        "rollup": rollup,
         "won": sum(1 for r in results if r["outcome"] == "WON"),
         "lost": sum(1 for r in results if r["outcome"] == "LOST"),
     }
