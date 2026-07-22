@@ -58,6 +58,17 @@ interface AwardLotModal {
   reason: string;
 }
 
+interface RollupBuyer { buyer_id: number; buyer: string; qty: number; avg_price: number | null; total_value: number; }
+interface RollupRow {
+  model: string; description: string; qty: number; total_value: number;
+  avg_price: number | null; min_price: number | null; max_price: number | null;
+  buyers: RollupBuyer[]; status: string;
+}
+interface RollupData {
+  rollup: RollupRow[];
+  total_models: number; total_devices: number; total_value: number;
+}
+
 const statusBadge: Record<string, { background: string; color: string }> = {
   pending_approval: { background: "rgba(251,191,36,0.15)", color: "#fbbf24" },
   approved:         { background: "rgba(52,211,153,0.15)", color: "#34d399" },
@@ -170,6 +181,9 @@ export default function DealsPage() {
   const [awardLot, setAwardLot] = useState<AwardLotModal | null>(null);
   const [roundBuyers, setRoundBuyers] = useState<RoundBuyer[]>([]);
   const [awardingLot, setAwardingLot] = useState(false);
+  const [viewMode, setViewMode] = useState<"device" | "model">("device");
+  const [rollup, setRollup] = useState<RollupData | null>(null);
+  const [rollupLoading, setRollupLoading] = useState(false);
 
   function flash(text: string, type: "ok" | "err" = "ok") {
     setMsg(text); setMsgType(type);
@@ -180,6 +194,20 @@ export default function DealsPage() {
     const d = await api.get(`/deals/rounds/${id}`).then((r) => r.data).catch(() => []);
     setDeals(d);
     setLoading(false);
+    // Refresh the model rollup too if it's been loaded, so both views stay in sync after actions.
+    if (rollup) loadRollup();
+  }
+
+  async function loadRollup() {
+    setRollupLoading(true);
+    const r = await api.get(`/deals/rounds/${id}/rollup`).then((x) => x.data).catch(() => null);
+    setRollup(r);
+    setRollupLoading(false);
+  }
+
+  function switchView(mode: "device" | "model") {
+    setViewMode(mode);
+    if (mode === "model" && !rollup) loadRollup();
   }
 
   useEffect(() => {
@@ -367,6 +395,69 @@ export default function DealsPage() {
           </div>
         )}
 
+        {/* View toggle: per-device (default) vs summed-by-model. A per-device round is thousands
+            of rows; the model view collapses them to one line per model with the total quantity. */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>View:</span>
+          {(["device", "model"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => switchView(m)}
+              className={viewMode === m ? "btn-brand" : "btn-ghost"}
+              style={{ fontSize: "0.76rem", padding: "6px 14px" }}
+            >
+              {m === "device" ? "Per device" : "Summed by model"}
+            </button>
+          ))}
+          {viewMode === "model" && rollup && (
+            <span style={{ fontSize: "0.74rem", color: "var(--text-4)", marginLeft: "6px" }}>
+              {rollup.total_models.toLocaleString()} models · {rollup.total_devices.toLocaleString()} devices · ${rollup.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+          )}
+        </div>
+
+        {viewMode === "model" ? (
+          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+            {rollupLoading && <p style={{ padding: "24px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>Summing…</p>}
+            {!rollupLoading && rollup && rollup.rollup.length === 0 && (
+              <p style={{ padding: "24px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>No deals yet.</p>
+            )}
+            {!rollupLoading && rollup && rollup.rollup.length > 0 && (
+              <table className="dark-table" style={{ width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th style={{ textAlign: "right" }}>Qty</th>
+                    <th style={{ textAlign: "right" }}>Avg Price</th>
+                    <th style={{ textAlign: "right" }}>Total Value</th>
+                    <th>Won by</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rollup.rollup.map((r) => (
+                    <tr key={r.model}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.84rem", fontFamily: "monospace" }}>{r.model}</div>
+                        <div style={{ color: "var(--text-4)", fontSize: "0.72rem" }}>{r.description}</div>
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--text-1)" }}>{r.qty.toLocaleString()}</td>
+                      <td style={{ textAlign: "right", color: "var(--text-2)" }}>
+                        {r.avg_price != null ? `$${r.avg_price.toFixed(2)}` : "—"}
+                        {r.min_price != null && r.max_price != null && r.min_price !== r.max_price && (
+                          <div style={{ fontSize: "0.68rem", color: "var(--text-4)" }}>${r.min_price.toFixed(2)}–${r.max_price.toFixed(2)}</div>
+                        )}
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#34d399" }}>${r.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>
+                        {r.buyers.map((b) => `${b.buyer} ×${b.qty}`).join(", ")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : (
         <div style={{
           background: "var(--bg-2)",
           border: "1px solid var(--border)",
@@ -487,6 +578,7 @@ export default function DealsPage() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Award Entire Lot Modal */}
         {awardLot && (

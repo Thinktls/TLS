@@ -13,6 +13,7 @@ from app.core.security import require_admin
 from app.models.deal import Deal
 from app.models.user import User
 from app.models.bid_line import BidLine
+from app.models.master_item import MasterItem
 from app.models.approval_override import ApprovalOverride
 from app.services.buyer_scorer import recalculate_buyer_scores
 from app.api.routes.notifications import create_notification
@@ -57,6 +58,102 @@ def list_deals(round_id: int, db: Session = Depends(get_db), _=Depends(require_a
         .all()
     }
     return [_deal_out_fast(d, buyers_map, override_counts) for d in deals]
+
+
+def _model_key(deal, master) -> tuple[str, str]:
+    """(display model, description) used to roll deals up by model. Per-device rounds store a
+    unique 'Model-Serial' part number on the deal, so the real model is recovered from the
+    master item's original columns:
+      - server/laptop files carry a "Model" column;
+      - drive/memory files have no Model column — the base model IS the "Part Number" column
+        (the deal's part number is that value with the serial/uid appended).
+    Fall back to the deal part number if neither is present."""
+    model = ""
+    if master and master.extra_columns:
+        low = {str(k).strip().lower(): v for k, v in master.extra_columns.items()}
+        model = str(low.get("model") or low.get("part number") or low.get("part#") or "").strip()
+    if not model:
+        model = deal.part_number or "—"
+    return model, (deal.description or (master.description if master else "") or "")
+
+
+@router.get("/rounds/{round_id}/rollup")
+def deals_rollup(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Deals summed by MODEL instead of one row per physical device.
+
+    A per-device round awards e.g. 16 separate 'S2600WTT-<serial>' deals; the sales/Razor
+    view wants them as one line 'S2600WTT ×16'. Groups approved+pending deals by model and,
+    within each model, by winning buyer, summing quantity and value.
+    """
+    deals = db.query(Deal).filter(Deal.bid_round_id == round_id).all()
+    if not deals:
+        return {"rollup": [], "total_models": 0, "total_devices": 0, "total_value": 0.0}
+
+    masters = {
+        m.id: m for m in db.query(MasterItem).filter(MasterItem.bid_round_id == round_id).all()
+    }
+    buyer_ids = {d.winning_buyer_id for d in deals}
+    buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()} if buyer_ids else {}
+
+    # model -> aggregate
+    groups: dict[str, dict] = {}
+    for d in deals:
+        master = masters.get(d.master_item_id)
+        model, desc = _model_key(d, master)
+        g = groups.setdefault(model, {
+            "model": model, "description": desc,
+            "qty": 0, "total_value": 0.0, "prices": [], "by_buyer": {},
+            "statuses": set(),
+        })
+        qty = d.quantity or 1
+        g["qty"] += qty
+        g["total_value"] += d.total_value or 0.0
+        if d.winning_price is not None:
+            g["prices"].append(d.winning_price)
+        g["statuses"].add(d.status)
+        buyer = buyers.get(d.winning_buyer_id)
+        bname = (buyer.company_name or buyer.full_name) if buyer else f"Buyer {d.winning_buyer_id}"
+        b = g["by_buyer"].setdefault(d.winning_buyer_id, {
+            "buyer_id": d.winning_buyer_id, "buyer": bname, "qty": 0, "total_value": 0.0, "prices": [],
+        })
+        b["qty"] += qty
+        b["total_value"] += d.total_value or 0.0
+        if d.winning_price is not None:
+            b["prices"].append(d.winning_price)
+
+    rollup = []
+    for g in groups.values():
+        prices = g["prices"]
+        by_buyer = []
+        for b in g["by_buyer"].values():
+            bp = b["prices"]
+            by_buyer.append({
+                "buyer_id": b["buyer_id"], "buyer": b["buyer"], "qty": b["qty"],
+                "avg_price": round(sum(bp) / len(bp), 2) if bp else None,
+                "total_value": round(b["total_value"], 2),
+            })
+        by_buyer.sort(key=lambda x: -x["qty"])
+        rollup.append({
+            "model": g["model"],
+            "description": g["description"],
+            "qty": g["qty"],
+            "total_value": round(g["total_value"], 2),
+            "avg_price": round(sum(prices) / len(prices), 2) if prices else None,
+            "min_price": round(min(prices), 2) if prices else None,
+            "max_price": round(max(prices), 2) if prices else None,
+            "buyers": by_buyer,
+            "status": "approved" if g["statuses"] == {"approved"} else (
+                "mixed" if len(g["statuses"]) > 1 else next(iter(g["statuses"]))
+            ),
+        })
+    rollup.sort(key=lambda r: -r["total_value"])
+
+    return {
+        "rollup": rollup,
+        "total_models": len(rollup),
+        "total_devices": sum(r["qty"] for r in rollup),
+        "total_value": round(sum(r["total_value"] for r in rollup), 2),
+    }
 
 
 @router.post("/{deal_id}/approve")
