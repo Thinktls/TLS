@@ -58,8 +58,10 @@ def _base(content: str, preview_text: str = "") -> str:
               <tr>
                 <td>
                   <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.6;">
-                    © ThinkTLS &nbsp;·&nbsp; This email is confidential and intended solely for the named recipient.<br/>
-                    If you received this in error, please disregard and do not share its contents.
+                    You received this email because your company is a registered buyer on the ThinkTLS
+                    Bid Desk. This is a transactional message about your account or an active bid round.<br/>
+                    © ThinkTLS &nbsp;·&nbsp; Confidential — intended solely for the named recipient.
+                    If received in error, please disregard and let us know by replying.
                   </p>
                 </td>
                 <td align="right" style="white-space:nowrap;">
