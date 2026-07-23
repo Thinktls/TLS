@@ -187,8 +187,8 @@ export default function ExportCenter() {
             ext="csv"
           />
           <ExportRow
-            label="Razor Upload — per customer (.zip)"
-            description="One CSV per customer sale with Model, Serial, UID and Price — ready to upload into Razor. Approved deals only."
+            label="Razor Upload — per winner (.zip of .xlsx)"
+            description="One Excel per winning customer, expanded to ONE ROW PER DEVICE with Model, Serial, UID and Price — ready to upload into Razor. Approved deals only."
             path={`/rounds/${id}/export/razor-per-customer.zip`}
             filename={`razor_per_customer_${slug}.zip`}
             ext="zip"
