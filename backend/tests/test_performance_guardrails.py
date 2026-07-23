@@ -93,81 +93,77 @@ def test_file_parsing_preserves_exact_row_count(num_rows):
     assert len(part_numbers) == len(set(part_numbers)), "Duplicate part numbers in parsed output."
 
 
-# ── Upload must preserve EVERY column and EVERY data row (full fidelity) ─────────
-# Requirement: a real client file (laptops/servers) carries many spec columns (CPU, memory,
-# storage, networking, grade, serial, …) and thousands of rows. Uploading must take the file
-# "exact" — no spec column silently dropped, no data row silently skipped — regardless of what
-# extra columns a future file adds. Only the reserve/price placeholder columns are omitted.
+# ── Upload consolidates by MODEL, preserving every spec column and every device ─────
+# Requirement (ThinkTLS, 2026-07-23): a unit-level file is bid at the MODEL level — "qty (8)
+# 15-13079-02", not 8 separate lines. Uploading must (a) sum the quantity per model, (b) keep
+# every model-level spec column, and (c) preserve EVERY physical device's Serial/UID in
+# unit_details so the per-winner Razor output can expand a won model back to its devices. The
+# per-device identifier columns move to unit_details and don't appear as model-level spec cols.
 
 def _make_unit_level_xlsx(num_rows: int, spec_cols: list[str], blank_col: str | None = None) -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
-    # Serial makes it a unit-level (1 row per unit) file; every other column is arbitrary spec data.
+    # Serial makes it a unit-level file; Model repeats so rows consolidate by model.
     cols = ["Model", "Serial", "MFG"] + spec_cols
     ws.append(cols)
     for i in range(num_rows):
         vals = []
         for c in spec_cols:
-            # blank_col is empty on the FIRST rows and only filled later — this is the real
-            # "Drive bays" shape that used to shove a column to the end of the template.
+            # blank_col is empty on the FIRST rows and only filled later — the real "Drive bays"
+            # shape that used to shove a column to the end of the template.
             if c == blank_col:
                 vals.append("" if i < 3 else f"late-{i}")
             else:
-                vals.append(f"{c}-val-{i}")
+                vals.append(f"{c}-val")   # model-level: same across a model's devices
         ws.append([f"MODEL-{i%40}", f"SN{i:06d}", "DELL"] + vals)
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
 
 
-def test_upload_preserves_all_columns_and_all_rows():
-    # 12 arbitrary spec columns the parser has never seen named before.
+def test_upload_consolidates_by_model_and_preserves_devices():
     spec_cols = [f"Spec Column {chr(65+i)}" for i in range(12)]
-    num_rows = 750
+    num_rows = 750  # 40 distinct models (MODEL-0..39)
     content = _make_unit_level_xlsx(num_rows, spec_cols)
     rows = parse_master_file(content, "big_unit_file.xlsx")
 
-    # Every physical unit row survives 1:1 (unit-level files never aggregate).
-    assert len(rows) == num_rows, (
-        f"Unit-level upload lost rows: {num_rows} in, {len(rows)} out. No data row may be skipped."
+    # Consolidated to one row per model, with the device count summed and every device kept.
+    assert len(rows) == 40, f"Expected 40 models, got {len(rows)} — file must consolidate by model."
+    assert sum(r["quantity"] for r in rows) == num_rows, "Total device quantity must equal input rows."
+    assert sum(len(r.get("unit_details") or []) for r in rows) == num_rows, (
+        "Every physical device's Serial/UID must be preserved in unit_details for the Razor output."
     )
-    # Every arbitrary spec column is preserved on every row (mapped fields + extra_columns),
-    # so nothing in the source file is missed.
     for r in rows:
         preserved = set(r.get("extra_columns") or {})
-        # Model/MFG map to standard fields; the 12 spec columns must all be in extra_columns.
         missing = set(spec_cols) - preserved
-        assert not missing, f"Spec columns dropped from upload: {sorted(missing)} — file must be taken exact."
+        assert not missing, f"Spec columns dropped: {sorted(missing)} — nothing may be missed."
         assert r["manufacturer"] == "DELL"
+        # Serial is a per-device identifier — it belongs in unit_details, not as a model spec col.
+        assert "Serial" not in preserved
+        assert all("Serial" in d for d in (r.get("unit_details") or []))
 
 
-# ── Template columns must mirror the admin's file, in the SAME ORDER ─────────────
-# Incident: a drive file uploaded as Part Number|Manufacturer|Uid|Serial|Condition|Description
-# came back to the buyer as Uid|Serial|Condition|Description|Part Number|Manufacturer. Two
-# separate causes, both fixed: (1) extra_columns was physically `jsonb`, which discards key
-# order; (2) blank cells were skipped per row, so a column blank on the first rows ("Drive
-# bays" on the first server) was pushed to the end of the template — or vanished entirely if
-# blank on every row scanned.
+# ── Model-level spec columns keep the source file's order ────────────────────────
+# extra_columns must round-trip in the file's column order (it was physically jsonb, which
+# discards key order; and blank cells were dropped per row, reordering columns). Identifier
+# columns (Serial/UID) are excluded now that they live in unit_details.
 
 def test_extra_columns_keep_source_order_including_blank_columns():
     spec_cols = ["Alpha Spec", "Blank Until Later", "Zeta Spec", "Mid Spec"]
     content = _make_unit_level_xlsx(20, spec_cols, blank_col="Blank Until Later")
     rows = parse_master_file(content, "order_test.xlsx")
 
-    # Every row carries every source column, in the file's own order — including the column
-    # that is blank on the early rows. The template's column order is derived from this.
-    expected = ["Model", "Serial", "MFG"] + spec_cols
+    # Only the non-standard spec columns remain, in the file's order: Model→part_number,
+    # MFG→manufacturer and Serial→unit_details are all surfaced elsewhere, not repeated here.
+    expected = spec_cols
     for r in rows:
         got = list((r.get("extra_columns") or {}).keys())
         assert got == expected, (
             f"extra_columns order drifted from the source file.\n expected: {expected}\n got:      {got}"
         )
-
-    # The blank column must exist on the early rows (as ""), not be dropped — otherwise it
-    # only appears once a later row has a value, which is what reordered the template.
+    # The blank column must still be present (as "") in order, not dropped.
     first = rows[0]["extra_columns"]
-    assert "Blank Until Later" in first
-    assert first["Blank Until Later"] == ""
+    assert "Blank Until Later" in first and first["Blank Until Later"] == ""
     assert rows[-1]["extra_columns"]["Blank Until Later"].startswith("late-")
 
 

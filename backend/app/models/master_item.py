@@ -24,6 +24,12 @@ class MasterItem(Base):
     category = Column(String, nullable=True)
     extra_columns = Column(JSON, nullable=True)  # non-standard spec cols from original upload (CPU, Memory, Grade, etc.)
 
+    # For consolidated-by-model items: the individual devices that make up the quantity, each
+    # {"Serial": ..., "UID": ...}. The bid template shows one row per MODEL with the summed
+    # quantity; this preserves the per-device Serial/UID so the final per-winner Razor output
+    # can expand a won model back into one line per physical device. None for non-unit rounds.
+    unit_details = Column(JSON, nullable=True)
+
     row_number = Column(Integer, nullable=True)  # original Excel row
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

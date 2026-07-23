@@ -427,69 +427,87 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     # columns) flows into extra_columns with its EXACT original name and in the original
     # column order, so the generated buyer template mirrors the admin file column-for-column
     # with no renaming and no columns combined or hidden.
+    # Columns excluded from the model-level spec view:
+    #  - reserve price (admin-only floor);
+    #  - buyer price placeholders ("Offer"/"Bid Unit") and pivot noise;
+    #  - the per-device identifier columns (Serial, UID, …): they differ for every device, so
+    #    they can't sit on a single consolidated model row — they move into unit_details.
     system_only = {reserve_col} if reserve_col else set()
+    id_col_set = set(id_cols)
+    # Columns already surfaced as standard fields (part number, description, manufacturer, grade)
+    # must not be repeated as spec columns, or the template shows "Part Number"/"Description"
+    # twice — once as a fixed header, once as an extra column.
+    mapped_cols = {c for c in (pn_col, desc_col, mfr_col, grade_col) if c}
     extra_col_names = [
         c for c in df.columns
         if c not in system_only
+        and c not in id_col_set
+        and c not in mapped_cols
         and re.sub(r"\.\d+$", "", str(c)).strip().lower() not in _BUYER_PLACEHOLDER_COLS
         and not _is_pivot_noise_col(c)
     ]
 
-    rows = []
+    # Consolidate by MODEL: one master item per distinct model, quantity = number of physical
+    # devices, with each device's Serial/UID kept in unit_details. ThinkTLS bid at the model
+    # level — "qty (8) 15-13079-02", not 8 separate lines — and the per-device identifiers are
+    # only needed later for the per-winner Razor output, which expands a won model back to its
+    # devices.
+    groups: dict[str, dict] = {}
     for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
         if pn_col:
-            pn_val = str(row.get(pn_col, "")).strip()
-            if not pn_val or pn_val.lower() in ("nan", "none", "") or _is_junk_row(pn_val):
+            label = str(row.get(pn_col, "")).strip()
+            if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
                 continue
-            label = pn_val
         else:
             label = normalize_description(str(row.get(desc_col, "")).strip())
             if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
                 continue
 
-        # If desc_col is grade-related (e.g. "Grading Description" fuzzy-matched
-        # "description"), don't use it as the item description — use the model name instead.
-        # "Grading Description" scores ~73 on fuzz.token_sort_ratio("description", ...)
-        # which is just above FUZZY_THRESHOLD=72, so the keyword guard is the safest defence.
-        if desc_col and not _is_grade_column(desc_col) and desc_col != grade_col:
-            desc_val = normalize_description(str(row.get(desc_col, "")).strip())
-        else:
-            desc_val = normalize_description(label)
+        norm = normalize_part_number(label)
+        # Per-device record for output expansion — the serial/uid identifier columns by name.
+        device = {c: _cell_text(row.get(c, "")) for c in id_cols if _cell_text(row.get(c, ""))}
 
-        grade = str(row.get(grade_col, "")).strip() if grade_col else ""
-        if grade.lower() in ("nan", "none", ""):
-            grade = ""
+        g = groups.get(norm)
+        if g is None:
+            if desc_col and not _is_grade_column(desc_col) and desc_col != grade_col:
+                desc_val = normalize_description(str(row.get(desc_col, "")).strip())
+            else:
+                desc_val = normalize_description(label)
+            grade = str(row.get(grade_col, "")).strip() if grade_col else ""
+            if grade.lower() in ("nan", "none", ""):
+                grade = ""
+            extra = {col: _cell_text(row.get(col, "")) for col in extra_col_names}
+            g = groups[norm] = {
+                "part_number": label,
+                "part_number_normalized": norm,
+                "description": desc_val,
+                "manufacturer": str(row.get(mfr_col, "")).strip() if mfr_col else "",
+                "quantity": 0,
+                "reserve_price": _safe_float(row.get(reserve_col)) if reserve_col else None,
+                "category": grade,
+                "extra_columns": extra if extra else None,
+                "unit_details": [],
+                "row_number": row_idx,
+            }
+        g["quantity"] += 1
+        if device:
+            g["unit_details"].append(device)
+        # Fill any model-level spec left blank on the first device from a later one.
+        if g["extra_columns"] is not None:
+            for col in extra_col_names:
+                if not g["extra_columns"].get(col):
+                    v = _cell_text(row.get(col, ""))
+                    if v:
+                        g["extra_columns"][col] = v
 
-        unit_id = next(
-            (v for c in id_cols if (v := str(row.get(c, "")).strip()) and v.lower() not in ("nan", "none")),
-            None,
-        )
-
-        # Composite key: model + serial only. Grade is NOT embedded here — it can be a
-        # long description ("Grade A – Like New, minor scuffs") that makes the part number
-        # unreadable in admin views. Serial already guarantees per-unit uniqueness.
-        pn_raw = label
-        if unit_id:
-            pn_raw = f"{pn_raw}-{unit_id}"
-
-        extra = {
-            col: _cell_text(row.get(col, ""))
-            for col in extra_col_names
-        }
-
-        rows.append({
-            "part_number": pn_raw,
-            "part_number_normalized": normalize_part_number(pn_raw),
-            "description": desc_val,
-            "manufacturer": str(row.get(mfr_col, "")).strip() if mfr_col else "",
-            "quantity": 1,
-            "reserve_price": _safe_float(row.get(reserve_col)) if reserve_col else None,
-            "category": grade,
-            "extra_columns": extra if extra else None,
-            "row_number": row_idx,
-        })
-
-    logger.info("[file_parser] unit-level file: %d rows → %d master items (1:1, no aggregation)", len(df), len(rows))
+    rows = list(groups.values())
+    for g in rows:
+        if not g["unit_details"]:
+            g["unit_details"] = None
+    logger.info(
+        "[file_parser] unit-level file: %d device rows → %d models (consolidated, qty summed)",
+        len(df), len(rows),
+    )
     return rows
 
 
@@ -580,72 +598,69 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
 
 def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
     """
-    For unit-level buyer files (ThinkTLS laptops, servers, desktops) where the buyer fills
-    an Offer price for each individual unit row.
-
-    NO grouping or merging — mirrors _aggregate_unit_level on the master-file side exactly,
-    one bid line per physical unit, quantity always 1. The part number is built the same way
-    (label + grade + serial/UID) so each bid line matches its master item by content, not by
-    row order. A buyer who leaves the price blank for a unit simply doesn't bid on it.
+    For a buyer file that is still per-device (a raw inventory file with a price column, rather
+    than the consolidated bid template). Consolidate by MODEL to mirror the master side: one bid
+    line per model, quantity = number of priced devices, unit_price = the model's price. Buyers
+    bid one price for the whole model — "qty (8) 15-13079-02" — so a per-device file just repeats
+    that price; we take the model's non-blank price (min if they somehow differ).
     """
     pn_col = mapping["part_number"]
     price_col = mapping["unit_price"]
     desc_col = mapping.get("description")
     grade_col = mapping.get("category")
-    id_cols = sorted(_all_identifier_columns(df))
+    id_cols = set(_all_identifier_columns(df))
 
-    # Only the offer-price column is excluded (captured as unit_price).
-    # All other original columns — model/title, UID/serial, grade, manufacturer, spec fields —
-    # flow into extra_columns with their exact original names so the submission preview
-    # shows the buyer's data exactly as it appeared in the file they uploaded.
+    # Exclude the price column and the per-device identifier columns from the model-level spec.
     system_only = {price_col} if price_col else set()
-    extra_col_names = [c for c in df.columns if c not in system_only]
+    extra_col_names = [
+        c for c in df.columns
+        if c not in system_only and c not in id_cols
+        and str(c).strip().lower() not in _BUYER_PLACEHOLDER_COLS
+        and not _is_pivot_noise_col(c)
+    ]
 
-    rows = []
+    groups: dict[str, dict] = {}
     for row_idx, (_, row) in enumerate(df.iterrows(), start=1):
         label = str(row.get(pn_col, "")).strip()
         if not label or label.lower() in ("nan", "none", "") or _is_junk_row(label):
             continue
         price = _safe_float(row.get(price_col))
+        norm = normalize_part_number(label)
 
-        grade = str(row.get(grade_col, "") if grade_col else "").strip()
-        if grade.lower() in ("nan", "none", ""):
-            grade = ""
+        g = groups.get(norm)
+        if g is None:
+            grade = str(row.get(grade_col, "") if grade_col else "").strip()
+            if grade.lower() in ("nan", "none", ""):
+                grade = ""
+            if desc_col and not _is_grade_column(desc_col) and desc_col != grade_col:
+                desc = normalize_description(str(row.get(desc_col, "")).strip())
+            else:
+                desc = normalize_description(label)
+            extra = {
+                col: _cell_text(row.get(col, "")) for col in extra_col_names
+                if _cell_text(row.get(col, ""))
+            }
+            g = groups[norm] = {
+                "raw_part_number": label,
+                "normalized_part_number": norm,
+                "description": desc or label,
+                "category": grade or None,
+                "unit_price": price,
+                "quantity": 0,
+                "total_price": None,
+                "row_number": row_idx,
+                "extra_columns": extra if extra else None,
+            }
+        g["quantity"] += 1
+        if price is not None and (g["unit_price"] is None or price < g["unit_price"]):
+            g["unit_price"] = price
 
-        unit_id = next(
-            (v for c in id_cols if (v := str(row.get(c, "")).strip()) and v.lower() not in ("nan", "none")),
-            None,
-        )
-
-        # Composite key: model + serial only (no grade) — mirrors _aggregate_unit_level.
-        pn_raw = label
-        if unit_id:
-            pn_raw = f"{pn_raw}-{unit_id}"
-
-        # Same grade-column guard as master path: don't use grade/condition columns as description.
-        if desc_col and not _is_grade_column(desc_col) and desc_col != grade_col:
-            desc = normalize_description(str(row.get(desc_col, "")).strip())
-        else:
-            desc = normalize_description(label)
-        extra = {
-            col: str(row.get(col, "")).strip()
-            for col in extra_col_names
-            if str(row.get(col, "")).strip() not in ("", "nan", "None")
-        }
-        rows.append({
-            "raw_part_number": pn_raw,
-            "normalized_part_number": normalize_part_number(pn_raw),
-            "description": desc or label,
-            "category": grade or None,
-            "unit_price": price,
-            "quantity": 1,
-            "total_price": round(price, 4) if price is not None else None,
-            "row_number": row_idx,
-            "extra_columns": extra if extra else None,
-        })
+    rows = list(groups.values())
+    for g in rows:
+        g["total_price"] = round(g["unit_price"] * g["quantity"], 4) if g["unit_price"] is not None else None
 
     logger.info(
-        "[file_parser] buyer unit-level file: %d rows → %d bid lines (%d priced)",
+        "[file_parser] buyer unit-level file: %d device rows → %d models (%d priced)",
         len(df), len(rows), sum(1 for r in rows if r["unit_price"] is not None),
     )
     return rows
