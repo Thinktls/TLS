@@ -225,6 +225,13 @@ _SHEET_PENALTY_KEYWORDS = [
 
 def _sheet_score_bonus(sheet_name: str) -> int:
     name = sheet_name.lower()
+    # Our own generated bid sheet always wins. The two-tab template we hand buyers has a
+    # "Bid Template" sheet (where they enter prices) AND a "Device Detail" sheet (per device,
+    # with a read-only VLOOKUP Offer formula). Device Detail is unit-level and would otherwise
+    # win via _UNIT_LEVEL_SHEET_BONUS — but its Offer is an uncomputed formula, so parsing it
+    # yields no prices. This decisive bonus keeps the parser on the Bid Template sheet.
+    if "bid template" in name:
+        return 15
     if any(k in name for k in _SHEET_BONUS_KEYWORDS):
         return 3
     if any(k in name for k in _SHEET_PENALTY_KEYWORDS):
