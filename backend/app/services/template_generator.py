@@ -164,7 +164,9 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         "3.  Each line is the full quantity — bids are all-or-nothing, there is no partial lot.",
         "4.  Leave Unit Price blank to opt out of a line — zero means you opt out.",
         "5.  Do NOT modify any column other than Unit Price ($).",
-        "6.  Save this file and upload it via the buyer portal before the deadline.",
+        "6.  The 'Device Detail' tab (if present) lists every physical unit and fills in your",
+        "     price automatically per model — it is read-only, for reference only.",
+        "7.  Save this file and upload it via the buyer portal before the deadline.",
         "",
         "Questions? Email bids@thinktls.com and include the round number.",
         "",
@@ -328,6 +330,61 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
     ws.protection.deleteRows          = False
     ws.protection.sort                = False
     ws.protection.autoFilter          = False
+
+    # ══════════════════════════════════════════════════════════════
+    # Sheet 3 — Device Detail (only when the round is device-backed)
+    # ══════════════════════════════════════════════════════════════
+    # ThinkTLS bid on the consolidated model (qty locked, one Offer per model), but their Razor
+    # upload needs one row per physical device with Serial/UID. So we mirror the source file's
+    # two-tab shape: the buyer prices the model on "Bid Template", and this read-only "Device
+    # Detail" tab lists every device and pulls that model's Offer down via a formula — so the
+    # moment they price 01DE973 once, all 7 of its device rows show the price, ready for Razor.
+    device_items = [it for it in items if getattr(it, "unit_details", None)]
+    if device_items:
+        price_col_idx = editable_start                     # 1-based column of Unit Price ($)
+        price_col_letter = get_column_letter(price_col_idx)
+        bid_last_row = 1 + len(items)
+        # VLOOKUP table spans Part Number (col B) .. price column; return offset within it.
+        vlookup_table = f"'Bid Template'!$B$2:${price_col_letter}${bid_last_row}"
+        ret_index = price_col_idx - 2 + 1                  # Part Number is column B (2)
+
+        wsd = wb.create_sheet("Device Detail")
+        wsd.sheet_view.showGridLines = False
+        wsd.sheet_properties.tabColor = "1F497D"
+        detail_headers = ["Model", "Manufacturer", "UID", "Serial", "Condition", "Description", "Offer ($)"]
+        detail_widths  = [24, 16, 18, 20, 12, 46, 12]
+        for col_idx, (hdr, width) in enumerate(zip(detail_headers, detail_widths), start=1):
+            wsd.column_dimensions[get_column_letter(col_idx)].width = width
+            c = wsd.cell(row=1, column=col_idx, value=hdr)
+            c.font = HDR_FONT; c.fill = HDR_FILL; c.alignment = CENTER; c.border = HDR_BORDER
+        wsd.row_dimensions[1].height = 22
+        wsd.freeze_panes = "A2"
+
+        drow = 2
+        for it in device_items:
+            model = it.part_number or ""
+            for dev in (it.unit_details or []):
+                low = {str(k).strip().lower(): v for k, v in (dev or {}).items()}
+                uid = str(low.get("uid") or low.get("unit id") or low.get("asset tag") or "").strip()
+                serial = str(low.get("serial") or low.get("serial number") or "").strip()
+                # Offer pulls this model's price from the Bid Template tab (blank until they bid).
+                offer = (
+                    f'=IFERROR(VLOOKUP(A{drow},{vlookup_table},{ret_index},FALSE),"")'
+                )
+                values = [model, it.manufacturer or "", uid, serial, it.category or "", it.description or "", offer]
+                for col_idx, value in enumerate(values, start=1):
+                    cell = wsd.cell(row=drow, column=col_idx, value=value)
+                    cell.border = THIN_BORDER
+                    cell.font = LOCK_FONT
+                    cell.protection = LOCKED
+                    cell.alignment = LEFT if col_idx == 6 else CENTER
+                wsd.row_dimensions[drow].height = 15
+                drow += 1
+
+        # Read-only sheet — everything is derived; the buyer prices on the Bid Template tab.
+        wsd.protection.sheet = True
+        wsd.protection.password = "thinktls"
+        wsd.protection.selectLockedCells = False
 
     # Open directly on the Bid Template tab so the buyer sees the pricing sheet
     # immediately — not the Instructions page which was covering it on open.
