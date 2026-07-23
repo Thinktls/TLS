@@ -30,6 +30,7 @@ from app.models.master_item import MasterItem
 from app.models.user import User
 from app.services.ai_matcher import run_ai_matching
 from app.services.buyer_scorer import recalculate_buyer_scores
+from app.api.routes.notifications import create_notification
 from app.services.email_service import (
     send_bid_invitation, send_round_results,
     send_approval_ready_email, send_exception_alert,
@@ -82,6 +83,7 @@ class RoundCreate(BaseModel):
     submission_deadline: Optional[datetime] = None
     notes: Optional[str] = None
     reserve_price_enabled: bool = False
+    auto_approve_enabled: bool = False
 
 
 class RoundOut(BaseModel):
@@ -95,6 +97,7 @@ class RoundOut(BaseModel):
     submission_deadline: Optional[datetime] = None
     notes: Optional[str] = None
     reserve_price_enabled: bool = False
+    auto_approve_enabled: bool = False
     created_at: Optional[datetime] = None
     master_file_uploaded_at: Optional[datetime] = None
     opened_at: Optional[datetime] = None
@@ -362,6 +365,7 @@ class RoundPatch(BaseModel):
     notes: Optional[str] = None
     submission_deadline: Optional[datetime] = None
     reserve_price_enabled: Optional[bool] = None
+    auto_approve_enabled: Optional[bool] = None
 
 
 @router.patch("/{round_id}")
@@ -727,6 +731,37 @@ def process_round(round_id: int, background_tasks: BackgroundTasks, db: Session 
     return {"message": "Processing started"}
 
 
+def _auto_approve_clean_round(db, round_id: int):
+    """Approve every pending deal on a clean, opt-in round and email buyers their results.
+    Runs inside the processing background task (its own session), so it uses the same
+    result-email builder the manual Approve-All path uses — buyers get the identical email,
+    including loss detail."""
+    from app.api.routes.deals import _send_results_to_all_buyers
+    now = datetime.now(timezone.utc)
+    deals = db.query(Deal).filter(
+        Deal.bid_round_id == round_id, Deal.status == "pending_approval"
+    ).all()
+    for d in deals:
+        d.status = "approved"
+        d.approved_by = "auto-approve"
+        d.approved_at = now
+    db.commit()
+    recalculate_buyer_scores(db, round_id)
+    _log.info(f"[AutoApprove] Round {round_id}: auto-approved {len(deals)} deal(s)")
+    # Reuse the same grouped result-email sender as the manual flow (opens its own session).
+    _send_results_to_all_buyers(round_id)
+    r = db.query(BidRound).filter(BidRound.id == round_id).first()
+    if r:
+        create_notification(
+            db,
+            title=f"Round auto-approved: {r.name}",
+            body=f"{len(deals)} deals were auto-approved (round had no exceptions) and buyers were emailed their results.",
+            category="success",
+            link=f"/admin/rounds/{round_id}/deals",
+        )
+        db.commit()
+
+
 def _run_processing(round_id: int):
     db = SessionLocal()
     try:
@@ -757,10 +792,15 @@ def _run_processing(round_id: int):
                 BidLine.exception_resolved == False,
             ).count()
             if exceptions_count > 0:
+                # Never auto-approve a round that still has anything needing a human decision.
                 send_exception_alert(
                     settings.ADMIN_EMAIL, r.name, exceptions_count,
                     f"{settings.FRONTEND_URL}/admin/rounds/{round_id}/exceptions"
                 )
+            elif getattr(r, "auto_approve_enabled", False):
+                # Opt-in automation: the round is clean and the admin pre-authorised auto-approve,
+                # so approve every pending deal and send buyers their results — no manual click.
+                _auto_approve_clean_round(db, round_id)
             else:
                 deal_count = db.query(Deal).filter(Deal.bid_round_id == round_id).count()
                 send_approval_ready_email(

@@ -93,6 +93,7 @@ export default function NewRound() {
     notes: "",
     submission_deadline: "",
     reserve_price_enabled: false,
+    auto_approve_enabled: false,
   });
   const [customCommodity, setCustomCommodity] = useState("");
 
@@ -357,6 +358,24 @@ export default function NewRound() {
                 Enable reserve price floor
                 <span style={{ display: "block", fontSize: "0.72rem", color: "var(--text-4)", fontWeight: 400 }}>
                   Set a minimum acceptable price per item; bids below it can’t win without an admin override.
+                </span>
+              </span>
+            </label>
+
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={form.auto_approve_enabled}
+                onChange={(e) => setForm({ ...form, auto_approve_enabled: e.target.checked })}
+                style={{ width: "16px", height: "16px", accentColor: "#3D81E3", marginTop: "3px" }}
+              />
+              <span style={{ fontSize: "0.85rem", color: "var(--text-2)" }}>
+                Auto-approve results when clean
+                <span style={{ display: "block", fontSize: "0.72rem", color: "var(--text-4)", fontWeight: 400 }}>
+                  If processing finishes with <strong>no exceptions</strong>, automatically approve every deal and email buyers their results — no manual approval step. A round with any exception always stops for your review.
+                </span>
+                <span style={{ display: "block", fontSize: "0.72rem", color: "#fbbf24", fontWeight: 400, marginTop: "2px" }}>
+                  ⚠ Those buyer emails send automatically and can’t be recalled. Leave off if you want to review first.
                 </span>
               </span>
             </label>

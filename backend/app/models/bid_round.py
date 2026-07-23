@@ -44,6 +44,11 @@ class BidRound(Base):
     submission_deadline = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)
     reserve_price_enabled = Column(Boolean, default=False)
+    # Opt-in automation (default OFF): when a round finishes processing with NO unresolved
+    # exceptions, auto-approve every deal — which sends buyers their result emails. Only ever
+    # true when an admin explicitly enabled it for this round, because those emails can't be
+    # recalled. A round with any unresolved exception always stops for manual review.
+    auto_approve_enabled = Column(Boolean, default=False, nullable=False, server_default="false")
 
     # Master file tracking
     master_file_uploaded = Column(Boolean, default=False)
