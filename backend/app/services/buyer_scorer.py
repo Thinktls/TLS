@@ -93,15 +93,23 @@ def recalculate_buyer_scores(db: Session, bid_round_id: int) -> None:
             .all()
         }
 
+        # Batch-fetch every master this buyer won across rounds in ONE query, so the margin loop
+        # is pure dict lookups. The old per-line fallback query was an N+1 that made approve-all
+        # crawl (and time out) once a buyer had many won lines spanning rounds.
+        won_master_ids = {
+            l.master_item_id for l in all_lines
+            if l.is_winner and l.master_item_id and l.master_item_id not in round_masters
+        }
+        if won_master_ids:
+            for m in db.query(MasterItem).filter(MasterItem.id.in_(won_master_ids)).all():
+                round_masters[m.id] = m
+
         # Margin contribution: sum((winning_price - reserve_price) × qty) for won lines
         margin_total = 0.0
         last_win = None
         for line in all_lines:
             if line.is_winner:
-                # Use pre-fetched dict first; fall back to DB query for cross-round lines
                 master = round_masters.get(line.master_item_id) if line.master_item_id else None
-                if master is None and line.master_item_id:
-                    master = db.query(MasterItem).filter(MasterItem.id == line.master_item_id).first()
                 if master and master.reserve_price and line.unit_price:
                     margin_total += max(0.0, line.unit_price - master.reserve_price) * (line.quantity or 1)
                 # Use deal.approved_at (actual award date) not line.created_at (bid submission)

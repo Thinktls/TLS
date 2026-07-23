@@ -326,7 +326,11 @@ def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
     for d in deals:
         by_buyer.setdefault(d.winning_buyer_id, []).append(d)
 
-    headers = ["Model", "Serial", "UID", "Description", "Unit Price", "Deal Ref"]
+    # EXACT Razor Sales Order Upload format (column names AND order matter for a seamless import):
+    #   Model | MFG | Condition | SKU | Serial | UID | Price
+    # Per ThinkTLS: Model must NOT include the serial; no Qty or Deal Ref columns; MFG/Condition/
+    # SKU are left blank for them to map on their side.
+    headers = ["Model", "MFG", "Condition", "SKU", "Serial", "UID", "Price"]
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for buyer_id, buyer_deals in by_buyer.items():
@@ -343,22 +347,30 @@ def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
                 cell.fill = HEADER_FILL
             for d in buyer_deals:
                 master = masters.get(d.master_item_id)
-                model = _lookup_ci(master.extra_columns if master else None, "Model") or (d.part_number or "")
+                extra = master.extra_columns if master else None
+                # Base model, never the model-serial composite. Consolidated rounds store the
+                # clean model on the deal; older per-device rounds keep it in the "Part Number"/
+                # "Model" spec column while the deal PN has the serial appended.
+                model = _lookup_ci(extra, "Model", "Part Number", "Part#") or (d.part_number or "")
                 price = round(d.winning_price, 2) if d.winning_price is not None else None
-                ref = f"THINKTLS-{bid_round_id}-{d.id}"
-                devices = (master.unit_details if master and master.unit_details else None)
-                if devices:
-                    # One row per physical device with its own Serial/UID.
-                    for dev in devices:
-                        serial, uid = _device_serial_uid(dev)
-                        ws.append([model, serial, uid, (d.description or "")[:120], price, ref])
-                else:
-                    # Older round without stored devices, or a genuinely single-unit line:
-                    # emit `quantity` rows so the device count still matches the sale.
-                    for _ in range(max(1, d.quantity or 1)):
-                        ws.append([model, "", "", (d.description or "")[:120], price, ref])
 
-            widths = [26, 20, 16, 46, 12, 20]
+                devices = master.unit_details if (master and master.unit_details) else None
+                if not devices:
+                    # Old per-device round (one device per master, serial/uid in extra_columns),
+                    # or a genuinely single-unit line.
+                    s = _lookup_ci(extra, "Serial", "Serial Number", "Serial#")
+                    u = _lookup_ci(extra, "UID", "Uid", "Unit ID", "Asset Tag", "Asset#")
+                    devices = [{"Serial": s, "UID": u}] if (s or u) else [{} for _ in range(max(1, d.quantity or 1))]
+
+                for dev in devices:
+                    serial, uid = _device_serial_uid(dev)
+                    # Defensive: if this row's own serial/uid is appended to the model, strip it.
+                    for tok in (serial, uid):
+                        if tok and model.endswith("-" + tok):
+                            model = model[: -(len(tok) + 1)]
+                    ws.append([model, "", "", "", serial, uid, price])
+
+            widths = [26, 14, 14, 14, 20, 16, 12]
             for i, w in enumerate(widths, start=1):
                 ws.column_dimensions[get_column_letter(i)].width = w
             ws.freeze_panes = "A2"

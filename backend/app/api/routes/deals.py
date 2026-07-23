@@ -257,15 +257,31 @@ async def approve_all_deals(round_id: int, background_tasks: BackgroundTasks, db
         deal.approved_by = admin.email
         deal.approved_at = now
     db.commit()
-    recalculate_buyer_scores(db, round_id)
     if settings.AUTO_PUSH_RAZOR:
         try:
             await push_round_to_razor(db, round_id)
         except Exception:
             pass
-    # Auto-send win/loss notice emails to all assigned buyers
-    background_tasks.add_task(_send_results_to_all_buyers, round_id)
+    # Score recalculation and the win/loss emails both scan every bid line in the round; on a
+    # large round that ran long enough that the HTTP request timed out and the UI showed
+    # "Approval failed" even though the deals WERE approved. Do both in the background so the
+    # click returns immediately.
+    background_tasks.add_task(_finalize_approval, round_id)
     return {"approved": len(deals), "razor_auto_pushed": settings.AUTO_PUSH_RAZOR}
+
+
+def _finalize_approval(round_id: int):
+    """Background: recalc buyer scores, then email each buyer their result."""
+    import logging
+    _log = logging.getLogger(__name__)
+    db = SessionLocal()
+    try:
+        recalculate_buyer_scores(db, round_id)
+    except Exception as exc:
+        _log.error(f"[Approve] score recalc failed for round {round_id}: {exc}", exc_info=True)
+    finally:
+        db.close()
+    _send_results_to_all_buyers(round_id)
 
 
 @router.post("/{deal_id}/reject")

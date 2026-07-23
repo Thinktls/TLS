@@ -9,7 +9,7 @@ interface ResultLine {
   part_number: string; description: string | null; quantity: number | null;
   outcome: "WON" | "LOST"; your_price: number | null; winning_price: number | null;
 }
-interface RollupRow { model: string; description: string; won: number; lost: number; won_value: number; }
+interface RollupRow { model: string; description: string; won: number; lost: number; won_value: number; per_item: number | null; }
 interface ResultData { round_id: number; results: ResultLine[]; rollup?: RollupRow[]; won: number; lost: number; }
 interface RoundRow { id: number; name: string; status: string; lines_submitted: number; lines_won: number; }
 
@@ -128,6 +128,7 @@ function ResultsInner() {
                           <th>Model</th><th>Description</th>
                           <th style={{ textAlign: "right" }}>Won</th>
                           <th style={{ textAlign: "right" }}>Lost</th>
+                          <th style={{ textAlign: "right" }}>Per Item</th>
                           <th style={{ textAlign: "right" }}>Won Value</th>
                         </tr>
                       </thead>
@@ -138,6 +139,7 @@ function ResultsInner() {
                             <td style={{ maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-3)" }}>{r.description || "—"}</td>
                             <td style={{ textAlign: "right", color: r.won > 0 ? "#34d399" : "var(--text-4)", fontWeight: r.won > 0 ? 700 : 400 }}>{r.won}</td>
                             <td style={{ textAlign: "right", color: r.lost > 0 ? "#60a5fa" : "var(--text-4)" }}>{r.lost}</td>
+                            <td style={{ textAlign: "right", fontFamily: "monospace", color: "var(--text-2)" }}>{r.per_item != null ? `$${r.per_item.toFixed(2)}` : "—"}</td>
                             <td style={{ textAlign: "right", fontFamily: "monospace", color: "#34d399" }}>{r.won_value > 0 ? `$${r.won_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "—"}</td>
                           </tr>
                         ))}

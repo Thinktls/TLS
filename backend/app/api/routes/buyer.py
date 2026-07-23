@@ -518,10 +518,14 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
             "winning_price": d.winning_price,
         })
 
-    # LOST: bid lines where this buyer bid but the deal went to someone else
+    # LOST: lines the buyer ACTUALLY BID ON (a price) but that went to someone else. A row the
+    # buyer left blank in the template is not a bid — it must not appear as a "LOST" line with
+    # empty prices, which is what made the loser's results look full of unpopulated rows.
     for l in lines:
         if l.master_item_id in won_master_ids:
             continue  # already counted as WON
+        if l.unit_price is None:
+            continue  # not quoted — not a bid, so not a loss
         master = masters_map_r.get(l.master_item_id) if l.master_item_id else None
         results.append({
             "part_number": master.part_number if master else l.raw_part_number,
@@ -534,21 +538,31 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
         })
 
     # Summed-by-model rollup so the buyer sees "Model — won 12 / lost 4" instead of scrolling
-    # thousands of per-device rows.
+    # thousands of per-device rows. Carries the per-item unit price alongside the won value.
     roll: dict[str, dict] = {}
     for r in results:
         g = roll.setdefault(r["model"], {
             "model": r["model"], "description": r["description"],
             "won": 0, "lost": 0, "won_value": 0.0,
+            "_won_prices": [], "_bid_prices": [],
         })
+        qty = r["quantity"] or 1
         if r["outcome"] == "WON":
-            g["won"] += r["quantity"] or 1
-            g["won_value"] += (r["your_price"] or 0) * (r["quantity"] or 1)
+            g["won"] += qty
+            g["won_value"] += (r["your_price"] or 0) * qty
+            if r["your_price"] is not None:
+                g["_won_prices"].append(r["your_price"])
         else:
-            g["lost"] += r["quantity"] or 1
+            g["lost"] += qty
+            if r["your_price"] is not None:
+                g["_bid_prices"].append(r["your_price"])
     rollup = sorted(roll.values(), key=lambda x: (-x["won"], -x["lost"]))
     for g in rollup:
         g["won_value"] = round(g["won_value"], 2)
+        # Per-item value: the price you got per unit on wins; otherwise your per-unit bid.
+        wp, bp = g.pop("_won_prices"), g.pop("_bid_prices")
+        per = (sum(wp) / len(wp)) if wp else (sum(bp) / len(bp) if bp else None)
+        g["per_item"] = round(per, 2) if per is not None else None
 
     return {
         "round_id": round_id,

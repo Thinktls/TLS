@@ -202,7 +202,7 @@ export default function ComparisonPage() {
               <div style={{
                 display: "flex",
                 height: HEADER_H,
-                background: "rgba(30,58,95,0.6)",
+                background: "rgba(30,58,95,0.95)",   // opaque so the white header text reads in light mode too
                 borderBottom: "1px solid rgba(255,255,255,0.08)",
               }}>
                 <HeaderCell width={COL_W_ITEM}>Model / Part</HeaderCell>
@@ -257,10 +257,10 @@ export default function ComparisonPage() {
                           padding: "0 12px", overflow: "hidden",
                           borderRight: "1px solid rgba(255,255,255,0.03)",
                         }}>
-                          <div style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>
+                          <div style={{ fontSize: "0.82rem", color: "var(--text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>
                             {row.description || row.part_number}
                           </div>
-                          <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.32)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-4)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
                             {row.part_number}
                           </div>
                         </div>
@@ -304,7 +304,7 @@ export default function ComparisonPage() {
                                   display: "flex", alignItems: "center", justifyContent: "center",
                                   borderLeft: "1px solid rgba(255,255,255,0.04)",
                                   fontSize: "0.68rem", fontStyle: "italic",
-                                  color: "rgba(255,255,255,0.28)", cursor: "help",
+                                  color: "var(--text-4)", cursor: "help",
                                 }}
                               >
                                 not quoted
@@ -317,7 +317,7 @@ export default function ComparisonPage() {
                           const belowReserve = row.reserve_price != null && price < row.reserve_price;
 
                           let bg = "transparent";
-                          let color = "rgba(255,255,255,0.7)";
+                          let color = "var(--text-2)";
                           let fw: string | number = 400;
 
                           if (isWinner) { bg = "rgba(52,211,153,0.12)"; color = "#34d399"; fw = 700; }
@@ -403,7 +403,9 @@ function Cell({ children, width, center, muted, mono }: {
       justifyContent: center ? "center" : "flex-start",
       padding: "0 12px",
       fontSize: "0.8rem",
-      color: muted ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)",
+      // Theme-aware: this table used hardcoded white text that was invisible on the light-mode
+      // page — the Model/Part, Qty and Reserve columns looked blank.
+      color: muted ? "var(--text-4)" : "var(--text-1)",
       fontFamily: mono ? "monospace" : undefined,
       overflow: "hidden",
       textOverflow: "ellipsis",
