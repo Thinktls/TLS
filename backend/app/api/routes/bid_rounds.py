@@ -13,7 +13,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import text, func, case
+from sqlalchemy import text, func, case, nullslast
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -206,6 +206,78 @@ def report_summary(db: Session = Depends(get_db), _=Depends(require_admin)):
             for r in sorted(all_rounds, key=lambda x: x.created_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[:5]
         ],
     }
+
+
+@router.get("/report/round-trends")
+def report_round_trends(limit: int = Query(12, ge=1, le=50), db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Per-round metrics for the most recent completed rounds, oldest→newest for charting:
+    deal value, deals, avg winning price, participation (bid / invited) and exception rate.
+    Lets the dashboard show round-over-round trends, not just all-time totals."""
+    rounds = (
+        db.query(BidRound)
+        .filter(BidRound.status == "complete")
+        .order_by(nullslast(BidRound.completed_at.desc()), BidRound.id.desc())
+        .limit(limit)
+        .all()
+    )
+    if not rounds:
+        return {"rounds": []}
+    rids = [r.id for r in rounds]
+
+    # Batch every metric by round_id — no per-round query loop.
+    deal_rows = (
+        db.query(
+            Deal.bid_round_id,
+            func.count().label("deals"),
+            func.coalesce(func.sum(Deal.total_value), 0).label("value"),
+            func.coalesce(func.avg(Deal.winning_price), 0).label("avg_price"),
+        )
+        .filter(Deal.bid_round_id.in_(rids), Deal.status == "approved")
+        .group_by(Deal.bid_round_id)
+        .all()
+    )
+    deals_by_round = {row.bid_round_id: row for row in deal_rows}
+
+    line_rows = (
+        db.query(
+            BidLine.bid_round_id,
+            func.count().label("total"),
+            func.count(func.distinct(BidLine.buyer_id)).label("participants"),
+            func.count(case((BidLine.match_status == "exception", 1))).label("exceptions"),
+        )
+        .filter(BidLine.bid_round_id.in_(rids))
+        .group_by(BidLine.bid_round_id)
+        .all()
+    )
+    lines_by_round = {row.bid_round_id: row for row in line_rows}
+
+    invited_rows = db.execute(
+        text("SELECT round_id, COUNT(*) AS n FROM round_buyers WHERE round_id = ANY(:rids) GROUP BY round_id"),
+        {"rids": rids},
+    ).fetchall()
+    invited_by_round = {row.round_id: row.n for row in invited_rows}
+
+    out = []
+    for r in rounds:
+        d = deals_by_round.get(r.id)
+        ln = lines_by_round.get(r.id)
+        total_lines = ln.total if ln else 0
+        exc = ln.exceptions if ln else 0
+        out.append({
+            "id": r.id,
+            "name": r.name,
+            "commodity": r.commodity,
+            "completed_at": r.completed_at.isoformat() if r.completed_at else (r.created_at.isoformat() if r.created_at else None),
+            "deals": d.deals if d else 0,
+            "total_value": round(float(d.value), 2) if d else 0.0,
+            "avg_price": round(float(d.avg_price), 2) if d else 0.0,
+            "participants": ln.participants if ln else 0,
+            "invited": invited_by_round.get(r.id, 0),
+            "participation_pct": round((ln.participants / invited_by_round[r.id]) * 100, 1) if ln and invited_by_round.get(r.id) else 0.0,
+            "exception_rate_pct": round(exc / total_lines * 100, 1) if total_lines else 0.0,
+        })
+    out.reverse()  # oldest → newest for left-to-right charting
+    return {"rounds": out}
 
 
 @router.get("/report/monthly-deal-value")

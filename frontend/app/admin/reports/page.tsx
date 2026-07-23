@@ -48,6 +48,12 @@ interface MonthlyBar {
   count: number;
 }
 
+interface RoundTrend {
+  id: number; name: string; commodity: string; completed_at: string | null;
+  deals: number; total_value: number; avg_price: number;
+  participants: number; invited: number; participation_pct: number; exception_rate_pct: number;
+}
+
 const statusColor: Record<string, string> = {
   draft: "rgba(255,255,255,0.4)",
   open: "#34d399",
@@ -84,15 +90,18 @@ function CustomTooltip({ active, payload, label }: any) {
 export default function ReportsDashboard() {
   const [data, setData] = useState<ReportData | null>(null);
   const [monthly, setMonthly] = useState<MonthlyBar[]>([]);
+  const [trends, setTrends] = useState<RoundTrend[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.get("/rounds/report/summary").then((r) => r.data).catch(() => null),
       api.get("/rounds/report/monthly-deal-value").then((r) => r.data).catch(() => []),
-    ]).then(([summary, bars]) => {
+      api.get("/rounds/report/round-trends?limit=12").then((r) => r.data?.rounds ?? []).catch(() => []),
+    ]).then(([summary, bars, tr]) => {
       setData(summary);
       setMonthly(bars);
+      setTrends(tr);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -194,6 +203,60 @@ export default function ReportsDashboard() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Round-over-round trends — deal value per completed round with participation/exception context */}
+        {trends.length > 0 && (
+          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "24px", marginBottom: "16px" }}>
+            <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 4px", fontSize: "0.9rem" }}>Round-over-Round Trends</p>
+            <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: "0 0 16px" }}>Deal value per completed round (most recent {trends.length}).</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={trends} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} tickFormatter={(v: string) => (v.length > 10 ? v.slice(0, 10) + "…" : v)} />
+                <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  contentStyle={{ background: "#0d1825", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={((v: number, _n: unknown, item: any) => {
+                    const r = item?.payload as RoundTrend | undefined;
+                    return [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, r ? `${r.deals} deals · ${r.participation_pct}% bid · ${r.exception_rate_pct}% exceptions` : "Deal value"];
+                  }) as never}
+                />
+                <Bar dataKey="total_value" radius={[4, 4, 0, 0]}>
+                  {trends.map((t, i) => (
+                    <Cell key={`t-${i}`} fill={t.exception_rate_pct > 5 ? "rgba(251,191,36,0.7)" : "rgba(52,211,153,0.6)"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ overflowX: "auto", marginTop: "12px" }}>
+              <table className="dark-table" style={{ width: "100%", minWidth: "560px" }}>
+                <thead>
+                  <tr>
+                    <th>Round</th>
+                    <th style={{ textAlign: "right" }}>Deals</th>
+                    <th style={{ textAlign: "right" }}>Value</th>
+                    <th style={{ textAlign: "right" }}>Avg Price</th>
+                    <th style={{ textAlign: "right" }}>Participation</th>
+                    <th style={{ textAlign: "right" }}>Exceptions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...trends].reverse().map((t) => (
+                    <tr key={t.id}>
+                      <td style={{ color: "var(--text-1)", fontSize: "0.82rem" }}>{t.name}<span style={{ color: "var(--text-4)", fontSize: "0.7rem" }}> · {t.commodity}</span></td>
+                      <td style={{ textAlign: "right" }}>{t.deals.toLocaleString()}</td>
+                      <td style={{ textAlign: "right", color: "#34d399", fontWeight: 600 }}>${t.total_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td style={{ textAlign: "right", color: "var(--text-3)" }}>{t.avg_price ? `$${t.avg_price.toFixed(2)}` : "—"}</td>
+                      <td style={{ textAlign: "right", color: "var(--text-3)" }}>{t.participants}/{t.invited} ({t.participation_pct}%)</td>
+                      <td style={{ textAlign: "right", color: t.exception_rate_pct > 5 ? "#fbbf24" : "var(--text-3)" }}>{t.exception_rate_pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           {/* Buyer Performance Table */}
