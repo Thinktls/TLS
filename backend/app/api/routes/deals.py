@@ -61,19 +61,8 @@ def list_deals(round_id: int, db: Session = Depends(get_db), _=Depends(require_a
 
 
 def _model_key(deal, master) -> tuple[str, str]:
-    """(display model, description) used to roll deals up by model. Per-device rounds store a
-    unique 'Model-Serial' part number on the deal, so the real model is recovered from the
-    master item's original columns:
-      - server/laptop files carry a "Model" column;
-      - drive/memory files have no Model column — the base model IS the "Part Number" column
-        (the deal's part number is that value with the serial/uid appended).
-    Fall back to the deal part number if neither is present."""
-    model = ""
-    if master and master.extra_columns:
-        low = {str(k).strip().lower(): v for k, v in master.extra_columns.items()}
-        model = str(low.get("model") or low.get("part number") or low.get("part#") or "").strip()
-    if not model:
-        model = deal.part_number or "—"
+    """(display model, description) used to roll deals up by model — see MasterItem.model_name."""
+    model = master.model_name(deal.part_number or "—") if master else (deal.part_number or "—")
     return model, (deal.description or (master.description if master else "") or "")
 
 

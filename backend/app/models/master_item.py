@@ -36,3 +36,15 @@ class MasterItem(Base):
 
     bid_round = relationship("BidRound", back_populates="master_items")
     bid_lines = relationship("BidLine", back_populates="master_item")
+
+    def model_name(self, fallback: str = "") -> str:
+        """The base MODEL for this item. Server/laptop files carry a "Model" column; drive/memory
+        files have no Model column — the base model is the "Part Number" column (a consolidated
+        deal's part_number is that value). Falls back to the caller's part number when neither is
+        present. Single source of truth for the rollup and Razor exports."""
+        if self.extra_columns:
+            low = {str(k).strip().lower(): v for k, v in self.extra_columns.items()}
+            m = str(low.get("model") or low.get("part number") or low.get("part#") or "").strip()
+            if m:
+                return m
+        return fallback

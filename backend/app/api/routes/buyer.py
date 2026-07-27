@@ -493,15 +493,8 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
     lines_by_master = {l.master_item_id: l for l in lines if l.master_item_id}
 
     def _model_of(master, fallback_pn: str) -> str:
-        # Recover the base model from the item's original columns — "Model" (server/laptop) or
-        # "Part Number" (drive/memory, whose per-device PN is that value + serial). Groups a
-        # buyer's per-device results into "Model ×N" the same way the admin deals rollup does.
-        if master and master.extra_columns:
-            low = {str(k).strip().lower(): v for k, v in master.extra_columns.items()}
-            m = str(low.get("model") or low.get("part number") or low.get("part#") or "").strip()
-            if m:
-                return m
-        return fallback_pn or "—"
+        # Base model for the summed-by-model rollup — see MasterItem.model_name.
+        return master.model_name(fallback_pn or "—") if master else (fallback_pn or "—")
 
     results = []
     # WON: from deals (correctly reflects award-lot and other admin overrides)

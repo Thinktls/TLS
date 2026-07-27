@@ -14,6 +14,7 @@ from app.models.deal import Deal
 from app.models.bid_line import BidLine
 from app.models.master_item import MasterItem
 from app.models.user import User
+from app.services.file_parser import device_serial_uid
 
 
 # ── Shared style helpers ───────────────────────────────────────────────────────
@@ -293,14 +294,6 @@ def _lookup_ci(d: dict | None, *names: str) -> str:
     return ""
 
 
-def _device_serial_uid(dev: dict) -> tuple[str, str]:
-    """Pull (serial, uid) from a unit_details entry, tolerant of key casing (Serial/serial, UID/Uid)."""
-    low = {str(k).strip().lower(): v for k, v in (dev or {}).items()}
-    serial = str(low.get("serial") or low.get("serial number") or low.get("serial#") or "").strip()
-    uid = str(low.get("uid") or low.get("unit id") or low.get("asset tag") or low.get("asset#") or "").strip()
-    return serial, uid
-
-
 def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
     """One Razor upload workbook PER CUSTOMER (winning buyer), with ONE ROW PER PHYSICAL DEVICE
     — Model, Serial, UID, Price — the format ThinkTLS uploads into Razor after a sale.
@@ -348,10 +341,8 @@ def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
             for d in buyer_deals:
                 master = masters.get(d.master_item_id)
                 extra = master.extra_columns if master else None
-                # Base model, never the model-serial composite. Consolidated rounds store the
-                # clean model on the deal; older per-device rounds keep it in the "Part Number"/
-                # "Model" spec column while the deal PN has the serial appended.
-                model = _lookup_ci(extra, "Model", "Part Number", "Part#") or (d.part_number or "")
+                # Base model, never the model-serial composite — computed once per deal.
+                model = master.model_name(d.part_number or "") if master else (d.part_number or "")
                 price = round(d.winning_price, 2) if d.winning_price is not None else None
 
                 devices = master.unit_details if (master and master.unit_details) else None
@@ -361,13 +352,13 @@ def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
                     s = _lookup_ci(extra, "Serial", "Serial Number", "Serial#")
                     u = _lookup_ci(extra, "UID", "Uid", "Unit ID", "Asset Tag", "Asset#")
                     devices = [{"Serial": s, "UID": u}] if (s or u) else [{} for _ in range(max(1, d.quantity or 1))]
-
-                for dev in devices:
-                    serial, uid = _device_serial_uid(dev)
-                    # Defensive: if this row's own serial/uid is appended to the model, strip it.
-                    for tok in (serial, uid):
+                    # Defensive: an old per-device deal PN may carry the serial appended — strip it.
+                    for tok in (s, u):
                         if tok and model.endswith("-" + tok):
                             model = model[: -(len(tok) + 1)]
+
+                for dev in devices:
+                    serial, uid = device_serial_uid(dev)
                     ws.append([model, "", "", "", serial, uid, price])
 
             widths = [26, 14, 14, 14, 20, 16, 12]

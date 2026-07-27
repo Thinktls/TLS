@@ -231,7 +231,7 @@ def _sheet_score_bonus(sheet_name: str) -> int:
     # win via _UNIT_LEVEL_SHEET_BONUS — but its Offer is an uncomputed formula, so parsing it
     # yields no prices. This decisive bonus keeps the parser on the Bid Template sheet.
     if "bid template" in name:
-        return 15
+        return _OWN_TEMPLATE_BONUS
     if any(k in name for k in _SHEET_BONUS_KEYWORDS):
         return 3
     if any(k in name for k in _SHEET_PENALTY_KEYWORDS):
@@ -265,6 +265,22 @@ _PIVOT_BLOCK_BONUS = 10
 # every one of them fell through to the expensive fuzzy tier. Both maps must land on the
 # per-unit sheet.
 _UNIT_LEVEL_SHEET_BONUS = 6
+
+# Decisive bonus for OUR OWN generated bid sheet (named "Bid Template"). A two-tab template we
+# hand buyers pairs it with a "Device Detail" sheet that is unit-level (so it would win via
+# _UNIT_LEVEL_SHEET_BONUS) but whose Offer column is an uncomputed VLOOKUP formula — parsing it
+# yields no prices. This must beat every other sheet signal so buyer uploads read the bid sheet.
+_OWN_TEMPLATE_BONUS = 15
+
+
+def device_serial_uid(dev: dict) -> tuple[str, str]:
+    """(serial, uid) from a unit_details entry, tolerant of key casing (Serial/serial, UID/Uid).
+    Canonical reader for the per-device dicts this module writes into master_item.unit_details;
+    used by both the template generator and the Razor export so the alias list can't drift."""
+    low = {str(k).strip().lower(): v for k, v in (dev or {}).items()}
+    serial = str(low.get("serial") or low.get("serial number") or low.get("serial#") or "").strip()
+    uid = str(low.get("uid") or low.get("unit id") or low.get("asset tag") or low.get("asset#") or "").strip()
+    return serial, uid
 
 
 def _cell_text(val) -> str:
@@ -472,7 +488,7 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
 
         norm = normalize_part_number(label)
         # Per-device record for output expansion — the serial/uid identifier columns by name.
-        device = {c: _cell_text(row.get(c, "")) for c in id_cols if _cell_text(row.get(c, ""))}
+        device = {c: v for c in id_cols if (v := _cell_text(row.get(c, "")))}
 
         g = groups.get(norm)
         if g is None:
@@ -495,20 +511,24 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
                 "extra_columns": extra if extra else None,
                 "unit_details": [],
                 "row_number": row_idx,
+                # Columns still blank for this model; a later device may fill them. Shrinks to
+                # empty once populated so a fully-filled model stops re-scanning every device.
+                "_blank_cols": {c for c in extra_col_names if not extra.get(c)} if extra else set(),
             }
         g["quantity"] += 1
         if device:
             g["unit_details"].append(device)
-        # Fill any model-level spec left blank on the first device from a later one.
-        if g["extra_columns"] is not None:
-            for col in extra_col_names:
-                if not g["extra_columns"].get(col):
-                    v = _cell_text(row.get(col, ""))
-                    if v:
-                        g["extra_columns"][col] = v
+        blank = g["_blank_cols"]
+        if blank:
+            for col in list(blank):
+                v = _cell_text(row.get(col, ""))
+                if v:
+                    g["extra_columns"][col] = v
+                    blank.discard(col)
 
     rows = list(groups.values())
     for g in rows:
+        g.pop("_blank_cols", None)
         if not g["unit_details"]:
             g["unit_details"] = None
     logger.info(
@@ -643,10 +663,7 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
                 desc = normalize_description(str(row.get(desc_col, "")).strip())
             else:
                 desc = normalize_description(label)
-            extra = {
-                col: _cell_text(row.get(col, "")) for col in extra_col_names
-                if _cell_text(row.get(col, ""))
-            }
+            extra = {col: v for col in extra_col_names if (v := _cell_text(row.get(col, "")))}
             g = groups[norm] = {
                 "raw_part_number": label,
                 "normalized_part_number": norm,

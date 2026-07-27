@@ -8,6 +8,7 @@ Returns bytes.
 import io
 import hashlib
 from app.core.timeutil import format_et
+from app.services.file_parser import device_serial_uid
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side, Protection as _Prot
 from openpyxl.utils import get_column_letter
@@ -346,7 +347,7 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         bid_last_row = 1 + len(items)
         # VLOOKUP table spans Part Number (col B) .. price column; return offset within it.
         vlookup_table = f"'Bid Template'!$B$2:${price_col_letter}${bid_last_row}"
-        ret_index = price_col_idx - 2 + 1                  # Part Number is column B (2)
+        ret_index = price_col_idx - 1                      # column offset within the table (Part Number = col B)
 
         wsd = wb.create_sheet("Device Detail")
         wsd.sheet_view.showGridLines = False
@@ -364,9 +365,7 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         for it in device_items:
             model = it.part_number or ""
             for dev in (it.unit_details or []):
-                low = {str(k).strip().lower(): v for k, v in (dev or {}).items()}
-                uid = str(low.get("uid") or low.get("unit id") or low.get("asset tag") or "").strip()
-                serial = str(low.get("serial") or low.get("serial number") or "").strip()
+                serial, uid = device_serial_uid(dev)
                 # Offer pulls this model's price from the Bid Template tab (blank until they bid).
                 offer = (
                     f'=IFERROR(VLOOKUP(A{drow},{vlookup_table},{ret_index},FALSE),"")'
