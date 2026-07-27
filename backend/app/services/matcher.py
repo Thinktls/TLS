@@ -42,13 +42,6 @@ def match_bid_lines(bid_lines: list[BidLine], master_items: list[MasterItem]) ->
         if pn in master_index:
             master = master_index[pn]
             _assign_match(line, master, "exact", 100.0)
-            # Overbid detection: bid quantity exceeds master quantity
-            if line.quantity and master.quantity and line.quantity > master.quantity:
-                line.match_status = "exception"
-                line.exception_type = "overbid"
-                line.exception_notes = (
-                    f"Bid qty {line.quantity} exceeds master qty {master.quantity}"
-                )
             continue
 
         # Tier 2: fuzzy — single C++ pass over all master part numbers. score_cutoff lets
@@ -68,12 +61,6 @@ def match_bid_lines(bid_lines: list[BidLine], master_items: list[MasterItem]) ->
 
         if best_score >= AUTO_MATCH_THRESHOLD:
             _assign_match(line, best_master, "fuzzy", best_score)
-            if line.quantity and best_master and best_master.quantity and line.quantity > best_master.quantity:
-                line.match_status = "exception"
-                line.exception_type = "overbid"
-                line.exception_notes = (
-                    f"Bid qty {line.quantity} exceeds master qty {best_master.quantity}"
-                )
         elif best_score >= REVIEW_THRESHOLD:
             line.master_item_id = best_master.id if best_master else None
             line.match_method = "fuzzy"
@@ -99,6 +86,12 @@ def _assign_match(line: BidLine, master: MasterItem, method: str, score: float):
     line.match_method = method
     line.match_score = score
     line.match_status = "matched"
+    # A bid is for the whole model lot (there is no per-buyer quantity anymore — "Your Qty" was
+    # removed), so the line's quantity is the model's full quantity. This also removes the old
+    # "overbid" exception, which mis-fired when the buyer file's quantity column resolved to a
+    # spec column like "CPU Quantity" (2) instead of the model's Avail Qty.
+    if master.quantity:
+        line.quantity = master.quantity
 
 
 async def ai_match_line(raw_part: str, description: str, master_items: list[MasterItem]) -> tuple[MasterItem | None, float, str]:
