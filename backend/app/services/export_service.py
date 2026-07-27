@@ -113,33 +113,112 @@ def export_deals_csv(db: Session, bid_round_id: int) -> bytes:
 # ── Full Bid Comparison Excel ─────────────────────────────────────────────────
 
 def export_bid_comparison_excel(db: Session, bid_round_id: int) -> bytes:
+    """A professional "bid tab": ONE ROW PER MODEL, one column per buyer showing that buyer's unit
+    price, then the Winner (buyer company) and the winning price. The winning buyer's cell in each
+    row is highlighted green so you can see at a glance who won each line and how the others priced it.
+
+    Batch-fetches masters, buyers and deals up front — the old version ran a master query AND a buyer
+    query for every single bid line, which took minutes on a large round; this runs a fixed handful
+    of queries regardless of size.
+    """
     lines = (
         db.query(BidLine)
         .filter(BidLine.bid_round_id == bid_round_id, BidLine.match_status == "matched")
-        .order_by(BidLine.master_item_id)
         .all()
     )
-    rows = []
+    master_ids = {l.master_item_id for l in lines if l.master_item_id}
+    buyer_ids  = {l.buyer_id for l in lines if l.buyer_id}
+    masters = {m.id: m for m in db.query(MasterItem).filter(MasterItem.id.in_(master_ids))} if master_ids else {}
+    buyers  = {u.id: u for u in db.query(User).filter(User.id.in_(buyer_ids))} if buyer_ids else {}
+    # Winner per model comes from the authoritative deals table (covers award-lot overrides).
+    win_by_master = {
+        d.master_item_id: d
+        for d in db.query(Deal).filter(Deal.bid_round_id == bid_round_id)
+    }
+
+    def _bname(uid: int) -> str:
+        b = buyers.get(uid)
+        return (b.company_name or b.full_name or b.email) if b else f"Buyer {uid}"
+
+    # Stable, alphabetical buyer column order.
+    buyer_cols = sorted(buyer_ids, key=lambda uid: _bname(uid).lower())
+
+    # model_id -> {buyer_id -> unit_price} (keep each buyer's most competitive, i.e. highest, quote)
+    prices_by_master: dict[int, dict[int, float]] = {}
     for l in lines:
-        master = db.query(MasterItem).filter(MasterItem.id == l.master_item_id).first()
-        buyer  = db.query(User).filter(User.id == l.buyer_id).first()
-        rows.append({
-            "Part Number": master.part_number if master else l.raw_part_number,
-            "Description": master.description if master else l.description,
-            "Buyer Company": buyer.company_name if buyer else "",
-            "Unit Price": l.unit_price,
-            "Quantity": l.quantity,
-            "Total Price": l.total_price,
-            "Is Winner": "YES" if l.is_winner else "no",
-            "Match Method": l.match_method,
-            "Match Score": l.match_score,
-            "Is Anomaly": "YES" if l.is_anomaly else "",
-            "Z-Score": l.z_score,
-        })
-    df = pd.DataFrame(rows)
+        if not l.master_item_id or l.unit_price is None:
+            continue
+        row = prices_by_master.setdefault(l.master_item_id, {})
+        prev = row.get(l.buyer_id)
+        if prev is None or l.unit_price > prev:
+            row[l.buyer_id] = l.unit_price
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Bid Comparison"
+    ws.sheet_view.showGridLines = False
+
+    headers = ["Model", "Description", "Qty"] + [_bname(uid) for uid in buyer_cols] + ["Winner", "Winning Price"]
+    widths  = [26, 44, 7] + [18] * len(buyer_cols) + [26, 15]
+    for i, (h, w) in enumerate(zip(headers, widths), start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+        c = ws.cell(row=1, column=i, value=h)
+        c.fill = HEADER_FILL
+        c.font = Font(name="Calibri", bold=True, color="FFFFFF", size=10)
+        c.alignment = CENTER
+        c.border = THIN
+    ws.row_dimensions[1].height = 22
+    ws.freeze_panes = "D2"
+
+    win_cell_fill = PatternFill("solid", fgColor="C6EFCE")   # green — the winning quote
+    win_cell_font = Font(name="Calibri", bold=True, color="006100", size=10)
+    data_font     = Font(name="Calibri", size=10)
+    money         = '#,##0.00'
+
+    # Sort models by part number for a predictable, readable sheet.
+    ordered_ids = sorted(prices_by_master.keys(), key=lambda mid: (masters[mid].part_number if mid in masters else ""))
+    excel_row = 2
+    for mid in ordered_ids:
+        master = masters.get(mid)
+        deal   = win_by_master.get(mid)
+        winner_uid = deal.winning_buyer_id if deal else None
+        base = [
+            master.part_number if master else "",
+            master.description if master else "",
+            master.quantity if master else "",
+        ]
+        for ci, v in enumerate(base, start=1):
+            c = ws.cell(row=excel_row, column=ci, value=v)
+            c.font = data_font
+            c.border = THIN
+            c.alignment = CENTER if ci == 3 else LEFT
+        row_prices = prices_by_master.get(mid, {})
+        for j, uid in enumerate(buyer_cols):
+            col = 4 + j
+            price = row_prices.get(uid)
+            c = ws.cell(row=excel_row, column=col, value=price)
+            c.border = THIN
+            c.alignment = CENTER
+            c.number_format = money
+            if uid == winner_uid:
+                c.fill = win_cell_fill
+                c.font = win_cell_font
+            else:
+                c.font = data_font
+        # Winner + winning price
+        wc = ws.cell(row=excel_row, column=4 + len(buyer_cols), value=_bname(winner_uid) if winner_uid else "—")
+        wc.font = win_cell_font if winner_uid else data_font
+        wc.border = THIN
+        wc.alignment = LEFT
+        wp = ws.cell(row=excel_row, column=5 + len(buyer_cols), value=(deal.winning_price if deal else None))
+        wp.font = win_cell_font if winner_uid else data_font
+        wp.border = THIN
+        wp.alignment = CENTER
+        wp.number_format = money
+        excel_row += 1
+
     buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Bid Comparison")
+    wb.save(buf)
     return buf.getvalue()
 
 

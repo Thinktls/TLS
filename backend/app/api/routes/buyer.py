@@ -524,7 +524,10 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
             "part_number": master.part_number if master else l.raw_part_number,
             "model": _model_of(master, (master.part_number if master else l.raw_part_number)),
             "description": master.description if master else l.description,
-            "quantity": l.quantity,
+            # Quantity is the MODEL's unit count (same source WON lines use via the deal), not the
+            # buyer's per-line qty — an unconsolidated bid line carries 1, which showed "1" on every
+            # lost model even though the model has e.g. 12 units. The master is authoritative.
+            "quantity": (master.quantity if master else l.quantity) or 1,
             "outcome": "LOST",
             "your_price": l.unit_price,
             "winning_price": l.fluffed_loss_price,

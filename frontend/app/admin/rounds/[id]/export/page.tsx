@@ -106,128 +106,165 @@ export default function ExportCenter() {
 
         <div style={{ height: "24px" }} />
 
-        {/* One-click bundle of every report below. */}
-        <button
-          onClick={() => downloadFile(`/rounds/${id}/export/report-pack.zip`, `report_pack_${slug}.zip`)}
-          className="btn-brand"
-          style={{ width: "100%", padding: "14px", fontSize: "0.9rem", marginBottom: "24px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
-        >
-          ⬇ Download Full Report Pack (everything in one ZIP)
-        </button>
+        {/* The two things admins actually reach for — everything else is tucked under Advanced. */}
+        <HeroCard
+          onClick={() => downloadFile(`/rounds/${id}/export/report-pack.zip`, `winning_buyers_report_${slug}.zip`)}
+          accent="#0d7c66"
+          badge="ZIP"
+          title="Download Full Report of Winning Buyers"
+          description="One ZIP with everything: who won each item and at what price, the professional bid-comparison sheet, per-buyer award sheets, and the Razor upload files. This is the all-in-one report."
+        />
+        <HeroCard
+          onClick={() => downloadFile(`/rounds/${id}/export/razor-per-customer.zip`, `razor_upload_${slug}.zip`)}
+          accent="#3d81e3"
+          badge="RAZOR"
+          title="Razor Upload — one file per winning customer"
+          description="Exactly what you upload into Razor: one Excel per winning customer, one row per physical device with Model, Serial, UID and Price. Approved deals only."
+        />
 
-        <Section title="Bid Results">
-          <ExportRow
-            label="Deals Export (.xlsx)"
-            description="All deals with winner, price, quantity, and Razor status."
-            path={`/rounds/${id}/export/deals.xlsx`}
-            filename={`deals_${slug}.xlsx`}
-            ext="xlsx"
-          />
-          <ExportRow
-            label="Deals Export (.csv)"
-            description="Same as above in CSV format."
-            path={`/rounds/${id}/export/deals.csv`}
-            filename={`deals_${slug}.csv`}
-            ext="csv"
-          />
-          <ExportRow
-            label="Full Bid Comparison (.xlsx)"
-            description="All buyer prices side-by-side — every matched line, every buyer."
-            path={`/rounds/${id}/export/comparison.xlsx`}
-            filename={`comparison_${slug}.xlsx`}
-            ext="xlsx"
-          />
-        </Section>
+        <details style={{ marginTop: "8px" }}>
+          <summary style={{ cursor: "pointer", fontSize: "0.82rem", color: "var(--text-4)", padding: "10px 4px", userSelect: "none" }}>
+            More formats &amp; individual files
+          </summary>
+          <div style={{ marginTop: "12px" }}>
+            <Section title="Winners & Bid Results">
+              <ExportRow
+                label="Bid Comparison — bid tab (.xlsx)"
+                description="One row per model, every buyer's price side-by-side, winner highlighted."
+                path={`/rounds/${id}/export/comparison.xlsx`}
+                filename={`bid_comparison_${slug}.xlsx`}
+                ext="xlsx"
+              />
+              <ExportRow
+                label="Deals Export (.xlsx)"
+                description="All deals with winner, price, quantity, and Razor status."
+                path={`/rounds/${id}/export/deals.xlsx`}
+                filename={`deals_${slug}.xlsx`}
+                ext="xlsx"
+              />
+              <ExportRow
+                label="Deals Export (.csv)"
+                description="Same as above in CSV format."
+                path={`/rounds/${id}/export/deals.csv`}
+                filename={`deals_${slug}.csv`}
+                ext="csv"
+              />
+              <ExportRow
+                label="Bid Comparison Table (browser)"
+                description="Interactive virtual-scroll comparison with winner highlights."
+                path={`/admin/rounds/${id}/comparison`}
+                filename=""
+                ext="view"
+                internal
+              />
+            </Section>
 
-        <Section title="Buyer Award Sheets">
-          <ExportRow
-            label="All Award Sheets (.zip)"
-            description="One Excel per buyer inside a ZIP — wins and loss notices with fluffed prices."
-            path={`/rounds/${id}/export/all-awards.zip`}
-            filename={`award_sheets_${slug}.zip`}
-            ext="zip"
-          />
-          {buyers.length > 0 && (
-            <div style={{ marginTop: "12px" }}>
-              <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: "0 0 8px" }}>
-                Individual buyer award sheets:
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {buyers.map((b) => (
-                  <button
-                    key={b.id}
-                    onClick={() => downloadFile(`/rounds/${id}/export/award-sheet/${b.id}`, `award_${b.company_name || b.full_name}_${slug}.xlsx`)}
-                    style={{
-                      padding: "5px 14px",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: "8px",
-                      fontSize: "0.78rem",
-                      color: "rgba(255,255,255,0.7)",
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(61,129,227,0.4)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
-                  >
-                    ↓ {b.company_name || b.full_name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </Section>
+            <Section title="Buyer Award Sheets">
+              <ExportRow
+                label="All Award Sheets (.zip)"
+                description="One Excel per buyer inside a ZIP — wins and loss notices with fluffed prices."
+                path={`/rounds/${id}/export/all-awards.zip`}
+                filename={`award_sheets_${slug}.zip`}
+                ext="zip"
+              />
+              {buyers.length > 0 && (
+                <div style={{ marginTop: "12px" }}>
+                  <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: "0 0 8px" }}>
+                    Individual buyer award sheets:
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {buyers.map((b) => (
+                      <button
+                        key={b.id}
+                        onClick={() => downloadFile(`/rounds/${id}/export/award-sheet/${b.id}`, `award_${b.company_name || b.full_name}_${slug}.xlsx`)}
+                        style={{
+                          padding: "5px 14px",
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "8px",
+                          fontSize: "0.78rem",
+                          color: "rgba(255,255,255,0.7)",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(61,129,227,0.4)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
+                      >
+                        ↓ {b.company_name || b.full_name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Section>
 
-        <Section title="ERP & Finance">
-          <ExportRow
-            label="Razor Sales Order (.csv)"
-            description="Razor-compatible format for approved deals. Only includes status=approved."
-            path={`/rounds/${id}/export/razor.csv`}
-            filename={`razor_order_${slug}.csv`}
-            ext="csv"
-          />
-          <ExportRow
-            label="Razor Upload — per winner (.zip of .xlsx)"
-            description="One Excel per winning customer, expanded to ONE ROW PER DEVICE with Model, Serial, UID and Price — ready to upload into Razor. Approved deals only."
-            path={`/rounds/${id}/export/razor-per-customer.zip`}
-            filename={`razor_per_customer_${slug}.zip`}
-            ext="zip"
-          />
-          <ExportRow
-            label="Margin Report (.xlsx)"
-            description="Reserve vs. winning price breakdown — margin $ and % per line item."
-            path={`/rounds/${id}/export/margin-report.xlsx`}
-            filename={`margin_report_${slug}.xlsx`}
-            ext="xlsx"
-          />
-          <ExportRow
-            label="Inventory Disposition Report (.xlsx)"
-            description="Every master line with disposition: AWARDED, NO_BIDS, BELOW_RESERVE, or PENDING."
-            path={`/rounds/${id}/export/disposition.xlsx`}
-            filename={`disposition_${slug}.xlsx`}
-            ext="xlsx"
-          />
-          <ExportRow
-            label="ERP Line-Item Report (.xlsx)"
-            description="One row per unit with part number, serial # placeholder, and winning price — ready for broker ERP upload."
-            path={`/rounds/${id}/export/erp-report.xlsx`}
-            filename={`erp_report_${slug}.xlsx`}
-            ext="xlsx"
-          />
-        </Section>
-
-        <Section title="Analysis">
-          <ExportRow
-            label="Bid Comparison Table (browser)"
-            description="Interactive virtual-scroll comparison with winner highlights."
-            path={`/admin/rounds/${id}/comparison`}
-            filename=""
-            ext="view"
-            internal
-          />
-        </Section>
+            <Section title="ERP & Finance">
+              <ExportRow
+                label="Razor Sales Order (.csv)"
+                description="Flat Razor CSV for approved deals — one line per deal."
+                path={`/rounds/${id}/export/razor.csv`}
+                filename={`razor_order_${slug}.csv`}
+                ext="csv"
+              />
+              <ExportRow
+                label="Margin Report (.xlsx)"
+                description="Reserve vs. winning price breakdown — margin $ and % per line item."
+                path={`/rounds/${id}/export/margin-report.xlsx`}
+                filename={`margin_report_${slug}.xlsx`}
+                ext="xlsx"
+              />
+              <ExportRow
+                label="Inventory Disposition Report (.xlsx)"
+                description="Every master line with disposition: AWARDED, NO_BIDS, BELOW_RESERVE, or PENDING."
+                path={`/rounds/${id}/export/disposition.xlsx`}
+                filename={`disposition_${slug}.xlsx`}
+                ext="xlsx"
+              />
+              <ExportRow
+                label="ERP Line-Item Report (.xlsx)"
+                description="One row per unit with part number, serial # placeholder, and winning price — ready for broker ERP upload."
+                path={`/rounds/${id}/export/erp-report.xlsx`}
+                filename={`erp_report_${slug}.xlsx`}
+                ext="xlsx"
+              />
+            </Section>
+          </div>
+        </details>
       </div>
     </AdminLayout>
+  );
+}
+
+function HeroCard({ onClick, accent, badge, title, description }: {
+  onClick: () => void; accent: string; badge: string; title: string; description: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%", textAlign: "left", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: "16px",
+        padding: "18px 20px", marginBottom: "14px",
+        background: "var(--bg-2)", border: `1px solid ${accent}55`,
+        borderRadius: "var(--radius-xl)", transition: "all 0.15s",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = accent; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${accent}55`; }}
+    >
+      <div style={{
+        flexShrink: 0, width: "52px", height: "52px", borderRadius: "12px",
+        background: `${accent}22`, border: `1px solid ${accent}55`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.04em", color: accent,
+      }}>
+        {badge}
+      </div>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontWeight: 700, color: "var(--text-1)", margin: "0 0 4px", fontSize: "0.98rem" }}>{title}</p>
+        <p style={{ fontSize: "0.8rem", color: "var(--text-4)", margin: 0, lineHeight: 1.45 }}>{description}</p>
+      </div>
+      <span style={{ flexShrink: 0, fontSize: "1.3rem", color: accent }}>⬇</span>
+    </button>
   );
 }
 
