@@ -49,7 +49,6 @@ function SubmitBidInner() {
   // Inline form state
   const [masterItems, setMasterItems] = useState<MasterItem[]>([]);
   const [inlinePrices, setInlinePrices] = useState<Record<number, string>>({});
-  const [inlineQtys, setInlineQtys] = useState<Record<number, string>>({});
   const [loadingItems, setLoadingItems] = useState(false);
   const [inlineDone, setInlineDone] = useState(false);
 
@@ -70,7 +69,6 @@ function SubmitBidInner() {
       setMsg(""); setError("");
       setInlineDone(false);
       setInlinePrices({});
-      setInlineQtys({});
     }
   }, [selectedRound]);
 
@@ -132,7 +130,7 @@ function SubmitBidInner() {
         part_number: item.part_number,
         description: item.description,
         unit_price: parseFloat(inlinePrices[item.id]),
-        quantity: inlineQtys[item.id] ? parseInt(inlineQtys[item.id]) : item.quantity,
+        quantity: item.quantity,  // qty is locked to the model quantity — buyers price, they don't set qty
       }));
     if (lines.length === 0) {
       setError("Enter at least one price before submitting.");
@@ -394,7 +392,7 @@ function SubmitBidInner() {
                     <div style={{ padding: "14px 18px", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "#34d399", lineHeight: 1.6 }}>
                       ✓ <span dangerouslySetInnerHTML={{ __html: msg }} />
                     </div>
-                    <button onClick={() => { setInlineDone(false); setInlinePrices({}); setInlineQtys({}); setMsg(""); }}
+                    <button onClick={() => { setInlineDone(false); setInlinePrices({}); setMsg(""); }}
                       className="btn-ghost" style={{ fontSize: "0.8rem", alignSelf: "flex-start" }}>
                       Edit prices
                     </button>
@@ -423,17 +421,17 @@ function SubmitBidInner() {
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                         <thead>
                           <tr style={{ position: "sticky", top: 0, background: "var(--bg-2)", zIndex: 1 }}>
-                            {["#", "Part Number", "Description", "Avail Qty", "Your Price ($)", "Your Qty"].map(h => (
+                            {["#", "Part Number", "Description", "Qty", "Your Price ($)"].map(h => (
                               <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontWeight: 700, color: "var(--text-4)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {masterItems.map((item) => {
+                          {masterItems.map((item, idx) => {
                             const priced = inlinePrices[item.id] && parseFloat(inlinePrices[item.id]) > 0;
                             return (
                               <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: priced ? "rgba(52,211,153,0.04)" : "transparent", transition: "background 0.15s" }}>
-                                <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{item.row_number}</td>
+                                <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{idx + 1}</td>
                                 <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.part_number}</td>
                                 <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.description}>{item.description || item.manufacturer || "—"}</td>
                                 <td style={{ padding: "7px 12px", color: "var(--text-4)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{item.quantity}</td>
@@ -450,22 +448,6 @@ function SubmitBidInner() {
                                       border: priced ? "1px solid rgba(52,211,153,0.4)" : "1px solid var(--border)",
                                       background: "var(--bg)", color: priced ? "#34d399" : "var(--text-1)",
                                       fontSize: "0.82rem", outline: "none", fontVariantNumeric: "tabular-nums",
-                                    }}
-                                  />
-                                </td>
-                                <td style={{ padding: "4px 8px" }}>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    placeholder={String(item.quantity)}
-                                    value={inlineQtys[item.id] ?? ""}
-                                    onChange={e => setInlineQtys(q => ({ ...q, [item.id]: e.target.value }))}
-                                    style={{
-                                      width: "80px", padding: "5px 8px", borderRadius: "6px",
-                                      border: "1px solid var(--border)",
-                                      background: "var(--bg)", color: "var(--text-1)",
-                                      fontSize: "0.82rem", outline: "none",
                                     }}
                                   />
                                 </td>
