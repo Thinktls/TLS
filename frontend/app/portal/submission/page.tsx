@@ -9,7 +9,7 @@ import { fmtDatetime } from "@/lib/format";
 
 interface BidFileMeta {
   id: number; filename: string; uploaded_at: string | null;
-  lines_parsed: number; status: string; error_message: string | null;
+  lines_parsed: number; status: string; error_message: string | null; offer_terms: string | null;
 }
 interface SubmittedLine {
   id: number; row_number: number | null; raw_part_number: string;
@@ -138,6 +138,14 @@ function SubmissionInner() {
                 <p style={{ fontSize: "1rem", fontWeight: 700, color: bidFile.status === "processed" ? "#34d399" : "#f87171", margin: 0, textTransform: "capitalize" }}>{bidFile.status}</p>
               </div>
             </div>
+
+            {/* Offer terms the buyer submitted */}
+            {bidFile.offer_terms && (
+              <div style={{ marginBottom: "16px", padding: "12px 16px", borderRadius: "10px", background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.22)" }}>
+                <p style={{ margin: "0 0 4px", fontSize: "0.68rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Your offer terms</p>
+                <p style={{ margin: 0, fontSize: "0.83rem", color: "var(--text-2)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{bidFile.offer_terms}</p>
+              </div>
+            )}
 
             {/* Alerts */}
             {bidFile.error_message && (

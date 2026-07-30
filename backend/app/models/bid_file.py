@@ -13,11 +13,15 @@ class BidFile(Base):
     buyer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     filename = Column(String, nullable=False)
-    file_path = Column(String, nullable=False)
+    # Null for inline ("Enter Prices Online") submissions, which have no uploaded file on disk.
+    file_path = Column(String, nullable=True)
     file_size_bytes = Column(Integer, nullable=True)
 
     status = Column(String, default="pending")  # pending | processing | processed | error
     error_message = Column(Text, nullable=True)
+    # Free-text conditions the buyer attached to this offer (e.g. minimum award value, health
+    # requirements). Shown to admins during review. None when the buyer left it blank.
+    offer_terms = Column(Text, nullable=True)
     lines_parsed = Column(Integer, default=0)
     lines_matched = Column(Integer, default=0)
     lines_exception = Column(Integer, default=0)

@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from app.api.routes.bid_rounds import validate_upload
 from app.core.executors import file_parsing_executor
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import text, func
@@ -161,7 +161,7 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
 
 
 @router.post("/rounds/{round_id}/bid")
-async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+async def submit_bid(round_id: int, file: UploadFile = File(...), offer_terms: str = Form(""), db: Session = Depends(get_db), buyer=Depends(require_buyer)):
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
@@ -221,6 +221,7 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), db: Session = 
         file_path=disk_path,
         file_size_bytes=file_size,
         status="processing",
+        offer_terms=(offer_terms or "").strip() or None,
     )
     db.add(bid_file)
     db.flush()
@@ -318,6 +319,7 @@ def my_submission(round_id: int, db: Session = Depends(get_db), buyer=Depends(re
             "lines_parsed": bid_file.lines_parsed,
             "status": bid_file.status,
             "error_message": bid_file.error_message,
+            "offer_terms": bid_file.offer_terms,
         },
         "lines": [
             {
@@ -669,14 +671,20 @@ class InlineBidLine(BaseModel):
     quantity: Optional[int] = None
 
 
+class InlineBidPayload(BaseModel):
+    lines: List[InlineBidLine]
+    offer_terms: Optional[str] = ""
+
+
 @router.post("/rounds/{round_id}/bid-inline")
 def submit_bid_inline(
     round_id: int,
-    lines: List[InlineBidLine],
+    payload: InlineBidPayload,
     db: Session = Depends(get_db),
     buyer=Depends(require_buyer),
 ):
     """Submit a bid directly from the inline form (no file upload required)."""
+    lines = payload.lines
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
@@ -720,6 +728,7 @@ def submit_bid_inline(
         file_path=None,
         file_size_bytes=0,
         status="processing",
+        offer_terms=(payload.offer_terms or "").strip() or None,
     )
     db.add(bid_file)
     db.flush()

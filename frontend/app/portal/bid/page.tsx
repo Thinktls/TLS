@@ -51,6 +51,7 @@ function SubmitBidInner() {
   const [inlinePrices, setInlinePrices] = useState<Record<number, string>>({});
   const [loadingItems, setLoadingItems] = useState(false);
   const [inlineDone, setInlineDone] = useState(false);
+  const [offerTerms, setOfferTerms] = useState("");
 
   useEffect(() => {
     api.get("/buyer/rounds").then(r => {
@@ -107,6 +108,7 @@ function SubmitBidInner() {
     setSubmitting(true); setError("");
     const fd = new FormData();
     fd.append("file", selectedFile);
+    fd.append("offer_terms", offerTerms);
     try {
       const res = await api.post(`/buyer/rounds/${selectedRound}/bid`, fd, { timeout: 180000 });
       setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:#34d399;font-weight:600">View full submission →</a>`);
@@ -138,7 +140,7 @@ function SubmitBidInner() {
     }
     setSubmitting(true); setError("");
     try {
-      const res = await api.post(`/buyer/rounds/${selectedRound}/bid-inline`, lines);
+      const res = await api.post(`/buyer/rounds/${selectedRound}/bid-inline`, { lines, offer_terms: offerTerms });
       setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:#34d399;font-weight:600">View full submission →</a>`);
       setInlineDone(true);
       setHasSubmission(true);
@@ -344,6 +346,7 @@ function SubmitBidInner() {
                         </div>
                       );
                     })()}
+                    <TermsField value={offerTerms} onChange={setOfferTerms} />
                     <div style={{ padding: "16px 22px", borderTop: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "center" }}>
                       <button onClick={confirmSubmit} disabled={submitting} className="btn-brand" style={{ padding: "10px 28px", fontSize: "0.9rem", fontWeight: 700 }}>
                         {submitting ? "Submitting…" : `Confirm & Submit ${preview.total_lines} lines`}
@@ -456,6 +459,8 @@ function SubmitBidInner() {
                       </table>
                     </div>
 
+                    <TermsField value={offerTerms} onChange={setOfferTerms} />
+
                     {/* Footer submit */}
                     <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
                       <span style={{ fontSize: "0.76rem", color: "var(--text-4)" }}>Leave price blank to opt out of a line</span>
@@ -479,6 +484,30 @@ function SubmitBidInner() {
         )}
       </div>
     </BuyerLayout>
+  );
+}
+
+function TermsField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ padding: "14px 22px", borderTop: "1px solid var(--border)" }}>
+      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, color: "var(--text-2)", marginBottom: "6px" }}>
+        Offer terms / conditions <span style={{ color: "var(--text-4)", fontWeight: 400 }}>(optional)</span>
+      </label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={2}
+        placeholder='e.g. "Will not accept an award lower than $20K." · "All SSDs must be above 90% health."'
+        style={{
+          width: "100%", padding: "9px 12px", borderRadius: "8px", resize: "vertical",
+          border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text-1)",
+          fontSize: "0.82rem", outline: "none", fontFamily: "inherit", lineHeight: 1.5,
+        }}
+      />
+      <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "6px 0 0" }}>
+        Any conditions on your offer. ThinkTLS reviews these with your bid.
+      </p>
+    </div>
   );
 }
 

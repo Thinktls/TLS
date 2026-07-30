@@ -866,6 +866,7 @@ def list_bid_files(round_id: int, db: Session = Depends(get_db), _=Depends(requi
             "status": f.status,
             "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
             "has_file": f.file_path is not None and os.path.exists(f.file_path),
+            "offer_terms": f.offer_terms,
         }
         for f in files
     ]

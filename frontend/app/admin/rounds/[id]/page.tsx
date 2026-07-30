@@ -33,7 +33,7 @@ interface AssignedBuyer {
 interface BidFileEntry {
   id: number; buyer_id: number; buyer_name: string | null; buyer_company: string | null;
   filename: string; file_size_bytes: number | null; lines_parsed: number;
-  status: string; uploaded_at: string | null; has_file: boolean;
+  status: string; uploaded_at: string | null; has_file: boolean; offer_terms: string | null;
 }
 interface AllBuyer {
   id: number; full_name: string; email: string; company_name: string; is_active: boolean;
@@ -701,6 +701,12 @@ export default function RoundDetail() {
                       {f.file_size_bytes && <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{(f.file_size_bytes / 1024).toFixed(1)} KB</span>}
                       {f.uploaded_at && <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{fmtDatetime(f.uploaded_at)}</span>}
                     </div>
+                    {f.offer_terms && (
+                      <div style={{ marginTop: "8px", padding: "8px 12px", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: "8px" }}>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Offer terms</span>
+                        <p style={{ margin: "3px 0 0", fontSize: "0.78rem", color: "var(--text-2)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{f.offer_terms}</p>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     {f.has_file ? (
