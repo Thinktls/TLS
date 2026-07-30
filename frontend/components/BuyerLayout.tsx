@@ -116,7 +116,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         <div style={{ margin: "0 10px 10px", padding: "12px 14px", background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px" }}>
           <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 3px" }}>Need help?</p>
           <p style={{ fontSize: "0.68rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>
-            Email <span style={{ color: "var(--text-3)" }}>bids@thinktls.com</span>
+            Email <span style={{ color: "var(--text-3)" }}>brokers@thinktls.com</span>
           </p>
         </div>
 

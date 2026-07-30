@@ -10,6 +10,7 @@ from typing import Optional, List
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
+from app.services.normalizer import format_part_number, normalize_description
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -695,19 +696,19 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
         won = sum(1 for l in buyer_lines if l.is_winner)
         lost = len(buyer_lines) - won
 
-        lost_items = []
+        won_items = []
         for line in buyer_lines:
-            if not line.is_winner and line.unit_price is not None and line.fluffed_loss_price is not None:
+            if line.is_winner:
                 master = masters_idx.get(line.master_item_id) if line.master_item_id else None
-                lost_items.append({
-                    "part_number": master.part_number if master else line.raw_part_number,
-                    "description": (master.description if master else line.description) or "",
+                won_items.append({
+                    "part_number": format_part_number(master.part_number if master else line.raw_part_number),
+                    "description": normalize_description((master.description if master else line.description) or ""),
+                    "quantity": (master.quantity if master else line.quantity) or 1,
                     "your_price": line.unit_price,
-                    "winning_price": line.fluffed_loss_price,
                 })
 
         background_tasks.add_task(
-            send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url, lost_items
+            send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items
         )
         sent += 1
 

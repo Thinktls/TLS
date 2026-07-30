@@ -7,6 +7,9 @@ _BRAND_DARK = "#0f3460"
 _BRAND_BLUE = "#3D81E3"
 _BRAND_GREEN = "#10b981"
 
+# Buyer-facing broker contact (POs, questions). Replaces the old bids@ address per client request.
+BROKERS_EMAIL = "brokers@thinktls.com"
+
 
 def _base(content: str, preview_text: str = "") -> str:
     """Wraps content in the shared header / footer shell."""
@@ -237,10 +240,12 @@ def bid_invitation_email(
 def results_email(
     full_name: str, round_name: str,
     won_count: int, lost_count: int, portal_url: str,
-    lost_items: list | None = None,
+    won_items: list | None = None,
 ) -> tuple[str, str]:
     """Returns (subject, html). Sent when round results are released to buyer.
-    lost_items: list of dicts with keys part_number, description, your_price, winning_price (fluffed)
+    won_items: list of dicts with keys part_number, description, quantity, your_price (the price
+    the buyer won at). Per client request the email highlights what the buyer WON (not the losses),
+    and reminds winners to issue a PO.
     """
     first = full_name.split()[0]
     total = won_count + lost_count
@@ -251,46 +256,52 @@ def results_email(
         f"Win rate this round: <strong style='color:#0f172a;'>{win_pct}%</strong></p>"
     ) if total > 0 else ""
 
-    # Build loss detail table — only for items where we have a fluffed winning price
-    priced_losses = [
-        item for item in (lost_items or [])
-        if item.get("winning_price") is not None and item.get("your_price") is not None
-    ]
-    loss_detail = ""
-    if priced_losses:
+    # PO instruction — winners must issue a purchase order to close the award.
+    po_notice = ""
+    if won_count > 0:
+        po_notice = f"""
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 20px;">
+          <tr><td style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px 20px;">
+            <p style="margin:0;font-size:14px;color:#92400e;line-height:1.6;">
+              <strong>Action required:</strong> Please issue a PO to
+              <a href="mailto:{BROKERS_EMAIL}" style="color:#b45309;font-weight:700;">{BROKERS_EMAIL}</a>
+              within <strong>24 hours</strong> of the bid being awarded.
+            </p>
+          </td></tr>
+        </table>"""
+
+    # Build the WON detail table (part #, description, qty, your price).
+    priced_wins = [item for item in (won_items or []) if item.get("your_price") is not None]
+    win_detail = ""
+    if priced_wins:
         rows_html = ""
-        for item in priced_losses[:25]:  # cap at 25 rows to keep email readable
+        for item in priced_wins[:25]:  # cap at 25 rows to keep email readable
             pn = str(item.get("part_number") or "")[:40]
             desc = str(item.get("description") or "")[:50]
+            qty = item.get("quantity") or 1
             your_p = item["your_price"]
-            win_p  = item["winning_price"]
-            diff_pct = round((win_p - your_p) / your_p * 100, 1) if your_p and your_p > 0 else None
-            diff_str = f"+{diff_pct}%" if diff_pct is not None and diff_pct > 0 else (f"{diff_pct}%" if diff_pct is not None else "")
             rows_html += f"""<tr>
               <td style="padding:8px 10px;font-size:11px;font-family:monospace;color:#334155;border-bottom:1px solid #f1f5f9;max-width:160px;overflow:hidden;">{pn}</td>
               <td style="padding:8px 10px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9;max-width:160px;overflow:hidden;">{desc}</td>
-              <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#475569;border-bottom:1px solid #f1f5f9;text-align:right;">${your_p:.2f}</td>
-              <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#10b981;border-bottom:1px solid #f1f5f9;text-align:right;">${win_p:.2f}</td>
-              <td style="padding:8px 10px;font-size:11px;color:#dc2626;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;">{diff_str}</td>
+              <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#475569;border-bottom:1px solid #f1f5f9;text-align:right;">{qty}</td>
+              <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#10b981;border-bottom:1px solid #f1f5f9;text-align:right;">${your_p:,.2f}</td>
             </tr>"""
-        more_msg = f'<p style="font-size:11px;color:#94a3b8;margin:8px 0 0;">... and {len(priced_losses) - 25} more items. See full results in your portal.</p>' if len(priced_losses) > 25 else ""
-        loss_detail = f"""
+        more_msg = f'<p style="font-size:11px;color:#94a3b8;margin:8px 0 0;">... and {len(priced_wins) - 25} more items won. See full results in your portal.</p>' if len(priced_wins) > 25 else ""
+        win_detail = f"""
         {_divider()}
-        <p style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 12px;">Items Where You Were Outbid</p>
+        <p style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 12px;">Items You Won</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;">
           <thead>
             <tr style="background:#f8fafc;">
               <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:left;">Part #</th>
               <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:left;">Description</th>
-              <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:right;">Your Bid</th>
-              <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:right;">Winning Price</th>
-              <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:right;">Difference</th>
+              <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:right;">Qty</th>
+              <th style="padding:8px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.6px;text-align:right;">Your Price</th>
             </tr>
           </thead>
           <tbody>{rows_html}</tbody>
         </table>
         {more_msg}
-        <p style="font-size:11px;color:#94a3b8;margin:8px 0 0;">* Winning prices shown are indicative. Actual transaction prices are confidential.</p>
         """
 
     content = f"""
@@ -317,7 +328,8 @@ def results_email(
       </table>
 
       {win_rate_row}
-      {loss_detail}
+      {po_notice}
+      {win_detail}
       {_cta_button("View My Full Results", portal_url, _BRAND_GREEN)}
 
       {_divider()}

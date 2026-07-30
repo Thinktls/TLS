@@ -35,6 +35,7 @@ from app.models.master_item import MasterItem
 from app.models.deal import Deal
 from app.services.file_parser import parse_buyer_file
 from app.services.export_service import export_buyer_award_sheet
+from app.services.normalizer import format_part_number, normalize_description
 from app.api.routes.notifications import create_notification
 
 router = APIRouter(prefix="/buyer", tags=["buyer"])
@@ -322,15 +323,18 @@ def my_submission(round_id: int, db: Session = Depends(get_db), buyer=Depends(re
             {
                 "id": l.id,
                 "row_number": l.row_number,
-                "raw_part_number": l.raw_part_number,
-                "description": l.description,
+                "raw_part_number": format_part_number(l.raw_part_number),
+                "description": normalize_description(l.description or ""),
                 "unit_price": l.unit_price,
-                "quantity": l.quantity,
+                # Quantity is the model's unit count (locked lot), not the buyer's per-line qty
+                # which is often 1 — matches what the award sheet and results show.
+                "quantity": (masters_map[l.master_item_id].quantity
+                             if l.master_item_id in masters_map else l.quantity) or 1,
                 "match_status": l.match_status,
                 "match_method": l.match_method,
                 "exception_type": l.exception_type,
-                "matched_part_number": masters_map[l.master_item_id].part_number if l.master_item_id and l.master_item_id in masters_map else None,
-                "matched_description": masters_map[l.master_item_id].description if l.master_item_id and l.master_item_id in masters_map else None,
+                "matched_part_number": format_part_number(masters_map[l.master_item_id].part_number) if l.master_item_id and l.master_item_id in masters_map else None,
+                "matched_description": normalize_description(masters_map[l.master_item_id].description or "") if l.master_item_id and l.master_item_id in masters_map else None,
             }
             for l in lines
         ],
@@ -502,9 +506,9 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
         master = masters_map_r.get(d.master_item_id)
         own_line = lines_by_master.get(d.master_item_id)
         results.append({
-            "part_number": d.part_number or (master.part_number if master else ""),
-            "model": _model_of(master, d.part_number or (master.part_number if master else "")),
-            "description": d.description or (master.description if master else ""),
+            "part_number": format_part_number(d.part_number or (master.part_number if master else "")),
+            "model": format_part_number(_model_of(master, d.part_number or (master.part_number if master else ""))),
+            "description": normalize_description(d.description or (master.description if master else "")),
             "quantity": d.quantity,
             "outcome": "WON",
             "your_price": own_line.unit_price if own_line else d.winning_price,
@@ -521,9 +525,9 @@ def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Dep
             continue  # not quoted — not a bid, so not a loss
         master = masters_map_r.get(l.master_item_id) if l.master_item_id else None
         results.append({
-            "part_number": master.part_number if master else l.raw_part_number,
-            "model": _model_of(master, (master.part_number if master else l.raw_part_number)),
-            "description": master.description if master else l.description,
+            "part_number": format_part_number(master.part_number if master else l.raw_part_number),
+            "model": format_part_number(_model_of(master, (master.part_number if master else l.raw_part_number))),
+            "description": normalize_description((master.description if master else l.description) or ""),
             # Quantity is the MODEL's unit count (same source WON lines use via the deal), not the
             # buyer's per-line qty — an unconsolidated bid line carries 1, which showed "1" on every
             # lost model even though the model has e.g. 12 units. The master is authoritative.
@@ -647,8 +651,8 @@ def get_round_items(round_id: int, db: Session = Depends(get_db), buyer=Depends(
         {
             "id": item.id,
             "row_number": item.row_number,
-            "part_number": item.part_number,
-            "description": item.description,
+            "part_number": format_part_number(item.part_number),
+            "description": normalize_description(item.description or ""),
             "manufacturer": item.manufacturer,
             "quantity": item.quantity,
             "category": item.category,

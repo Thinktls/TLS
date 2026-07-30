@@ -307,12 +307,12 @@ function SubmitBidInner() {
                         preview.rows.flatMap(r => Object.keys(r.extra_columns ?? {}))
                       ));
                       const thStyle: React.CSSProperties = { padding: "8px 12px", textAlign: "left", fontWeight: 700, color: "var(--text-4)", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" };
-                      const colCount = 4 + (hasCategory ? 1 : 0) + extraKeys.length;
                       return (
-                        <div style={{ overflowX: "auto", maxHeight: "340px", overflowY: "auto" }}>
+                        <div style={{ overflowX: "auto", maxHeight: "480px", overflowY: "auto" }}>
                           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                             <thead>
                               <tr style={{ position: "sticky", top: 0, background: "var(--bg-2)", zIndex: 1 }}>
+                                <th style={thStyle}>#</th>
                                 <th style={thStyle}>Part Number</th>
                                 <th style={thStyle}>Description</th>
                                 {hasCategory && <th style={thStyle}>Grade</th>}
@@ -322,8 +322,9 @@ function SubmitBidInner() {
                               </tr>
                             </thead>
                             <tbody>
-                              {preview.rows.slice(0, 50).map((row, i) => (
+                              {preview.rows.map((row, i) => (
                                 <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{i + 1}</td>
                                   <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", whiteSpace: "nowrap" }}>{row.raw_part_number}</td>
                                   <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description || "—"}</td>
                                   {hasCategory && <td style={{ padding: "7px 12px", color: "var(--text-3)", whiteSpace: "nowrap" }}>{row.category || "—"}</td>}
@@ -338,9 +339,6 @@ function SubmitBidInner() {
                                   ))}
                                 </tr>
                               ))}
-                              {preview.rows.length > 50 && (
-                                <tr><td colSpan={colCount} style={{ padding: "10px 12px", color: "var(--text-4)", fontSize: "0.75rem", textAlign: "center" }}>…and {preview.rows.length - 50} more lines</td></tr>
-                              )}
                             </tbody>
                           </table>
                         </div>

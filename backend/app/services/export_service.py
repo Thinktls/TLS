@@ -15,6 +15,10 @@ from app.models.bid_line import BidLine
 from app.models.master_item import MasterItem
 from app.models.user import User
 from app.services.file_parser import device_serial_uid
+from app.services.normalizer import format_part_number, normalize_description
+
+USD_FMT = '"$"#,##0.00'  # accounting-style USD for money cells
+BROKERS_EMAIL = "brokers@thinktls.com"
 
 
 # ── Shared style helpers ───────────────────────────────────────────────────────
@@ -183,8 +187,8 @@ def export_bid_comparison_excel(db: Session, bid_round_id: int) -> bytes:
         deal   = win_by_master.get(mid)
         winner_uid = deal.winning_buyer_id if deal else None
         base = [
-            master.part_number if master else "",
-            master.description if master else "",
+            format_part_number(master.part_number) if master else "",
+            normalize_description(master.description) if master else "",
             master.quantity if master else "",
         ]
         for ci, v in enumerate(base, start=1):
@@ -275,14 +279,22 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
         cell.border = thin_border
     ws.row_dimensions[1].height = 22
 
+    # Winner qty comes from the master (model quantity), matching what the on-screen results show.
+    masters_by_id = {
+        m.id: m for m in db.query(MasterItem).filter(
+            MasterItem.id.in_([l.master_item_id for l in lines if l.master_item_id])
+        )
+    } if lines else {}
+
     for row_idx, line in enumerate(lines, start=2):
-        master = db.query(MasterItem).filter(MasterItem.id == line.master_item_id).first()
+        master = masters_by_id.get(line.master_item_id)
         did_win = line.master_item_id in won_master_ids
         result = "WON" if did_win else "LOST"
+        qty = (master.quantity if master else line.quantity) or 1
         values = [
-            master.part_number if master else line.raw_part_number,
-            master.description if master else line.description,
-            line.quantity,
+            format_part_number(master.part_number if master else line.raw_part_number),
+            normalize_description(master.description if master else (line.description or "")),
+            qty,
             line.unit_price,
             result,
             line.fluffed_loss_price if not did_win else "",
@@ -294,6 +306,8 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
             cell.font = row_font if col_idx in (5, 6) else plain_data_font
             cell.border = thin_border
             cell.alignment = Alignment(horizontal="left", vertical="center")
+            if col_idx in (4, 6) and isinstance(val, (int, float)):
+                cell.number_format = USD_FMT  # Your Price / Loss Notice Price in USD
 
     # Summary row
     won = len(won_master_ids)
@@ -301,6 +315,14 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
     summary_row = len(lines) + 3
     summary_cell = ws.cell(row=summary_row, column=1, value=f"Total Won: {won}   |   Total Lost: {lost}")
     summary_cell.font = Font(name="Calibri", bold=True, size=11)
+
+    # Purchase-order instruction for winners — they must issue a PO to close the award.
+    if won:
+        po_cell = ws.cell(
+            row=summary_row + 2, column=1,
+            value=f"Please issue a PO to {BROKERS_EMAIL} within 24 hours of the bid being awarded.",
+        )
+        po_cell.font = Font(name="Calibri", bold=True, size=11, color="C00000")
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -421,7 +443,7 @@ def export_razor_per_customer_zip(db: Session, bid_round_id: int) -> bytes:
                 master = masters.get(d.master_item_id)
                 extra = master.extra_columns if master else None
                 # Base model, never the model-serial composite — computed once per deal.
-                model = master.model_name(d.part_number or "") if master else (d.part_number or "")
+                model = format_part_number(master.model_name(d.part_number or "") if master else (d.part_number or ""))
                 price = round(d.winning_price, 2) if d.winning_price is not None else None
 
                 devices = master.unit_details if (master and master.unit_details) else None

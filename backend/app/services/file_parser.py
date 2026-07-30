@@ -17,7 +17,7 @@ import re
 from collections import Counter
 import pandas as pd
 from rapidfuzz import fuzz
-from app.services.normalizer import normalize_part_number, normalize_description
+from app.services.normalizer import normalize_part_number, normalize_description, format_part_number
 
 logger = logging.getLogger(__name__)
 
@@ -349,7 +349,7 @@ def parse_master_file(file_bytes: bytes, filename: str) -> list[dict]:
             for col in extra_master_col_names
         }
         rows.append({
-            "part_number": raw_pn,
+            "part_number": format_part_number(raw_pn),
             "part_number_normalized": normalize_part_number(raw_pn),
             "description": normalize_description(str(row.get(mapping.get("description", ""), ""))),
             "manufacturer": str(row.get(mapping.get("manufacturer", ""), "")).strip(),
@@ -501,7 +501,7 @@ def _aggregate_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
                 grade = ""
             extra = {col: _cell_text(row.get(col, "")) for col in extra_col_names}
             g = groups[norm] = {
-                "part_number": label,
+                "part_number": format_part_number(label),
                 "part_number_normalized": norm,
                 "description": desc_val,
                 "manufacturer": str(row.get(mfr_col, "")).strip() if mfr_col else "",
@@ -588,7 +588,7 @@ def parse_buyer_file(file_bytes: bytes, filename: str) -> list[dict]:
             if str(row.get(col, "")).strip() not in ("", "nan", "None")
         }
         rows.append({
-            "raw_part_number": raw_pn,
+            "raw_part_number": format_part_number(raw_pn),
             "normalized_part_number": normalize_part_number(raw_pn),
             "description": normalize_description(str(row.get(mapping.get("description", ""), ""))),
             "category": str(row.get(mapping.get("category", ""), "")).strip() or None,
@@ -665,9 +665,9 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
                 desc = normalize_description(label)
             extra = {col: v for col in extra_col_names if (v := _cell_text(row.get(col, "")))}
             g = groups[norm] = {
-                "raw_part_number": label,
+                "raw_part_number": format_part_number(label),
                 "normalized_part_number": norm,
-                "description": desc or label,
+                "description": desc or format_part_number(label),
                 "category": grade or None,
                 "unit_price": price,
                 "quantity": 0,

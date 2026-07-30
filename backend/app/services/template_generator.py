@@ -169,7 +169,7 @@ def generate_bid_template(db: Session, round_id: int) -> bytes:
         "     price automatically per model — it is read-only, for reference only.",
         "7.  Save this file and upload it via the buyer portal before the deadline.",
         "",
-        "Questions? Email bids@thinktls.com and include the round number.",
+        "Questions? Email brokers@thinktls.com and include the round number.",
         "",
         "CONFIDENTIAL — for authorised ThinkTLS buyers only. Do not share.",
     ]

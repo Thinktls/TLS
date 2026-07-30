@@ -26,9 +26,13 @@ def test_normalize_part_number(raw, expected):
 
 
 @pytest.mark.parametrize("raw,expected", [
-    ("Dell  Laptop", "dell laptop"),
-    ("DELL LAPTOP", "dell laptop"),
-    ("  spaces  ", "spaces"),
+    # normalize_description now produces professional display casing (brands proper-cased,
+    # acronyms/units and part-number-like tokens uppercased), collapsing whitespace.
+    ("dell  laptop", "Dell Laptop"),
+    ("DELL LAPTOP", "Dell Laptop"),
+    ("  spaces  ", "Spaces"),
+    ("hgst hus724040als640 4tb sas hdd", "HGST HUS724040ALS640 4TB SAS HDD"),
+    ("intel intel ssdsc2kb240g8", "Intel Intel SSDSC2KB240G8"),
     ("", ""),
 ])
 def test_normalize_description(raw, expected):
