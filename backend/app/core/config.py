@@ -43,6 +43,10 @@ class Settings(BaseSettings):
 
     FROM_EMAIL: str = "bids@thinktls.com"
     FROM_NAME: str = "ThinkTLS Bid Desk"
+    # Address buyers reach when they reply to a bid-desk email. The Gmail relay authenticates as
+    # thinktls01@gmail.com (envelope sender must stay that for SPF/DKIM), so Reply-To is what
+    # actually routes human replies — it must be the brokers inbox, not the relay mailbox.
+    REPLY_TO_EMAIL: str = "brokers@thinktls.com"
 
     ANTHROPIC_API_KEY: str = ""
 

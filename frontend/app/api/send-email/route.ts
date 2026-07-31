@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { to_email, to_name, subject, html_body, text_body } = await req.json();
+    const { to_email, to_name, subject, html_body, text_body, reply_to } = await req.json();
     if (!to_email || !subject || !html_body) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
@@ -65,8 +65,9 @@ export async function POST(req: NextRequest) {
 
     // Gmail SMTP rewrites From to the authenticated account, so the envelope sender must stay
     // gmailUser for SPF/DKIM to align (misaligned From is itself a spam trigger). Reply-To
-    // carries the address humans should actually answer to.
-    const replyTo = process.env.REPLY_TO_EMAIL || gmailUser;
+    // carries the address humans should actually answer to — the brokers inbox, never the relay
+    // mailbox. Caller-supplied reply_to wins, then env, then the brokers default.
+    const replyTo = reply_to || process.env.REPLY_TO_EMAIL || "brokers@thinktls.com";
     const fromName = process.env.FROM_NAME || "ThinkTLS Bid Desk";
 
     await transporter.sendMail({

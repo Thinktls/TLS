@@ -30,7 +30,10 @@ def _send_via_relay(to_email: str, to_name: str, subject: str, html_body: str):
         url = f"{settings.EMAIL_RELAY_URL.rstrip('/')}/api/send-email"
         resp = httpx.post(
             url,
-            json={"to_email": to_email, "to_name": to_name, "subject": subject, "html_body": html_body},
+            json={
+                "to_email": to_email, "to_name": to_name, "subject": subject,
+                "html_body": html_body, "reply_to": settings.REPLY_TO_EMAIL,
+            },
             headers={"x-email-secret": settings.EMAIL_RELAY_SECRET},
             timeout=15,
         )
@@ -43,13 +46,15 @@ def _send_via_relay(to_email: str, to_name: str, subject: str, html_body: str):
 def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str):
     try:
         from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail, To
+        from sendgrid.helpers.mail import Mail, To, ReplyTo
         message = Mail(
             from_email=(settings.FROM_EMAIL, settings.FROM_NAME),
             to_emails=To(to_email, to_name),
             subject=subject,
             html_content=html_body,
         )
+        # Route replies to the brokers inbox, not the sending identity.
+        message.reply_to = ReplyTo(settings.REPLY_TO_EMAIL, settings.FROM_NAME)
         SendGridAPIClient(settings.SENDGRID_API_KEY).send(message)
         logger.info(f"[EMAIL SendGrid] Sent to {to_email}: {subject}")
     except Exception as e:
