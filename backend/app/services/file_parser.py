@@ -72,13 +72,14 @@ MASTER_COLUMN_ALIASES = {
         "original equipment manufacturer",
     ],
     "quantity": [
+        # Availability first — the lot quantity, ahead of spec columns like "CPU Quantity".
+        "avail qty", "available qty", "avail quantity", "available quantity",
+        "quantity available", "qty available", "available",
+        "stock qty", "stock", "inventory", "on hand", "lot size", "lot qty",
         "quantity", "qty", "units", "count", "unit count",
         "total qty", "total quantity", "total units",
         "pieces", "pcs", "pc", "each", "no of units",
         "number of units", "number of items", "num units",
-        "avail qty", "available qty", "available quantity",
-        "stock qty", "stock", "inventory", "on hand",
-        "lot size", "lot qty",
     ],
     "reserve_price": [
         "reserve price", "reserve", "floor price", "minimum price",
@@ -146,6 +147,11 @@ BUYER_COLUMN_ALIASES = {
         "buy price", "purchase price",
     ],
     "quantity": [
+        # Availability first — this is the lot quantity a buyer bids on. Our own template names it
+        # "Avail Qty"; put these ahead so they win over spec columns like "CPU Quantity".
+        "avail qty", "available qty", "avail quantity", "available quantity",
+        "quantity available", "qty available", "available", "available units",
+        "on hand", "on-hand", "in stock", "stock qty",
         "quantity", "qty", "units", "unit count", "total units",
         "pieces", "pcs", "count", "no of units",
         "your qty", "your quantity", "bid qty", "order qty",
@@ -692,8 +698,14 @@ def _aggregate_buyer_unit_level(df: pd.DataFrame, mapping: dict) -> list[dict]:
 
 # ── internal helpers ──────────────────────────────────────────────────────────
 
-def _find_column(df: pd.DataFrame, aliases: list[str]) -> str | None:
-    cols_lower = {c.lower().strip(): c for c in df.columns}
+def _find_column(df: pd.DataFrame, aliases: list[str], exclude_keywords: tuple[str, ...] = ()) -> str | None:
+    cols_lower = {
+        c.lower().strip(): c
+        for c in df.columns
+        # Skip columns whose name contains an excluded keyword — used to keep spec-qualified
+        # counts like "CPU Quantity" / "Storage Controller Qty" from being taken as the lot quantity.
+        if not any(kw in c.lower() for kw in exclude_keywords)
+    }
 
     # 1. Exact match
     for alias in aliases:
@@ -711,17 +723,29 @@ def _find_column(df: pd.DataFrame, aliases: list[str]) -> str | None:
     return best_col
 
 
+# Spec columns whose name embeds a component qualifier — a "CPU Quantity" is a per-server spec, not
+# the lot quantity a buyer bids on. Excluded when resolving the quantity column.
+_QTY_EXCLUDE_KEYWORDS = ("cpu", "memory", "storage", "controller", "drive", "core", "network", "processor", "ram", "cache", "port")
+
+
+def _qty_exclusions(field: str) -> tuple[str, ...]:
+    return _QTY_EXCLUDE_KEYWORDS if field == "quantity" else ()
+
+
 def _map_columns(df: pd.DataFrame, alias_map: dict) -> dict:
     return {
         field: col
         for field, aliases in alias_map.items()
-        if (col := _find_column(df, aliases))
+        if (col := _find_column(df, aliases, _qty_exclusions(field)))
     }
 
 
 def _score_df(df: pd.DataFrame, alias_map: dict) -> int:
     """Count how many fields from alias_map can be identified in df."""
-    return sum(1 for aliases in alias_map.values() if _find_column(df, aliases))
+    return sum(
+        1 for field, aliases in alias_map.items()
+        if _find_column(df, aliases, _qty_exclusions(field))
+    )
 
 
 # ── format loaders ────────────────────────────────────────────────────────────
