@@ -696,19 +696,27 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
         won = sum(1 for l in buyer_lines if l.is_winner)
         lost = len(buyer_lines) - won
 
-        won_items = []
+        won_items, lost_items = [], []
         for line in buyer_lines:
+            master = masters_idx.get(line.master_item_id) if line.master_item_id else None
             if line.is_winner:
-                master = masters_idx.get(line.master_item_id) if line.master_item_id else None
                 won_items.append({
                     "part_number": format_part_number(master.part_number if master else line.raw_part_number),
                     "description": normalize_description((master.description if master else line.description) or ""),
                     "quantity": (master.quantity if master else line.quantity) or 1,
                     "your_price": line.unit_price,
                 })
+            elif line.unit_price is not None and line.fluffed_loss_price is not None:
+                lost_items.append({
+                    "part_number": format_part_number(master.part_number if master else line.raw_part_number),
+                    "description": normalize_description((master.description if master else line.description) or ""),
+                    "quantity": (master.quantity if master else line.quantity) or 1,
+                    "your_price": line.unit_price,
+                    "winning_price": line.fluffed_loss_price,
+                })
 
         background_tasks.add_task(
-            send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items
+            send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items, lost_items
         )
         sent += 1
 

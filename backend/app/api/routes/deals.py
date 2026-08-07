@@ -226,8 +226,19 @@ def _send_results_to_all_buyers(round_id: int):
                     "quantity": d.quantity or (master.quantity if master else 1),
                     "your_price": d.winning_price,
                 })
+            lost_items = []
+            for line in lost_lines:
+                if line.unit_price is not None and line.fluffed_loss_price is not None:
+                    master = masters.get(line.master_item_id)
+                    lost_items.append({
+                        "part_number": format_part_number((master.part_number if master else line.raw_part_number) or ""),
+                        "description": normalize_description((master.description if master else line.description) or ""),
+                        "quantity": (master.quantity if master else line.quantity) or 1,
+                        "your_price": line.unit_price,
+                        "winning_price": line.fluffed_loss_price,
+                    })
             won, lost = len(won_ids), len(lost_lines)
-            send_round_results(buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items)
+            send_round_results(buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items, lost_items)
             _log.info(f"[AutoResults] Sent results for round {round_id} to {buyer.email}: won={won} lost={lost}")
     except Exception as exc:
         _log.error(f"[AutoResults] Failed to send results for round {round_id}: {exc}", exc_info=True)

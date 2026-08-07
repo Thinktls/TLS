@@ -40,10 +40,16 @@ won_items = [
     {"part_number": "H0H72108CLAR8000", "description": "Hitachi H0H72108CLAR8000", "quantity": 55, "your_price": 136.62},
     {"part_number": "EG002400JWJNN", "description": "HPE 2.4TB SAS", "quantity": 5, "your_price": 80.0},
 ]
+lost_items = [
+    {"part_number": "KPM5XRUG1T92", "description": "toshiba kpm5xrug1t92", "quantity": 12,
+     "your_price": 150.0, "winning_price": 241.36},
+]
 subject, html = results_email("David Buyer", "Drives - Test", won_count=2, lost_count=178,
-                              portal_url="http://x/portal/results?round=52", won_items=won_items)
+                              portal_url="http://x/portal/results?round=52",
+                              won_items=won_items, lost_items=lost_items)
 check("Items You Won" in html, "email has 'Items You Won' section")
-check("Items Where You Were Outbid" not in html, "email no longer shows outbid table")
+check("Items You Were Outbid" in html, "email ALSO shows the full outbid results")
+check("KPM5XRUG1T92" in html and "$241.36" in html, "lost item + winning price rendered")
 check(BROKERS_EMAIL in html and "brokers@thinktls.com" in html, "email has brokers@thinktls.com")
 check("issue a PO" in html and "24 hours" in html, "email has PO-within-24h instruction")
 check("H0H72108CLAR8000" in html and "$136.62" in html, "won item + price rendered")
