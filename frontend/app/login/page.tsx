@@ -52,6 +52,8 @@ export default function LoginPage() {
       // retry immediately. Without this the button stayed stuck on "Signing in…" (disabled)
       // after a wrong password, timeout, or cold-start error — which felt like a frozen app.
       setLoading(false);
+      // Clear the password so the field is empty for the retry, rather than leaving the old dots.
+      setPassword("");
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
         if (status === 401) {
