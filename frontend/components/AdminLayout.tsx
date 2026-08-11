@@ -291,10 +291,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text-2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {getFullName() || "Admin"}
             </p>
-            <button onClick={logout} style={{ fontSize: "0.68rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
-            >Sign out</button>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Link href="/admin/profile" onClick={closeSidebar} style={{ fontSize: "0.68rem", color: "var(--text-4)", textDecoration: "none", transition: "color 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#a0bfff"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
+              >Account</Link>
+              <span style={{ fontSize: "0.68rem", color: "var(--border)" }}>·</span>
+              <button onClick={logout} style={{ fontSize: "0.68rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
+              >Sign out</button>
+            </div>
           </div>
         </div>
       </aside>
