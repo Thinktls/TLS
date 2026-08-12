@@ -4,7 +4,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
@@ -44,6 +44,10 @@ async def login(req: LoginRequest, request: Request, response: Response, db: Ses
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is disabled")
     _login_attempts.pop(client_ip, None)
+    # Record the login so admins can see who has actually signed in (accepted their invite).
+    from datetime import datetime, timezone as _tz
+    user.last_login = datetime.now(_tz.utc)
+    db.commit()
     token = create_access_token({"sub": str(user.id), "role": user.role})
     # Set httpOnly cookie — JS cannot read it (XSS-safe)
     is_secure = request.url.scheme == "https"
@@ -108,7 +112,9 @@ def create_buyer(req: UserCreate, background_tasks: BackgroundTasks, db: Session
 
     from app.services.email_templates import welcome_email
     _subject, _html = welcome_email(user.full_name, user.email, temp_password, f"{settings.FRONTEND_URL}/login")
-    background_tasks.add_task(send_email, user.email, user.full_name, _subject, _html)
+    # Send now and report the result so the admin knows immediately if the invite didn't go out
+    # (was fire-and-forget, which hid delivery failures).
+    _res = send_email(user.email, user.full_name, _subject, _html)
 
     return {
         "id": user.id,
@@ -120,12 +126,24 @@ def create_buyer(req: UserCreate, background_tasks: BackgroundTasks, db: Session
         "fluff_percentage": user.fluff_percentage,
         "buyer_score": user.buyer_score,
         "temp_password": temp_password,
+        "email_sent": bool(_res.get("ok")),
+        "email_error": None if _res.get("ok") else _res.get("detail"),
     }
 
 
 @router.get("/buyers", response_model=list[UserOut])
 def list_buyers(db: Session = Depends(get_db), _=Depends(require_admin)):
-    return db.query(User).filter(User.role == "buyer").all()
+    # Alphabetical by company name (case-insensitive), blanks last, then by full name.
+    from sqlalchemy import func as _func
+    return (
+        db.query(User)
+        .filter(User.role == "buyer")
+        .order_by(
+            (User.company_name.is_(None)).asc(),
+            _func.lower(_func.coalesce(User.company_name, User.full_name)).asc(),
+        )
+        .all()
+    )
 
 
 @router.delete("/buyers/{user_id}")
@@ -207,8 +225,37 @@ def send_invite(user_id: int, background_tasks: BackgroundTasks, db: Session = D
 
     from app.services.email_templates import resend_credentials_email
     _subject, _html = resend_credentials_email(user.full_name, user.email, temp_password, f"{settings.FRONTEND_URL}/login")
-    background_tasks.add_task(send_email, user.email, user.full_name, _subject, _html)
+    _res = send_email(user.email, user.full_name, _subject, _html)
+    if not _res.get("ok"):
+        # Don't claim success when delivery failed — surface the real reason to the admin.
+        raise HTTPException(502, f"Password reset, but email delivery FAILED via {_res.get('provider')}: {_res.get('detail')}")
     return {"message": f"Credentials sent to {user.email}", "temp_password": temp_password, "email": user.email}
+
+
+@router.get("/email-config")
+def email_config(_=Depends(require_admin)):
+    """Show which email provider is active and which config is present (no secret values).
+    Lets an admin diagnose delivery without shell/log access."""
+    from app.services.email_service import email_provider_status
+    return email_provider_status()
+
+
+class EmailTestRequest(BaseModel):
+    to_email: EmailStr
+
+
+@router.post("/email-test")
+def email_test(req: EmailTestRequest, _=Depends(require_admin)):
+    """Send a real test email and return the actual result (provider + ok/error) — no silent
+    failures. Use this to find out exactly why buyer emails aren't arriving."""
+    from app.services.email_service import email_provider_status
+    subject = "ThinkTLS Bid Desk — email delivery test"
+    html = (
+        "<p>This is a test email from the ThinkTLS Bid Desk.</p>"
+        "<p>If you received it, outbound email is working.</p>"
+    )
+    res = send_email(req.to_email, "Test Recipient", subject, html)
+    return {"config": email_provider_status(), "result": res}
 
 
 @router.post("/setup-password")

@@ -11,6 +11,9 @@ interface Buyer {
   fluff_percentage: number;
   is_active: boolean;
   role: string;
+  last_login: string | null;
+  last_bid_at: string | null;
+  created_at: string | null;
 }
 
 interface NewBuyerForm {
@@ -32,8 +35,13 @@ export default function BuyersPage() {
   const [fluffValue, setFluffValue] = useState("");
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState<"ok" | "err">("ok");
-  const [newCredentials, setNewCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [newCredentials, setNewCredentials] = useState<{ email: string; password: string; emailError?: string | null } | null>(null);
   const [resending, setResending] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [testEmail, setTestEmail] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [showDiag, setShowDiag] = useState(false);
 
   const [form, setForm] = useState<NewBuyerForm>({
     email: "",
@@ -69,7 +77,7 @@ export default function BuyersPage() {
     setCreating(true);
     try {
       const res = await api.post("/auth/buyers", { ...form, role: "buyer" });
-      setNewCredentials({ email: res.data.email, password: res.data.temp_password });
+      setNewCredentials({ email: res.data.email, password: res.data.temp_password, emailError: res.data.email_error });
       setShowForm(false);
       setForm({ email: "", full_name: "", company_name: "", fluff_percentage: 3.5, password: "" });
       load();
@@ -106,6 +114,24 @@ export default function BuyersPage() {
     }
   }
 
+  async function sendTestEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setTesting(true); setTestResult(null);
+    try {
+      const res = await api.post("/auth/email-test", { to_email: testEmail });
+      const r = res.data.result; const c = res.data.config;
+      if (r.ok) {
+        setTestResult({ ok: true, text: `✓ Sent via ${r.provider}. Check ${testEmail} (incl. spam).` });
+      } else {
+        setTestResult({ ok: false, text: `✗ Provider: ${c.active_provider}. Failed: ${r.detail}` });
+      }
+    } catch (err: any) {
+      setTestResult({ ok: false, text: err.response?.data?.detail || "Test request failed" });
+    } finally {
+      setTesting(false);
+    }
+  }
+
   async function toggleBuyer(id: number) {
     setToggling(id);
     try {
@@ -133,6 +159,21 @@ export default function BuyersPage() {
     }
   }
 
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? buyers.filter(b =>
+        (b.company_name || "").toLowerCase().includes(q) ||
+        b.full_name.toLowerCase().includes(q) ||
+        b.email.toLowerCase().includes(q))
+    : buyers;
+  const signedInCount = buyers.filter(b => b.last_login).length;
+
+  function fmtDate(s: string | null): string {
+    if (!s) return "";
+    try { return new Date(s).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
+    catch { return ""; }
+  }
+
   const labelStyle: React.CSSProperties = {
     display: "block", fontSize: "0.72rem", fontWeight: 700,
     color: "var(--text-4)", marginBottom: "6px",
@@ -147,15 +188,65 @@ export default function BuyersPage() {
           <div>
             <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyers</h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
-              {buyers.length} buyer{buyers.length !== 1 ? "s" : ""} · <span style={{ color: "#34d399" }}>{buyers.filter((b) => b.is_active).length} active</span>
+              {buyers.length} buyer{buyers.length !== 1 ? "s" : ""} · <span style={{ color: "#34d399" }}>{signedInCount} signed in</span>
             </p>
           </div>
-          <button onClick={() => setShowForm(!showForm)} className={showForm ? "btn-ghost" : "btn-brand"}>
-            {showForm ? "Cancel" : (
-              <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Buyer</>
-            )}
-          </button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button onClick={() => setShowDiag(!showDiag)} className="btn-ghost" title="Diagnose email delivery">
+              ✉ Email check
+            </button>
+            <button onClick={() => setShowForm(!showForm)} className={showForm ? "btn-ghost" : "btn-brand"}>
+              {showForm ? "Cancel" : (
+                <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Buyer</>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Search */}
+        <div style={{ marginBottom: "16px" }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search buyers by company, name, or email…"
+            className="glass-input"
+            style={{ width: "100%", maxWidth: "420px" }}
+          />
+        </div>
+
+        {/* Email diagnostics — send a real test email and see the actual result/error */}
+        {showDiag && (
+          <div style={{ marginBottom: "20px", padding: "18px 20px", borderRadius: "14px", background: "var(--bg-2)", border: "1px solid var(--border)" }}>
+            <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 10px" }}>Email delivery test</p>
+            <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: "0 0 12px" }}>
+              Send a real test email to any address and see whether it sends (and the exact error if it doesn&apos;t).
+            </p>
+            <form onSubmit={sendTestEmail} style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+                className="glass-input"
+                style={{ flex: 1, minWidth: "240px" }}
+              />
+              <button type="submit" disabled={testing} className="btn-brand">
+                {testing ? "Sending…" : "Send test"}
+              </button>
+            </form>
+            {testResult && (
+              <div style={{
+                marginTop: "12px", padding: "10px 14px", borderRadius: "8px", fontSize: "0.82rem",
+                background: testResult.ok ? "rgba(52,211,153,0.1)" : "rgba(239,68,68,0.1)",
+                border: `1px solid ${testResult.ok ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
+                color: testResult.ok ? "#34d399" : "#f87171", wordBreak: "break-word",
+              }}>
+                {testResult.text}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Flash message */}
         {msg && (
@@ -197,9 +288,15 @@ export default function BuyersPage() {
                 </button>
               </div>
             </div>
-            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: "10px 0 0" }}>
-              Share these credentials with the buyer. An email was also attempted (if email is configured).
-            </p>
+            {newCredentials.emailError ? (
+              <div style={{ marginTop: "12px", padding: "9px 12px", borderRadius: "8px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171", fontSize: "0.75rem", wordBreak: "break-word" }}>
+                ⚠ The invite email did NOT send: {newCredentials.emailError} — share the credentials above manually, and use “✉ Email check” to diagnose.
+              </div>
+            ) : (
+              <p style={{ fontSize: "0.72rem", color: "#34d399", margin: "10px 0 0" }}>
+                ✓ Login credentials were emailed to the buyer.
+              </p>
+            )}
           </div>
         )}
 
@@ -297,19 +394,20 @@ export default function BuyersPage() {
             <table className="dark-table">
               <thead>
                 <tr>
-                  <th>Name</th>
                   <th>Company</th>
+                  <th>Name</th>
                   <th>Email</th>
                   <th style={{ textAlign: "center" }}>Fluff %</th>
+                  <th style={{ textAlign: "center" }}>Sign-in</th>
                   <th style={{ textAlign: "center" }}>Status</th>
                   <th style={{ textAlign: "center" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {buyers.map((b) => (
+                {filtered.map((b) => (
                   <tr key={b.id}>
-                    <td style={{ fontWeight: 500, color: "var(--text-1)" }}>{b.full_name}</td>
-                    <td>{b.company_name || "—"}</td>
+                    <td style={{ fontWeight: 500, color: "var(--text-1)" }}>{b.company_name || "—"}</td>
+                    <td style={{ color: "var(--text-2)" }}>{b.full_name}</td>
                     <td style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)" }}>{b.email}</td>
 
                     {/* Fluff % — inline edit */}
@@ -356,7 +454,19 @@ export default function BuyersPage() {
                       )}
                     </td>
 
-                    {/* Status badge */}
+                    {/* Sign-in status — has the buyer accepted their invite and logged in? */}
+                    <td style={{ textAlign: "center" }}>
+                      {b.last_login ? (
+                        <span title={`Last sign-in ${fmtDate(b.last_login)}`} style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#34d399" }}>Signed in</span>
+                          <span style={{ fontSize: "0.66rem", color: "var(--text-4)" }}>{fmtDate(b.last_login)}</span>
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#fbbf24" }} title="Invite sent but never signed in">Not yet</span>
+                      )}
+                    </td>
+
+                    {/* Account status badge */}
                     <td style={{ textAlign: "center" }}>
                       <span className={`badge ${b.is_active ? "badge-open" : "badge-error"}`}>
                         {b.is_active ? "Active" : "Disabled"}
@@ -411,6 +521,11 @@ export default function BuyersPage() {
                 ))}
               </tbody>
             </table>
+            {filtered.length === 0 && (
+              <div style={{ padding: "32px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>
+                No buyers match “{search}”.
+              </div>
+            )}
           </div>
         )}
       </div>

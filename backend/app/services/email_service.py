@@ -11,20 +11,36 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _send(to_email: str, to_name: str, subject: str, html_body: str):
+def email_provider_status() -> dict:
+    """Which provider is active + which config is present (booleans only — never the secret values).
+    Lets an admin see, without shell/log access, whether email is even wired up."""
+    relay = bool(settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET)
+    sendgrid = bool(settings.SENDGRID_API_KEY)
+    return {
+        "active_provider": "relay" if relay else ("sendgrid" if sendgrid else "none"),
+        "relay_url_set": bool(settings.EMAIL_RELAY_URL),
+        "relay_secret_set": bool(settings.EMAIL_RELAY_SECRET),
+        "sendgrid_key_set": sendgrid,
+        "from_email": settings.FROM_EMAIL,
+        "reply_to": settings.REPLY_TO_EMAIL,
+    }
+
+
+def _send(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
+    """Send an email. Returns {"ok": bool, "provider": str, "detail": str} — never raises, so it's
+    safe as a background task, but callers that care (invites, the email test) can inspect the
+    result instead of a silent failure."""
     if settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET:
-        _send_via_relay(to_email, to_name, subject, html_body)
+        return _send_via_relay(to_email, to_name, subject, html_body)
     elif settings.SENDGRID_API_KEY:
-        _send_sendgrid(to_email, to_name, subject, html_body)
+        return _send_sendgrid(to_email, to_name, subject, html_body)
     else:
-        logger.info(
-            f"[EMAIL MOCK] No provider configured.\n"
-            f"  To: {to_email}\n  Subject: {subject}\n"
-            f"  Set EMAIL_RELAY_URL+EMAIL_RELAY_SECRET or SENDGRID_API_KEY in Render."
-        )
+        msg = "No email provider configured (set EMAIL_RELAY_URL+EMAIL_RELAY_SECRET, or SENDGRID_API_KEY)."
+        logger.warning(f"[EMAIL MOCK] {msg} To: {to_email} Subject: {subject}")
+        return {"ok": False, "provider": "none", "detail": msg}
 
 
-def _send_via_relay(to_email: str, to_name: str, subject: str, html_body: str):
+def _send_via_relay(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
     try:
         import httpx
         url = f"{settings.EMAIL_RELAY_URL.rstrip('/')}/api/send-email"
@@ -35,15 +51,22 @@ def _send_via_relay(to_email: str, to_name: str, subject: str, html_body: str):
                 "html_body": html_body, "reply_to": settings.REPLY_TO_EMAIL,
             },
             headers={"x-email-secret": settings.EMAIL_RELAY_SECRET},
-            timeout=15,
+            timeout=20,
         )
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            # Surface the relay's own error body (e.g. "Gmail env vars not set", auth/limit errors).
+            detail = f"relay HTTP {resp.status_code}: {resp.text[:300]}"
+            logger.error(f"[EMAIL Relay] Failed for {to_email}: {detail}")
+            return {"ok": False, "provider": "relay", "detail": detail}
         logger.info(f"[EMAIL Relay] Sent to {to_email}: {subject}")
+        return {"ok": True, "provider": "relay", "detail": "sent"}
     except Exception as e:
-        logger.error(f"[EMAIL Relay] Failed for {to_email}: {e}")
+        detail = f"{type(e).__name__}: {e}"
+        logger.error(f"[EMAIL Relay] Failed for {to_email}: {detail}")
+        return {"ok": False, "provider": "relay", "detail": detail}
 
 
-def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str):
+def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
     try:
         from sendgrid import SendGridAPIClient
         from sendgrid.helpers.mail import Mail, To, ReplyTo
@@ -55,10 +78,18 @@ def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str):
         )
         # Route replies to the brokers inbox, not the sending identity.
         message.reply_to = ReplyTo(settings.REPLY_TO_EMAIL, settings.FROM_NAME)
-        SendGridAPIClient(settings.SENDGRID_API_KEY).send(message)
-        logger.info(f"[EMAIL SendGrid] Sent to {to_email}: {subject}")
+        resp = SendGridAPIClient(settings.SENDGRID_API_KEY).send(message)
+        code = getattr(resp, "status_code", 0)
+        if code >= 400:
+            detail = f"sendgrid HTTP {code}"
+            logger.error(f"[EMAIL SendGrid] Failed for {to_email}: {detail}")
+            return {"ok": False, "provider": "sendgrid", "detail": detail}
+        logger.info(f"[EMAIL SendGrid] Sent to {to_email}: {subject} (HTTP {code})")
+        return {"ok": True, "provider": "sendgrid", "detail": f"sent (HTTP {code})"}
     except Exception as e:
-        logger.error(f"[EMAIL SendGrid] Failed for {to_email}: {e}")
+        detail = f"{type(e).__name__}: {e}"
+        logger.error(f"[EMAIL SendGrid] Failed for {to_email}: {detail}")
+        return {"ok": False, "provider": "sendgrid", "detail": detail}
 
 
 def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, commodity: str, deadline: str, upload_url: str):

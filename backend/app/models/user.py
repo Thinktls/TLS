@@ -19,6 +19,7 @@ class User(Base):
     fluff_percentage = Column(Float, default=3.5)
     fluff_enabled = Column(Boolean, default=True)
     last_bid_at = Column(DateTime(timezone=True), nullable=True)
+    last_login = Column(DateTime(timezone=True), nullable=True)  # set on each successful login; null = never logged in (invite not yet accepted)
     last_invited_date = Column(DateTime(timezone=True), nullable=True)
     last_win_date = Column(DateTime(timezone=True), nullable=True)
     total_rounds_participated = Column(Integer, default=0)

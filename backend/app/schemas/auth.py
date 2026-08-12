@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, EmailStr
 
 
@@ -32,6 +33,9 @@ class UserOut(BaseModel):
     is_active: bool
     fluff_percentage: float
     buyer_score: float
+    last_login: datetime | None = None       # null = never signed in (invite not yet accepted)
+    last_bid_at: datetime | None = None
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True
