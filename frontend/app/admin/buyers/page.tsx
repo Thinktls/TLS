@@ -182,7 +182,7 @@ export default function BuyersPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "960px" }} className="animate-in">
+      <div style={{ maxWidth: "1180px" }} className="animate-in">
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
           <div>
@@ -389,9 +389,9 @@ export default function BuyersPage() {
             background: "var(--bg-2)",
             border: "1px solid var(--border)",
             borderRadius: "var(--radius-xl)",
-            overflow: "hidden",
+            overflowX: "auto",
           }}>
-            <table className="dark-table">
+            <table className="dark-table" style={{ minWidth: "820px" }}>
               <thead>
                 <tr>
                   <th>Company</th>
