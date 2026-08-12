@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     EMAIL_RELAY_URL: str = ""   # e.g. https://thinktls-bid-desk.vercel.app
     EMAIL_RELAY_SECRET: str = "" # shared secret — set same value in Vercel env
 
+    # Force a specific provider: "sendgrid" | "relay" | "" (auto = relay if set, else sendgrid).
+    # The Gmail relay has a hard daily send limit; set EMAIL_PROVIDER=sendgrid for production volume.
+    EMAIL_PROVIDER: str = ""
+
     FROM_EMAIL: str = "bids@thinktls.com"
     FROM_NAME: str = "ThinkTLS Bid Desk"
     # Address buyers reach when they reply to a bid-desk email. The Gmail relay authenticates as

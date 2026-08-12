@@ -11,16 +11,27 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _resolve_provider() -> str:
+    """Which provider _send will use: honors EMAIL_PROVIDER override, else auto (relay > sendgrid)."""
+    forced = (settings.EMAIL_PROVIDER or "").strip().lower()
+    if forced in ("sendgrid", "relay"):
+        return forced
+    if settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET:
+        return "relay"
+    if settings.SENDGRID_API_KEY:
+        return "sendgrid"
+    return "none"
+
+
 def email_provider_status() -> dict:
     """Which provider is active + which config is present (booleans only — never the secret values).
     Lets an admin see, without shell/log access, whether email is even wired up."""
-    relay = bool(settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET)
-    sendgrid = bool(settings.SENDGRID_API_KEY)
     return {
-        "active_provider": "relay" if relay else ("sendgrid" if sendgrid else "none"),
+        "active_provider": _resolve_provider(),
+        "email_provider_override": (settings.EMAIL_PROVIDER or "").strip().lower() or "(auto)",
         "relay_url_set": bool(settings.EMAIL_RELAY_URL),
         "relay_secret_set": bool(settings.EMAIL_RELAY_SECRET),
-        "sendgrid_key_set": sendgrid,
+        "sendgrid_key_set": bool(settings.SENDGRID_API_KEY),
         "from_email": settings.FROM_EMAIL,
         "reply_to": settings.REPLY_TO_EMAIL,
     }
@@ -30,14 +41,18 @@ def _send(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
     """Send an email. Returns {"ok": bool, "provider": str, "detail": str} — never raises, so it's
     safe as a background task, but callers that care (invites, the email test) can inspect the
     result instead of a silent failure."""
-    if settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET:
-        return _send_via_relay(to_email, to_name, subject, html_body)
-    elif settings.SENDGRID_API_KEY:
+    provider = _resolve_provider()
+    if provider == "sendgrid":
+        if not settings.SENDGRID_API_KEY:
+            return {"ok": False, "provider": "sendgrid", "detail": "SENDGRID_API_KEY is not set"}
         return _send_sendgrid(to_email, to_name, subject, html_body)
-    else:
-        msg = "No email provider configured (set EMAIL_RELAY_URL+EMAIL_RELAY_SECRET, or SENDGRID_API_KEY)."
-        logger.warning(f"[EMAIL MOCK] {msg} To: {to_email} Subject: {subject}")
-        return {"ok": False, "provider": "none", "detail": msg}
+    if provider == "relay":
+        if not (settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET):
+            return {"ok": False, "provider": "relay", "detail": "EMAIL_RELAY_URL / EMAIL_RELAY_SECRET not set"}
+        return _send_via_relay(to_email, to_name, subject, html_body)
+    msg = "No email provider configured (set EMAIL_PROVIDER=sendgrid + SENDGRID_API_KEY, or the relay vars)."
+    logger.warning(f"[EMAIL MOCK] {msg} To: {to_email} Subject: {subject}")
+    return {"ok": False, "provider": "none", "detail": msg}
 
 
 def _send_via_relay(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
