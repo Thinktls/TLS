@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app.db.session import get_db, SessionLocal
 from app.core.security import require_admin
-from app.services.normalizer import format_part_number, normalize_description
+from app.services.results_email_items import won_item_from_deal, lost_item_from_line
 from app.models.deal import Deal
 from app.models.user import User
 from app.models.bid_line import BidLine
@@ -217,26 +217,12 @@ def _send_results_to_all_buyers(round_id: int):
             won_ids = {d.master_item_id for d in won_deals}
             buyer_lines = lines_by_buyer.get(buyer_id, [])
             lost_lines = [l for l in buyer_lines if l.master_item_id not in won_ids]
-            won_items = []
-            for d in won_deals:
-                master = masters.get(d.master_item_id)
-                won_items.append({
-                    "part_number": format_part_number(d.part_number or (master.part_number if master else "")),
-                    "description": normalize_description((d.description or (master.description if master else "")) or ""),
-                    "quantity": d.quantity or (master.quantity if master else 1),
-                    "your_price": d.winning_price,
-                })
-            lost_items = []
-            for line in lost_lines:
-                if line.unit_price is not None and line.fluffed_loss_price is not None:
-                    master = masters.get(line.master_item_id)
-                    lost_items.append({
-                        "part_number": format_part_number((master.part_number if master else line.raw_part_number) or ""),
-                        "description": normalize_description((master.description if master else line.description) or ""),
-                        "quantity": (master.quantity if master else line.quantity) or 1,
-                        "your_price": line.unit_price,
-                        "winning_price": line.fluffed_loss_price,
-                    })
+            won_items = [won_item_from_deal(d, masters.get(d.master_item_id)) for d in won_deals]
+            lost_items = [
+                lost_item_from_line(line, masters.get(line.master_item_id))
+                for line in lost_lines
+                if line.unit_price is not None and line.fluffed_loss_price is not None
+            ]
             won, lost = len(won_ids), len(lost_lines)
             send_round_results(buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items, lost_items)
             _log.info(f"[AutoResults] Sent results for round {round_id} to {buyer.email}: won={won} lost={lost}")
