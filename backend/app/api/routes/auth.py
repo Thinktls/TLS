@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
@@ -36,7 +37,7 @@ def _check_rate_limit(client_ip: str):
 async def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
     _check_rate_limit(client_ip)
-    user = db.query(User).filter(User.email == req.email).first()
+    user = db.query(User).filter(func.lower(User.email) == req.email.strip().lower()).first()
     # Run bcrypt off the event loop — it's CPU-bound and would block all other requests
     password_ok = await asyncio.to_thread(verify_password, req.password, user.hashed_password) if user else False
     if not user or not password_ok:
@@ -92,14 +93,15 @@ def change_password(req: ChangePasswordRequest, db: Session = Depends(get_db), c
 
 @router.post("/buyers")
 def create_buyer(req: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), _=Depends(require_admin)):
-    if db.query(User).filter(User.email == req.email).first():
+    email = req.email.strip().lower()  # store + match emails lowercase so login is case-insensitive
+    if db.query(User).filter(func.lower(User.email) == email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # Auto-generate a temporary password if not provided
     temp_password = req.password if req.password else secrets.token_urlsafe(10)
 
     user = User(
-        email=req.email,
+        email=email,
         hashed_password=hash_password(temp_password),
         full_name=req.full_name,
         company_name=req.company_name,
@@ -314,7 +316,7 @@ class ResetPasswordRequest(BaseModel):
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """Send a password-reset link. Always responds 200 to prevent email enumeration."""
-    user = db.query(User).filter(User.email == req.email).first()
+    user = db.query(User).filter(func.lower(User.email) == req.email.strip().lower()).first()
     if user and user.is_active:
         db.query(InviteToken).filter(InviteToken.buyer_id == user.id, InviteToken.used == False).delete()
         token_str = secrets.token_urlsafe(32)
