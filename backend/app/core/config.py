@@ -41,8 +41,15 @@ class Settings(BaseSettings):
     EMAIL_RELAY_URL: str = ""   # e.g. https://thinktls-bid-desk.vercel.app
     EMAIL_RELAY_SECRET: str = "" # shared secret — set same value in Vercel env
 
-    # Force a specific provider: "sendgrid" | "relay" | "" (auto = relay if set, else sendgrid).
-    # The Gmail relay has a hard daily send limit; set EMAIL_PROVIDER=sendgrid for production volume.
+    # Generic SMTP (Brevo, Mailgun, Amazon SES, Mailjet, …). Set EMAIL_PROVIDER=smtp and fill these.
+    # Brevo example: host smtp-relay.brevo.com, port 587, user = your Brevo login, password = SMTP key.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+
+    # Force a specific provider: "sendgrid" | "smtp" | "relay" | "" (auto = relay > sendgrid > smtp).
+    # The Gmail relay has a hard daily send limit; use sendgrid or smtp for production volume.
     EMAIL_PROVIDER: str = ""
 
     FROM_EMAIL: str = "bids@thinktls.com"

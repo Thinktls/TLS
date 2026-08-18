@@ -12,14 +12,16 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_provider() -> str:
-    """Which provider _send will use: honors EMAIL_PROVIDER override, else auto (relay > sendgrid)."""
+    """Which provider _send will use: honors EMAIL_PROVIDER override, else auto (relay > sendgrid > smtp)."""
     forced = (settings.EMAIL_PROVIDER or "").strip().lower()
-    if forced in ("sendgrid", "relay"):
+    if forced in ("sendgrid", "relay", "smtp"):
         return forced
     if settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET:
         return "relay"
     if settings.SENDGRID_API_KEY:
         return "sendgrid"
+    if settings.SMTP_HOST:
+        return "smtp"
     return "none"
 
 
@@ -32,6 +34,7 @@ def email_provider_status() -> dict:
         "relay_url_set": bool(settings.EMAIL_RELAY_URL),
         "relay_secret_set": bool(settings.EMAIL_RELAY_SECRET),
         "sendgrid_key_set": bool(settings.SENDGRID_API_KEY),
+        "smtp_host_set": bool(settings.SMTP_HOST),
         "from_email": settings.FROM_EMAIL,
         "reply_to": settings.REPLY_TO_EMAIL,
     }
@@ -46,13 +49,66 @@ def _send(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
         if not settings.SENDGRID_API_KEY:
             return {"ok": False, "provider": "sendgrid", "detail": "SENDGRID_API_KEY is not set"}
         return _send_sendgrid(to_email, to_name, subject, html_body)
+    if provider == "smtp":
+        if not settings.SMTP_HOST:
+            return {"ok": False, "provider": "smtp", "detail": "SMTP_HOST is not set"}
+        return _send_smtp(to_email, to_name, subject, html_body)
     if provider == "relay":
         if not (settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET):
             return {"ok": False, "provider": "relay", "detail": "EMAIL_RELAY_URL / EMAIL_RELAY_SECRET not set"}
         return _send_via_relay(to_email, to_name, subject, html_body)
-    msg = "No email provider configured (set EMAIL_PROVIDER=sendgrid + SENDGRID_API_KEY, or the relay vars)."
+    msg = "No email provider configured (set EMAIL_PROVIDER=smtp + SMTP_* , or sendgrid + SENDGRID_API_KEY)."
     logger.warning(f"[EMAIL MOCK] {msg} To: {to_email} Subject: {subject}")
     return {"ok": False, "provider": "none", "detail": msg}
+
+
+def _html_to_text(html: str) -> str:
+    """Minimal plain-text alternative from HTML — every email should carry a text/plain part
+    (an HTML-only message is a strong spam signal)."""
+    import re
+    text = re.sub(r"(?is)<(style|script).*?</\1>", " ", html)
+    text = re.sub(r"(?i)</(p|div|tr|h[1-6]|li)>", "\n", text)
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = (text.replace("&nbsp;", " ").replace("&amp;", "&")
+                .replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'"))
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    return "\n".join(line.strip() for line in text.splitlines()).strip()
+
+
+def _send_smtp(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
+    """Send via a generic SMTP provider (Brevo, Mailgun, Amazon SES, Mailjet, …)."""
+    try:
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.utils import formataddr
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = formataddr((settings.FROM_NAME, settings.FROM_EMAIL))
+        msg["To"] = formataddr((to_name, to_email)) if to_name else to_email
+        msg["Reply-To"] = settings.REPLY_TO_EMAIL
+        msg.attach(MIMEText(_html_to_text(html_body), "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        port = int(settings.SMTP_PORT or 587)
+        if port == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, port, timeout=20) as s:
+                s.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                s.sendmail(settings.FROM_EMAIL, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, port, timeout=20) as s:
+                s.starttls()
+                s.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                s.sendmail(settings.FROM_EMAIL, [to_email], msg.as_string())
+        logger.info(f"[EMAIL SMTP] Sent to {to_email}: {subject}")
+        return {"ok": True, "provider": "smtp", "detail": "sent"}
+    except Exception as e:
+        detail = f"{type(e).__name__}: {e}"
+        logger.error(f"[EMAIL SMTP] Failed for {to_email}: {detail}")
+        return {"ok": False, "provider": "smtp", "detail": detail}
 
 
 def _send_via_relay(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
