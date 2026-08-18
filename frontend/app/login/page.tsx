@@ -220,7 +220,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="you@thinktls.com"
+                    placeholder="Enter your email address"
                     className="glass-input"
                   />
                 </div>
