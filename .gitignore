@@ -25,3 +25,6 @@ dist/
 
 # Vercel local project link (deploys run from repo root: `vercel --prod`)
 .vercel
+
+# Real deploy config with secrets — never commit; use render.yaml.example as the template.
+render.yaml

@@ -1,0 +1,53 @@
+# Render Blueprint — Backend API only
+# Database: Supabase (free) — set DATABASE_URL below
+# Frontend: Vercel (free) — deploy separately from /frontend directory
+
+services:
+  - type: web
+    name: thinktls-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free          # Free tier — wakes on first request (30s cold start after 15 min idle)
+    envVars:
+      - key: DATABASE_URL
+        sync: false     # Set manually in Render dashboard from Supabase connection string
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false   # set this in the Render dashboard
+      # SMTP — Brevo
+      - key: SMTP_HOST
+        sync: false   # set this in the Render dashboard
+      - key: SMTP_PORT
+        sync: false   # set this in the Render dashboard
+      - key: SMTP_USER
+        sync: false   # set this in the Render dashboard
+      - key: SMTP_PASSWORD
+        sync: false   # set this in the Render dashboard
+      - key: FROM_EMAIL
+        sync: false   # set this in the Render dashboard
+      - key: FROM_NAME
+        sync: false   # set this in the Render dashboard
+      # AI — Groq
+      - key: OLLAMA_BASE_URL
+        sync: false   # set this in the Render dashboard
+      - key: OLLAMA_MODEL
+        sync: false   # set this in the Render dashboard
+      - key: OLLAMA_API_KEY
+        sync: false   # set this in the Render dashboard
+      # Future: SendGrid, Razor
+      - key: SENDGRID_API_KEY
+        sync: false   # set this in the Render dashboard
+      - key: SENDGRID_WEBHOOK_KEY
+        sync: false   # set this in the Render dashboard
+      - key: RAZOR_API_URL
+        sync: false   # set this in the Render dashboard
+      - key: RAZOR_API_KEY
+        sync: false   # set this in the Render dashboard
+      - key: AUTO_PUSH_RAZOR
+        sync: false   # set this in the Render dashboard
+      - key: ADMIN_EMAIL
+        sync: false   # set this in the Render dashboard
+      - key: ADMIN_PASSWORD
+        sync: false   # set this in the Render dashboard
