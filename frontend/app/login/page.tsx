@@ -234,7 +234,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                     className="glass-input"
                   />
                 </div>
