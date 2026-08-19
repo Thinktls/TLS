@@ -12,14 +12,16 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_provider() -> str:
-    """Which provider _send will use: honors EMAIL_PROVIDER override, else auto (relay > sendgrid > smtp)."""
+    """Which provider _send will use: honors EMAIL_PROVIDER override, else auto."""
     forced = (settings.EMAIL_PROVIDER or "").strip().lower()
-    if forced in ("sendgrid", "relay", "smtp"):
+    if forced in ("brevo", "sendgrid", "relay", "smtp"):
         return forced
     if settings.EMAIL_RELAY_URL and settings.EMAIL_RELAY_SECRET:
         return "relay"
     if settings.SENDGRID_API_KEY:
         return "sendgrid"
+    if settings.BREVO_API_KEY:
+        return "brevo"
     if settings.SMTP_HOST:
         return "smtp"
     return "none"
@@ -34,6 +36,7 @@ def email_provider_status() -> dict:
         "relay_url_set": bool(settings.EMAIL_RELAY_URL),
         "relay_secret_set": bool(settings.EMAIL_RELAY_SECRET),
         "sendgrid_key_set": bool(settings.SENDGRID_API_KEY),
+        "brevo_key_set": bool(settings.BREVO_API_KEY),
         "smtp_host_set": bool(settings.SMTP_HOST),
         "from_email": settings.FROM_EMAIL,
         "reply_to": settings.REPLY_TO_EMAIL,
@@ -45,6 +48,10 @@ def _send(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
     safe as a background task, but callers that care (invites, the email test) can inspect the
     result instead of a silent failure."""
     provider = _resolve_provider()
+    if provider == "brevo":
+        if not settings.BREVO_API_KEY:
+            return {"ok": False, "provider": "brevo", "detail": "BREVO_API_KEY is not set"}
+        return _send_brevo_api(to_email, to_name, subject, html_body)
     if provider == "sendgrid":
         if not settings.SENDGRID_API_KEY:
             return {"ok": False, "provider": "sendgrid", "detail": "SENDGRID_API_KEY is not set"}
@@ -75,6 +82,36 @@ def _html_to_text(html: str) -> str:
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
     return "\n".join(line.strip() for line in text.splitlines()).strip()
+
+
+def _send_brevo_api(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
+    """Send via Brevo's transactional HTTPS API — works even where outbound SMTP is blocked."""
+    try:
+        import httpx
+        payload = {
+            "sender": {"email": settings.FROM_EMAIL, "name": settings.FROM_NAME},
+            "to": [{"email": to_email, "name": to_name or to_email}],
+            "replyTo": {"email": settings.REPLY_TO_EMAIL},
+            "subject": subject,
+            "htmlContent": html_body,
+            "textContent": _html_to_text(html_body),
+        }
+        resp = httpx.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={"api-key": settings.BREVO_API_KEY, "content-type": "application/json", "accept": "application/json"},
+            timeout=20,
+        )
+        if resp.status_code >= 400:
+            detail = f"brevo HTTP {resp.status_code}: {resp.text[:300]}"
+            logger.error(f"[EMAIL Brevo] Failed for {to_email}: {detail}")
+            return {"ok": False, "provider": "brevo", "detail": detail}
+        logger.info(f"[EMAIL Brevo] Sent to {to_email}: {subject}")
+        return {"ok": True, "provider": "brevo", "detail": "sent"}
+    except Exception as e:
+        detail = f"{type(e).__name__}: {e}"
+        logger.error(f"[EMAIL Brevo] Failed for {to_email}: {detail}")
+        return {"ok": False, "provider": "brevo", "detail": detail}
 
 
 def _send_smtp(to_email: str, to_name: str, subject: str, html_body: str) -> dict:

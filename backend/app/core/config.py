@@ -48,8 +48,12 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
 
-    # Force a specific provider: "sendgrid" | "smtp" | "relay" | "" (auto = relay > sendgrid > smtp).
-    # The Gmail relay has a hard daily send limit; use sendgrid or smtp for production volume.
+    # Brevo HTTPS API (works even when the host blocks outbound SMTP ports). Set EMAIL_PROVIDER=brevo.
+    # Key from Brevo → Settings → SMTP & API → API Keys (this is the "api-key", not the SMTP key).
+    BREVO_API_KEY: str = ""
+
+    # Force a specific provider: "brevo" | "sendgrid" | "smtp" | "relay" | "" (auto).
+    # Use brevo (HTTPS API) or sendgrid for production; SMTP can be blocked by some hosts (e.g. Render).
     EMAIL_PROVIDER: str = ""
 
     FROM_EMAIL: str = "bids@thinktls.com"
