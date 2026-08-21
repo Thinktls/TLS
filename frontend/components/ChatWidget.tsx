@@ -182,7 +182,7 @@ export default function ChatWidget({ role, roundId }: Props) {
                     : "var(--surface)",
                   border: m.role === "user" ? "none" : "1px solid var(--border)",
                   fontSize: "0.8rem",
-                  color: "var(--text-on-brand)",
+                  color: m.role === "user" ? "var(--text-on-brand)" : "var(--text-1)",
                   lineHeight: 1.55,
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",

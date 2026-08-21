@@ -114,7 +114,7 @@ export default function LandingPage() {
           transition: border-color 0.2s, color 0.2s, transform 0.15s;
         }
         .outline-btn:hover {
-          border-color: rgba(255,255,255,0.12);
+          border-color: rgba(255,255,255,0.32);
           color: #ffffff;
           transform: translateY(-2px);
         }
