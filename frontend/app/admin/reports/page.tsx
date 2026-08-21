@@ -55,7 +55,7 @@ interface RoundTrend {
 }
 
 const statusColor: Record<string, string> = {
-  draft: "rgba(255,255,255,0.4)",
+  draft: "var(--text-3)",
   open: "#34d399",
   closed: "#fbbf24",
   processing: "#60a5fa",
@@ -72,17 +72,17 @@ function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: "#0d1826",
+      background: "var(--bg-2)",
       border: "1px solid rgba(61,129,227,0.3)",
       borderRadius: "10px",
       padding: "10px 14px",
       fontSize: "0.8rem",
     }}>
-      <p style={{ color: "rgba(255,255,255,0.5)", margin: "0 0 4px" }}>{label}</p>
+      <p style={{ color: "var(--text-3)", margin: "0 0 4px" }}>{label}</p>
       <p style={{ color: "#34d399", fontWeight: 700, margin: "0 0 2px" }}>
         ${payload[0].value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
       </p>
-      <p style={{ color: "rgba(255,255,255,0.35)", margin: 0 }}>{payload[0].payload.count} deals</p>
+      <p style={{ color: "var(--text-3)", margin: 0 }}>{payload[0].payload.count} deals</p>
     </div>
   );
 }
@@ -153,7 +153,7 @@ export default function ReportsDashboard() {
               borderRadius: "var(--radius-xl)",
               padding: "20px",
             }}>
-              <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {label}
               </p>
               <p style={{ fontSize: "1.8rem", fontWeight: 700, color: color as string, margin: 0 }}>{value}</p>
@@ -173,25 +173,25 @@ export default function ReportsDashboard() {
             <p style={{ fontWeight: 600, color: "var(--text-1)", margin: 0, fontSize: "0.9rem" }}>
               Monthly Deal Value
             </p>
-            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>Last 12 months · approved deals only</p>
+            <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0 }}>Last 12 months · approved deals only</p>
           </div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={monthly} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 11 }}
+                tick={{ fill: "var(--text-3)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={fmt}
-                tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
+                tick={{ fill: "var(--text-4)", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 width={56}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--surface)" }} />
               <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                 {monthly.map((entry, index) => (
                   <Cell
@@ -211,11 +211,11 @@ export default function ReportsDashboard() {
             <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: "0 0 16px" }}>Deal value per completed round (most recent {trends.length}).</p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={trends} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} tickFormatter={(v: string) => (v.length > 10 ? v.slice(0, 10) + "…" : v)} />
-                <YAxis tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: "var(--text-3)", fontSize: 10 }} tickFormatter={(v: string) => (v.length > 10 ? v.slice(0, 10) + "…" : v)} />
+                <YAxis tick={{ fill: "var(--text-3)", fontSize: 10 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{ background: "#0d1825", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={((v: number, _n: unknown, item: any) => {
                     const r = item?.payload as RoundTrend | undefined;
@@ -270,7 +270,7 @@ export default function ReportsDashboard() {
               Top Buyers by Margin
             </p>
             {top_buyers.length === 0 ? (
-              <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.3)" }}>No buyer data yet.</p>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-4)" }}>No buyer data yet.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {top_buyers.map((b, idx) => (
@@ -281,20 +281,20 @@ export default function ReportsDashboard() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         padding: "10px 12px",
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.06)",
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
                         borderRadius: "10px",
                         transition: "all 0.15s",
                       }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)"; }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-mid)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"; }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <span style={{
                           width: 22, height: 22, borderRadius: 6,
-                          background: "rgba(255,255,255,0.06)",
+                          background: "var(--surface)",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: "0.65rem", fontWeight: 700, color: "rgba(255,255,255,0.5)",
+                          fontSize: "0.65rem", fontWeight: 700, color: "var(--text-3)",
                           flexShrink: 0,
                         }}>
                           {idx + 1}
@@ -303,7 +303,7 @@ export default function ReportsDashboard() {
                           <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 500, color: "var(--text-1)" }}>
                             {b.company_name || b.full_name}
                           </p>
-                          <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>
+                          <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--text-3)" }}>
                             {b.total_lines_won} won / {b.total_lines_bid} bid · {b.win_rate.toFixed(1)}% win rate
                           </p>
                         </div>
@@ -327,12 +327,12 @@ export default function ReportsDashboard() {
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
               <p style={{ fontWeight: 600, color: "var(--text-1)", margin: 0, fontSize: "0.9rem" }}>Recent Rounds</p>
-              <Link href="/admin/rounds" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", textDecoration: "none" }}>
+              <Link href="/admin/rounds" style={{ fontSize: "0.75rem", color: "var(--text-3)", textDecoration: "none" }}>
                 View all →
               </Link>
             </div>
             {recent_rounds.length === 0 ? (
-              <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.3)" }}>No rounds yet.</p>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-4)" }}>No rounds yet.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {recent_rounds.map((r) => (
@@ -342,13 +342,13 @@ export default function ReportsDashboard() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "10px 12px",
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
                       borderRadius: "10px",
                     }}>
                       <div>
                         <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 500, color: "var(--text-1)" }}>{r.name}</p>
-                        <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>
+                        <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--text-3)" }}>
                           {r.total_line_items.toLocaleString()} items
                         </p>
                       </div>
@@ -357,8 +357,8 @@ export default function ReportsDashboard() {
                         fontWeight: 600,
                         padding: "2px 10px",
                         borderRadius: "100px",
-                        background: "rgba(255,255,255,0.05)",
-                        color: statusColor[r.status] || "rgba(255,255,255,0.5)",
+                        background: "var(--surface)",
+                        color: statusColor[r.status] || "var(--text-3)",
                         textTransform: "capitalize",
                       }}>
                         {r.status}

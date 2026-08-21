@@ -66,7 +66,7 @@ function ResultsInner() {
                   padding: "7px 18px", borderRadius: "100px", cursor: "pointer",
                   background: selected === r.id ? "rgba(61,129,227,0.2)" : "var(--bg-2)",
                   border: `1px solid ${selected === r.id ? "rgba(61,129,227,0.4)" : "var(--border)"}`,
-                  color: selected === r.id ? "white" : "var(--text-3)",
+                  color: selected === r.id ? "var(--text-1)" : "var(--text-3)",
                   fontSize: "0.82rem", fontWeight: selected === r.id ? 700 : 400,
                   transition: "all 0.15s", fontFamily: "inherit",
                 }}>
@@ -90,7 +90,7 @@ function ResultsInner() {
                     {[
                       { label: "Won",      val: result.won,  bg: "rgba(16,185,129,0.1)",  border: "rgba(16,185,129,0.2)",  color: "#34d399" },
                       { label: "Lost",     val: result.lost, bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.15)", color: "#f87171" },
-                      { label: "Win Rate", val: winRate ? `${winRate}%` : "—", bg: "rgba(255,255,255,0.03)", border: "var(--border)", color: "var(--text-1)" },
+                      { label: "Win Rate", val: winRate ? `${winRate}%` : "—", bg: "var(--surface)", border: "var(--border)", color: "var(--text-1)" },
                     ].map(({ label, val, bg, border, color }) => (
                       <div key={label} style={{ padding: "12px 20px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius)" }}>
                         <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 5px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>
@@ -110,7 +110,7 @@ function ResultsInner() {
                     <button key={f} onClick={() => setFilterOutcome(f)} style={{
                       padding: "5px 14px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none",
                       background: filterOutcome === f ? "rgba(61,129,227,0.18)" : "transparent",
-                      color: filterOutcome === f ? "white" : "var(--text-4)",
+                      color: filterOutcome === f ? "var(--text-1)" : "var(--text-4)",
                       fontWeight: filterOutcome === f ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
                     }}>
                       {f === "all" ? `All (${result.results.length})` : f === "WON" ? `Won (${result.won})` : f === "LOST" ? `Lost (${result.lost})` : `Summed by Model (${result.rollup?.length ?? 0})`}

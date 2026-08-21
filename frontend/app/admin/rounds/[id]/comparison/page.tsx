@@ -145,11 +145,11 @@ export default function ComparisonPage() {
             { color: "#34d399", bg: "rgba(52,211,153,0.12)", label: "Winner", tip: "Highest valid bid on this item — the awarded price." },
             { color: "#f87171", bg: "rgba(239,68,68,0.1)", label: "Below reserve", tip: "Bid is under your minimum acceptable price and can't win without an override." },
             { color: "#fbbf24", bg: "rgba(251,191,36,0.1)", label: "Anomaly", tip: "Possible price typo — this bid is far above or below the others on the same item." },
-            { color: "rgba(255,255,255,0.3)", bg: "transparent", label: "not quoted", tip: "This buyer did not put a price on this device — either they left it blank or never bid on it." },
+            { color: "var(--text-4)", bg: "transparent", label: "not quoted", tip: "This buyer did not put a price on this device — either they left it blank or never bid on it." },
           ].map(({ color, bg, label, tip }) => (
             <div key={label} title={tip} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "help" }}>
               <div style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px solid ${color}` }} />
-              <span style={{ color: "rgba(255,255,255,0.5)" }}>{label}</span>
+              <span style={{ color: "var(--text-3)" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -173,12 +173,12 @@ export default function ComparisonPage() {
                     fontSize: "0.72rem",
                   }}
                 >
-                  <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{c.buyer}</span>
+                  <span style={{ color: "var(--text-1)", fontWeight: 600 }}>{c.buyer}</span>
                   <span style={{ color: full ? "#34d399" : "#fbbf24", marginLeft: "8px" }}>
                     quoted {c.quoted.toLocaleString()}/{c.total_items.toLocaleString()} ({c.quoted_pct}%)
                   </span>
                   {!full && (
-                    <span style={{ color: "rgba(255,255,255,0.35)", marginLeft: "6px" }}>
+                    <span style={{ color: "var(--text-3)", marginLeft: "6px" }}>
                       · {c.not_quoted.toLocaleString()} not quoted
                     </span>
                   )}
@@ -203,7 +203,7 @@ export default function ComparisonPage() {
                 display: "flex",
                 height: HEADER_H,
                 background: "rgba(30,58,95,0.95)",   // opaque so the white header text reads in light mode too
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
+                borderBottom: "1px solid var(--border)",
               }}>
                 <HeaderCell width={COL_W_ITEM}>Model / Part</HeaderCell>
                 {isUnitLevel && <HeaderCell width={COL_W_GRADE} center>Grade</HeaderCell>}
@@ -246,8 +246,8 @@ export default function ComparisonPage() {
                           height: ROW_H,
                           display: "flex",
                           alignItems: "center",
-                          borderBottom: "1px solid rgba(255,255,255,0.04)",
-                          background: virtualRow.index % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
+                          borderBottom: "1px solid var(--border)",
+                          background: virtualRow.index % 2 === 0 ? "var(--surface)" : "transparent",
                         }}
                       >
                         {/* Two-line item cell: model name on top, part number / serial below */}
@@ -255,7 +255,7 @@ export default function ComparisonPage() {
                           width: COL_W_ITEM, flexShrink: 0,
                           display: "flex", flexDirection: "column", justifyContent: "center",
                           padding: "0 12px", overflow: "hidden",
-                          borderRight: "1px solid rgba(255,255,255,0.03)",
+                          borderRight: "1px solid var(--border)",
                         }}>
                           <div style={{ fontSize: "0.82rem", color: "var(--text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>
                             {row.description || row.part_number}
@@ -269,7 +269,7 @@ export default function ComparisonPage() {
                             width: COL_W_GRADE, flexShrink: 0,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             padding: "0 8px", overflow: "hidden",
-                            borderRight: "1px solid rgba(255,255,255,0.03)",
+                            borderRight: "1px solid var(--border)",
                           }}>
                             {row.category ? (
                               <span style={{
@@ -280,7 +280,7 @@ export default function ComparisonPage() {
                                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                                 maxWidth: "100%",
                               }}>{row.category}</span>
-                            ) : <span style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.75rem" }}>—</span>}
+                            ) : <span style={{ color: "var(--text-4)", fontSize: "0.75rem" }}>—</span>}
                           </div>
                         )}
                         <Cell width={COL_W_QTY} center muted>{row.quantity ?? "—"}</Cell>
@@ -302,7 +302,7 @@ export default function ComparisonPage() {
                                 style={{
                                   width: COL_W_BID, flexShrink: 0, height: "100%",
                                   display: "flex", alignItems: "center", justifyContent: "center",
-                                  borderLeft: "1px solid rgba(255,255,255,0.04)",
+                                  borderLeft: "1px solid var(--border)",
                                   fontSize: "0.68rem", fontStyle: "italic",
                                   color: "var(--text-4)", cursor: "help",
                                 }}
@@ -335,7 +335,7 @@ export default function ComparisonPage() {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 background: bg,
-                                borderLeft: "1px solid rgba(255,255,255,0.04)",
+                                borderLeft: "1px solid var(--border)",
                                 fontSize: "0.82rem",
                                 fontWeight: fw,
                                 color,
@@ -357,7 +357,7 @@ export default function ComparisonPage() {
         </div>
 
         {rows.length === 0 && (
-          <div style={{ textAlign: "center", paddingTop: "60px", color: "rgba(255,255,255,0.3)" }}>
+          <div style={{ textAlign: "center", paddingTop: "60px", color: "var(--text-4)" }}>
             No matched bid lines found. Process the round first.
           </div>
         )}
@@ -377,10 +377,10 @@ function HeaderCell({ children, width, center }: { children: React.ReactNode; wi
       padding: "0 12px",
       fontSize: "0.72rem",
       fontWeight: 600,
-      color: "rgba(255,255,255,0.55)",
+      color: "#ffffff",
       textTransform: "uppercase",
       letterSpacing: "0.06em",
-      borderRight: "1px solid rgba(255,255,255,0.05)",
+      borderRight: "1px solid var(--border)",
     }}>
       {children}
     </div>
@@ -410,7 +410,7 @@ function Cell({ children, width, center, muted, mono }: {
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",
-      borderRight: "1px solid rgba(255,255,255,0.03)",
+      borderRight: "1px solid var(--border)",
     }}>
       {children}
     </div>

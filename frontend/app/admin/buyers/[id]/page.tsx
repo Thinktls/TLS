@@ -26,7 +26,7 @@ interface BuyerProfile {
   total_deals_won: number;
 }
 
-const stat = (label: string, value: string | number, color = "white"): [string, string | number, string] =>
+const stat = (label: string, value: string | number, color = "var(--text-1)"): [string, string | number, string] =>
   [label, value, color];
 
 function fmt(dt: string | null): string {
@@ -86,10 +86,10 @@ export default function BuyerProfilePage() {
   const stats: [string, string | number, string][] = [
     stat("Win Rate",         `${profile.win_rate.toFixed(1)}%`,  profile.win_rate > 50 ? "#34d399" : profile.win_rate > 25 ? "#fbbf24" : "#f87171"),
     stat("Lines Won",        profile.total_lines_won,            "#34d399"),
-    stat("Lines Bid",        profile.total_lines_bid,            "white"),
+    stat("Lines Bid",        profile.total_lines_bid,            "var(--text-1)"),
     stat("Deals Awarded",    profile.total_deals_won,            "#a78bfa"),
     stat("Margin Contrib.",  `$${profile.total_margin_contribution.toLocaleString()}`, "#60a5fa"),
-    stat("Deal Value Won",   `$${profile.total_deal_value.toLocaleString()}`, "white"),
+    stat("Deal Value Won",   `$${profile.total_deal_value.toLocaleString()}`, "var(--text-1)"),
   ];
 
   return (
@@ -151,13 +151,13 @@ export default function BuyerProfilePage() {
             borderRadius: "var(--radius-xl)",
             padding: "20px",
           }}>
-            <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Buyer Score
             </p>
             <p style={{ fontSize: "2.4rem", fontWeight: 700, color: "#a78bfa", margin: 0 }}>
               {profile.buyer_score.toFixed(0)}
             </p>
-            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: "6px 0 0" }}>
+            <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "6px 0 0" }}>
               Updated {fmt(profile.score_updated_at)}
             </p>
           </div>
@@ -167,13 +167,13 @@ export default function BuyerProfilePage() {
             borderRadius: "var(--radius-xl)",
             padding: "20px",
           }}>
-            <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Fluff %
             </p>
             <p style={{ fontSize: "2.4rem", fontWeight: 700, color: "#fbbf24", margin: 0 }}>
               {profile.fluff_percentage}%
             </p>
-            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: "6px 0 0" }}>
+            <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "6px 0 0" }}>
               {profile.fluff_enabled ? "Enabled" : "Disabled"} · Applied to loss notices
             </p>
           </div>
@@ -192,11 +192,11 @@ export default function BuyerProfilePage() {
             {stats.map(([label, value, color]) => (
               <div key={label} style={{
                 padding: "14px",
-                background: "rgba(255,255,255,0.03)",
+                background: "var(--surface)",
                 borderRadius: "10px",
-                border: "1px solid rgba(255,255,255,0.05)",
+                border: "1px solid var(--border)",
               }}>
-                <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+                <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
                 <p style={{ fontSize: "1.3rem", fontWeight: 700, color, margin: 0 }}>{value}</p>
               </div>
             ))}
@@ -219,8 +219,8 @@ export default function BuyerProfilePage() {
               ["Company", profile.company_name || "—"],
             ].map(([label, value]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.83rem" }}>
-                <span style={{ color: "rgba(255,255,255,0.4)" }}>{label}</span>
-                <span style={{ color: "rgba(255,255,255,0.8)" }}>{value}</span>
+                <span style={{ color: "var(--text-3)" }}>{label}</span>
+                <span style={{ color: "var(--text-1)" }}>{value}</span>
               </div>
             ))}
           </div>

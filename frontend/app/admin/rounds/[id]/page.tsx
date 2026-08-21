@@ -411,9 +411,9 @@ export default function RoundDetail() {
         {summary && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "20px" }}>
             {[
-              { label: "Bid Lines",   val: summary.total_bid_lines.toLocaleString(), color: "var(--text-1)",   bg: "rgba(255,255,255,0.03)" },
+              { label: "Bid Lines",   val: summary.total_bid_lines.toLocaleString(), color: "var(--text-1)",   bg: "var(--surface)" },
               { label: "Matched",     val: summary.matched.toLocaleString(),          color: "#34d399", bg: "rgba(16,185,129,0.06)" },
-              { label: "Exceptions",  val: summary.exceptions.toLocaleString(),       color: summary.exceptions > 0 ? "#fb923c" : "var(--text-3)", bg: summary.exceptions > 0 ? "rgba(251,146,60,0.06)" : "rgba(255,255,255,0.03)" },
+              { label: "Exceptions",  val: summary.exceptions.toLocaleString(),       color: summary.exceptions > 0 ? "#fb923c" : "var(--text-3)", bg: summary.exceptions > 0 ? "rgba(251,146,60,0.06)" : "var(--surface)" },
               { label: "Winners",     val: summary.winners.toLocaleString(),          color: "#a78bfa", bg: "rgba(139,92,246,0.06)" },
               { label: "Deals",       val: summary.deals.toLocaleString(),            color: "#60a5fa", bg: "rgba(61,129,227,0.06)" },
               { label: "Deal Value",  val: `$${summary.total_deal_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#34d399", bg: "rgba(16,185,129,0.06)" },
@@ -656,7 +656,7 @@ export default function RoundDetail() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {assignedBuyers.map(b => (
-                <div key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+                <div key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(61,129,227,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>
                       {initials(b.full_name)}
@@ -664,7 +664,7 @@ export default function RoundDetail() {
                     <div>
                       <Link href={`/admin/rounds/${id}/buyers/${b.id}`} style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-1)", textDecoration: "none", display: "block" }}
                         onMouseEnter={e => { e.currentTarget.style.color = "#60a5fa"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = "white"; }}>
+                        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-1)"; }}>
                         {b.full_name}
                       </Link>
                       <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>{b.company_name || b.email}</p>
@@ -685,7 +685,7 @@ export default function RoundDetail() {
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {bidFiles.map(f => (
-                <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", padding: "12px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+                <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", padding: "12px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "3px" }}>
                       <Link href={`/admin/rounds/${id}/buyers/${f.buyer_id}`} style={{ fontSize: "0.85rem", fontWeight: 600, color: "#60a5fa", textDecoration: "none" }}
@@ -753,7 +753,7 @@ export default function RoundDetail() {
               {[
                 { label: "Invited",  count: assignedBuyers.filter(b => b.invite_status !== "pending").length, color: "#60a5fa", bg: "rgba(61,129,227,0.08)" },
                 { label: "Uploaded", count: uploadedCount,  color: "#34d399", bg: "rgba(16,185,129,0.08)" },
-                { label: "Pending",  count: pendingCount,   color: "var(--text-3)", bg: "rgba(255,255,255,0.03)" },
+                { label: "Pending",  count: pendingCount,   color: "var(--text-3)", bg: "var(--surface)" },
               ].map(({ label, count, color, bg }) => (
                 <div key={label} style={{ padding: "14px 16px", background: bg, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
                   <p style={{ fontSize: "1.6rem", fontWeight: 800, color, margin: "0 0 3px", letterSpacing: "-0.04em" }}>{count}</p>
@@ -766,13 +766,13 @@ export default function RoundDetail() {
 
       {/* Extend Deadline Modal */}
       {extendDeadline !== null && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div style={{ background: "#0d1826", border: "1px solid rgba(61,129,227,0.3)", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "440px" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "var(--modal-backdrop-bg)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "var(--bg-2)", border: "1px solid rgba(61,129,227,0.3)", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "440px" }}>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 8px" }}>Extend Submission Deadline</h3>
-            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", margin: "0 0 20px" }}>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-3)", margin: "0 0 20px" }}>
               Set a new deadline for this round. Buyers will be able to submit until the new date.
             </p>
-            <label htmlFor="extend-deadline-input" style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "rgba(255,255,255,0.5)", marginBottom: "6px" }}>New Deadline</label>
+            <label htmlFor="extend-deadline-input" style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "var(--text-3)", marginBottom: "6px" }}>New Deadline</label>
             <input
               id="extend-deadline-input"
               type="datetime-local"

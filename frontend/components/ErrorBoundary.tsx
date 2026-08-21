@@ -31,15 +31,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div style={{
           minHeight: "100vh",
-          background: "#0c0c0c",
+          background: "var(--bg)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           padding: "40px",
         }}>
           <div style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: "16px",
             padding: "48px",
             maxWidth: "480px",
@@ -50,7 +50,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <h2 style={{ color: "var(--text-1)", fontSize: "1.25rem", fontWeight: 700, marginBottom: "8px" }}>
               Something went wrong
             </h2>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", marginBottom: "24px", lineHeight: 1.6 }}>
+            <p style={{ color: "var(--text-3)", fontSize: "0.875rem", marginBottom: "24px", lineHeight: 1.6 }}>
               An unexpected error occurred. The error has been logged.
             </p>
             {this.state.error && (

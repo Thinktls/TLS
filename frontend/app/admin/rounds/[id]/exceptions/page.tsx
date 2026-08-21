@@ -76,7 +76,7 @@ const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   price_anomaly: { bg: "rgba(168,85,247,0.15)", color: "#c084fc" },
   below_reserve: { bg: "rgba(239,68,68,0.12)", color: "#fca5a5" },
   overbid: { bg: "rgba(251,146,60,0.12)", color: "#fdba74" },
-  rejected: { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)" },
+  rejected: { bg: "var(--surface)", color: "var(--text-3)" },
   bad_format: { bg: "rgba(251,191,36,0.1)", color: "#fde68a" },
 };
 
@@ -126,7 +126,7 @@ function MasterSearch({
 
   return (
     <div style={{
-      background: "rgba(10,10,14,0.95)",
+      background: "var(--bg-2)",
       border: "1px solid rgba(61,129,227,0.3)",
       borderRadius: "12px",
       padding: "16px",
@@ -141,7 +141,7 @@ function MasterSearch({
         className="glass-input"
         style={{ marginBottom: "10px" }}
       />
-      {searching && <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.3)" }}>Searching...</p>}
+      {searching && <p style={{ fontSize: "0.78rem", color: "var(--text-4)" }}>Searching...</p>}
       {results.map((r) => (
         <div
           key={r.id}
@@ -151,18 +151,18 @@ function MasterSearch({
             borderRadius: "8px",
             cursor: "pointer",
             marginBottom: "4px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(61,129,227,0.1)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface)")}
         >
           <p style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "var(--text-1)", margin: "0 0 2px" }}>{r.part_number}</p>
-          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)", margin: 0 }}>{r.description}</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-3)", margin: 0 }}>{r.description}</p>
         </div>
       ))}
       {q.length >= 2 && !searching && results.length === 0 && (
-        <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.25)", textAlign: "center" }}>No master items found</p>
+        <p style={{ fontSize: "0.78rem", color: "var(--text-4)", textAlign: "center" }}>No master items found</p>
       )}
       <button onClick={onCancel} className="btn-ghost" style={{ marginTop: "8px", fontSize: "0.78rem", padding: "5px 14px" }}>
         Cancel
@@ -384,7 +384,7 @@ export default function ExceptionsPage() {
         {stats && (
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
             {[
-              { label: "Total",      value: stats.total,                   color: "var(--text-2)", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
+              { label: "Total",      value: stats.total,                   color: "var(--text-2)", bg: "var(--surface)", border: "var(--border)" },
               { label: "Unresolved", value: stats.unresolved,              color: "#fb923c",       bg: "rgba(251,146,60,0.07)", border: "rgba(251,146,60,0.2)" },
               { label: "Resolved",   value: stats.resolved,                color: "#34d399",       bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
               { label: "AI Matched", value: stats.ai_suggestions_available, color: "#a78bfa",      bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)" },
@@ -403,7 +403,7 @@ export default function ExceptionsPage() {
             <button key={tab.key} onClick={() => setActiveFilter(tab.key)} style={{
               padding: "5px 13px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none", fontFamily: "inherit",
               background: activeFilter === tab.key ? "rgba(61,129,227,0.18)" : "transparent",
-              color: activeFilter === tab.key ? "white" : "var(--text-4)",
+              color: activeFilter === tab.key ? "var(--text-1)" : "var(--text-4)",
               fontWeight: activeFilter === tab.key ? 600 : 400, transition: "all 0.15s",
             }}>
               {tab.label}
@@ -423,12 +423,12 @@ export default function ExceptionsPage() {
           )}
 
           {filtered.map((ex) => {
-            const typeStyle = TYPE_COLORS[ex.exception_type] || { bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" };
+            const typeStyle = TYPE_COLORS[ex.exception_type] || { bg: "var(--surface)", color: "var(--text-3)" };
             const isWorking = resolving === ex.id;
 
             return (
               <div key={ex.id} style={{
-                background: ex.resolved ? "rgba(255,255,255,0.01)" : "var(--bg-2)",
+                background: ex.resolved ? "var(--surface)" : "var(--bg-2)",
                 border: `1px solid ${ex.resolved ? "var(--border)" : "rgba(251,146,60,0.2)"}`,
                 borderRadius: "var(--radius-xl)",
                 padding: "20px 22px",
@@ -448,8 +448,8 @@ export default function ExceptionsPage() {
                     <p style={{ fontFamily: "monospace", fontWeight: 600, color: "var(--text-1)", margin: "0 0 2px", fontSize: "0.92rem" }}>
                       {ex.raw_part_number}
                     </p>
-                    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.45)", margin: "0 0 6px" }}>{ex.description}</p>
-                    <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", margin: 0, lineHeight: 1.45 }}>
+                    <p style={{ fontSize: "0.8rem", color: "var(--text-3)", margin: "0 0 6px" }}>{ex.description}</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-3)", margin: 0, lineHeight: 1.45 }}>
                       {TYPE_DESCRIPTIONS[ex.exception_type] || "Review this line and take an action below."}
                     </p>
                   </div>
@@ -457,15 +457,15 @@ export default function ExceptionsPage() {
                     <p style={{ fontWeight: 700, color: "var(--text-1)", margin: "0 0 2px", fontSize: "1rem", fontFamily: "monospace" }}>
                       {ex.unit_price != null ? `$${ex.unit_price.toFixed(2)}` : "—"}
                     </p>
-                    <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)", margin: 0 }}>from {ex.buyer_company || ex.buyer_name}</p>
+                    <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0 }}>from {ex.buyer_company || ex.buyer_name}</p>
                   </div>
                 </div>
 
                 {/* System notes (anomaly reason, etc.) */}
                 {ex.exception_notes && (
-                  <div style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "8px", marginBottom: "12px" }}>
-                    <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.4)", margin: 0, lineHeight: 1.5 }}>
-                      <strong style={{ color: "rgba(255,255,255,0.55)" }}>Why flagged: </strong>{ex.exception_notes}
+                  <div style={{ padding: "8px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "8px", marginBottom: "12px" }}>
+                    <p style={{ fontSize: "0.73rem", color: "var(--text-3)", margin: 0, lineHeight: 1.5 }}>
+                      <strong style={{ color: "var(--text-2)" }}>Why flagged: </strong>{ex.exception_notes}
                     </p>
                   </div>
                 )}
@@ -587,7 +587,7 @@ export default function ExceptionsPage() {
                       >
                         ✕ Remove from Round
                       </button>
-                      {isWorking && <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)" }}>Saving…</span>}
+                      {isWorking && <span style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>Saving…</span>}
                     </div>
                   </>
                 )}

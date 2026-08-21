@@ -31,7 +31,7 @@ interface ParticipationData {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pending:    { label: "Not Invited",  color: "rgba(255,255,255,0.4)", bg: "rgba(255,255,255,0.06)" },
+  pending:    { label: "Not Invited",  color: "var(--text-3)", bg: "var(--surface)" },
   sent:       { label: "Invited",      color: "#60a5fa",               bg: "rgba(96,165,250,0.12)" },
   uploaded:   { label: "Uploaded",     color: "#34d399",               bg: "rgba(52,211,153,0.12)" },
   processing: { label: "Processing",   color: "#fbbf24",               bg: "rgba(251,191,36,0.12)" },
@@ -58,7 +58,7 @@ function StatBox({ label, value, color }: { label: string; value: number; color:
       borderRadius: "var(--radius-lg)",
       padding: "16px 20px",
     }}>
-      <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+      <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
         {label}
       </p>
       <p style={{ fontSize: "1.6rem", fontWeight: 700, color, margin: 0 }}>{value}</p>
@@ -121,7 +121,7 @@ export default function ParticipationTracker() {
             </p>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <label style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <label style={{ fontSize: "0.78rem", color: "var(--text-3)", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={autoRefresh}
@@ -138,7 +138,7 @@ export default function ParticipationTracker() {
 
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "24px" }}>
-          <StatBox label="Total Buyers" value={stats.total} color="white" />
+          <StatBox label="Total Buyers" value={stats.total} color="var(--text-1)" />
           <StatBox label="Invited" value={stats.sent} color="#60a5fa" />
           <StatBox label="Uploaded" value={stats.uploaded} color="#34d399" />
           <StatBox label="No Response" value={stats.no_response} color="#f87171" />
@@ -146,7 +146,7 @@ export default function ParticipationTracker() {
 
         {/* Progress bar */}
         <div style={{
-          background: "rgba(255,255,255,0.06)",
+          background: "var(--surface)",
           borderRadius: "100px",
           height: "6px",
           marginBottom: "28px",
@@ -188,7 +188,7 @@ export default function ParticipationTracker() {
         {/* Not invited buyers */}
         {notInvited.length > 0 && (
           <section style={{ marginBottom: "24px" }}>
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 600, color: "rgba(255,255,255,0.3)", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <h3 style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-4)", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Not Yet Invited ({notInvited.length})
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -198,7 +198,7 @@ export default function ParticipationTracker() {
         )}
 
         {buyers.length === 0 && (
-          <p style={{ fontSize: "0.83rem", color: "rgba(255,255,255,0.3)", textAlign: "center", padding: "40px 0" }}>
+          <p style={{ fontSize: "0.83rem", color: "var(--text-4)", textAlign: "center", padding: "40px 0" }}>
             No buyers assigned to this round yet.
           </p>
         )}
@@ -215,8 +215,8 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
       alignItems: "center",
       justifyContent: "space-between",
       padding: "12px 16px",
-      background: "rgba(255,255,255,0.02)",
-      border: "1px solid rgba(255,255,255,0.06)",
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
       borderRadius: "12px",
       flexWrap: "wrap",
       gap: "8px",
@@ -233,7 +233,7 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
           <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 500, color: "var(--text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {b.full_name}
           </p>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "var(--text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {b.company_name || b.email}
           </p>
         </div>
@@ -242,7 +242,7 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
       <div style={{ display: "flex", alignItems: "center", gap: "20px", flexShrink: 0 }}>
         {b.uploaded_at && (
           <div style={{ textAlign: "right" }}>
-            <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>uploaded</p>
+            <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--text-3)" }}>uploaded</p>
             <p style={{ margin: 0, fontSize: "0.78rem", color: "#34d399", fontWeight: 500 }}>
               {timeAgo(b.uploaded_at)}
             </p>
@@ -250,7 +250,7 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
         )}
         {b.lines_submitted > 0 && (
           <div style={{ textAlign: "right" }}>
-            <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>lines</p>
+            <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--text-3)" }}>lines</p>
             <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-1)", fontWeight: 500 }}>
               {b.lines_submitted.toLocaleString()}
             </p>
@@ -258,8 +258,8 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
         )}
         {b.invited_at && !b.uploaded_at && (
           <div style={{ textAlign: "right" }}>
-            <p style={{ margin: 0, fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>invited</p>
-            <p style={{ margin: 0, fontSize: "0.78rem", color: "rgba(255,255,255,0.5)" }}>
+            <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--text-3)" }}>invited</p>
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-3)" }}>
               {timeAgo(b.invited_at)}
             </p>
           </div>

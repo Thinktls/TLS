@@ -97,7 +97,7 @@ export default function AdminGuidePage() {
           <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 8px" }}>
             Admin Handover Guide
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.9rem", lineHeight: 1.6 }}>
+          <p style={{ color: "var(--text-3)", fontSize: "0.9rem", lineHeight: 1.6 }}>
             Complete operational reference for ThinkTLS Bid Desk administrators.
             Covers daily workflows, configuration, exports, integrations, and troubleshooting.
           </p>
@@ -108,7 +108,7 @@ export default function AdminGuidePage() {
             <div key={sec.title} className="glass" style={{ borderRadius: "14px", overflow: "hidden" }}>
               <div style={{
                 padding: "16px 20px",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                borderBottom: "1px solid var(--border)",
                 display: "flex",
                 alignItems: "center",
                 gap: "10px",
@@ -120,7 +120,7 @@ export default function AdminGuidePage() {
                 {sec.items.map((item, i) => (
                   <div key={i} style={{
                     padding: "12px 20px",
-                    borderBottom: i < sec.items.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                    borderBottom: i < sec.items.length - 1 ? "1px solid var(--border)" : "none",
                     display: "grid",
                     gridTemplateColumns: "220px 1fr",
                     gap: "16px",
@@ -129,7 +129,7 @@ export default function AdminGuidePage() {
                     <div style={{ color: "var(--text-1)", fontWeight: 500, fontSize: "0.85rem", paddingTop: "1px" }}>
                       {item.label}
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.83rem", lineHeight: 1.6 }}>
+                    <div style={{ color: "var(--text-2)", fontSize: "0.83rem", lineHeight: 1.6 }}>
                       {item.detail}
                     </div>
                   </div>
@@ -146,7 +146,7 @@ export default function AdminGuidePage() {
           border: "1px solid rgba(61,129,227,0.15)",
           borderRadius: "12px",
           fontSize: "0.82rem",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--text-3)",
           textAlign: "center",
         }}>
           ThinkTLS Bid Desk — Internal Platform — Authorized Users Only

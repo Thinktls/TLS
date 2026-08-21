@@ -52,8 +52,8 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
               ? "#059669"
               : step === current
                 ? "#3D81E3"
-                : "rgba(255,255,255,0.06)",
-            color: step <= current ? "white" : "rgba(255,255,255,0.3)",
+                : "var(--surface)",
+            color: step <= current ? "var(--text-1)" : "var(--text-4)",
             border: step === current ? "2px solid rgba(61,129,227,0.5)" : "2px solid transparent",
             transition: "all 0.2s",
           }}>
@@ -62,7 +62,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           {step < total && (
             <div style={{
               width: "40px", height: "1px",
-              background: step < current ? "#059669" : "rgba(255,255,255,0.1)",
+              background: step < current ? "#059669" : "var(--surface-hover)",
               transition: "background 0.3s",
             }} />
           )}
@@ -407,7 +407,7 @@ export default function NewRound() {
                 </div>
                 <button
                   onClick={() => { setMasterCount(null); setMasterFile(null); }}
-                  style={{ marginLeft: "auto", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", background: "none", border: "none", cursor: "pointer" }}
+                  style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-3)", background: "none", border: "none", cursor: "pointer" }}
                 >
                   Re-upload
                 </button>
@@ -419,7 +419,7 @@ export default function NewRound() {
                 onDrop={handleMasterDrop}
                 onClick={() => masterFileRef.current?.click()}
                 style={{
-                  border: `1px dashed ${dragOver ? "rgba(61,129,227,0.6)" : "rgba(255,255,255,0.15)"}`,
+                  border: `1px dashed ${dragOver ? "rgba(61,129,227,0.6)" : "var(--border-mid)"}`,
                   borderRadius: "14px",
                   padding: "40px 24px",
                   textAlign: "center",
@@ -429,10 +429,10 @@ export default function NewRound() {
                 }}
               >
                 <div style={{ fontSize: "2rem", marginBottom: "10px" }}>{working ? "⏳" : "📋"}</div>
-                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.88rem", margin: "0 0 6px", fontWeight: 500 }}>
+                <p style={{ color: "var(--text-2)", fontSize: "0.88rem", margin: "0 0 6px", fontWeight: 500 }}>
                   {working ? "Parsing file..." : "Drop master file here"}
                 </p>
-                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.75rem", margin: 0 }}>
+                <p style={{ color: "var(--text-4)", fontSize: "0.75rem", margin: 0 }}>
                   Excel, CSV, PDF, Word · Part Number column required · auto-detects layout
                 </p>
                 <input
@@ -446,7 +446,7 @@ export default function NewRound() {
             )}
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-              <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)" }}>Don't have a file?</span>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-4)" }}>Don't have a file?</span>
               <button
                 onClick={() => {
                   const csv = [
@@ -506,7 +506,7 @@ export default function NewRound() {
             </div>
 
             {buyers.length === 0 ? (
-              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.85rem" }}>No active buyers found. You can assign buyers later from the round page.</p>
+              <p style={{ color: "var(--text-4)", fontSize: "0.85rem" }}>No active buyers found. You can assign buyers later from the round page.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "280px", overflowY: "auto" }}>
                 {buyers.map((b) => (
@@ -515,8 +515,8 @@ export default function NewRound() {
                     style={{
                       display: "flex", alignItems: "center", gap: "12px",
                       padding: "10px 14px", borderRadius: "10px", cursor: "pointer",
-                      background: selectedBuyers.has(b.id) ? "rgba(61,129,227,0.1)" : "rgba(255,255,255,0.02)",
-                      border: `1px solid ${selectedBuyers.has(b.id) ? "rgba(61,129,227,0.25)" : "rgba(255,255,255,0.06)"}`,
+                      background: selectedBuyers.has(b.id) ? "rgba(61,129,227,0.1)" : "var(--surface)",
+                      border: `1px solid ${selectedBuyers.has(b.id) ? "rgba(61,129,227,0.25)" : "var(--border)"}`,
                       transition: "all 0.15s",
                     }}
                   >
@@ -528,7 +528,7 @@ export default function NewRound() {
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 500, color: "var(--text-1)", margin: 0, fontSize: "0.85rem" }}>{b.full_name}</p>
-                      <p style={{ color: "rgba(255,255,255,0.35)", margin: 0, fontSize: "0.75rem" }}>
+                      <p style={{ color: "var(--text-3)", margin: 0, fontSize: "0.75rem" }}>
                         {b.company_name} · {b.email}
                       </p>
                     </div>
@@ -580,7 +580,7 @@ export default function NewRound() {
                 <div key={label} style={{
                   display: "flex", justifyContent: "space-between",
                   padding: "10px 14px",
-                  background: "rgba(255,255,255,0.02)",
+                  background: "var(--surface)",
                   borderRadius: "8px",
                 }}>
                   <span style={{ fontSize: "0.82rem", color: "var(--text-4)" }}>{label}</span>
@@ -614,7 +614,7 @@ export default function NewRound() {
 
             <button
               onClick={() => router.push(`/admin/rounds/${roundId}`)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.35)", fontSize: "0.78rem", textDecoration: "underline" }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", fontSize: "0.78rem", textDecoration: "underline" }}
             >
               Save as draft and configure later
             </button>

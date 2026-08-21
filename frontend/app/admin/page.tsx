@@ -13,7 +13,7 @@ interface Round {
 interface Buyer { id: number; is_active: boolean; }
 
 const STATUS_META: Record<string, { label: string; dot: string; badge: string }> = {
-  draft:      { label: "Draft",      dot: "rgba(255,255,255,0.3)", badge: "badge-draft" },
+  draft:      { label: "Draft",      dot: "var(--text-4)", badge: "badge-draft" },
   open:       { label: "Open",       dot: "#10b981",              badge: "badge-open" },
   closed:     { label: "Closed",     dot: "#f59e0b",              badge: "badge-closed" },
   processing: { label: "Processing", dot: "#60a5fa",              badge: "badge-processing" },
@@ -134,9 +134,9 @@ export default function AdminDashboard() {
                   width: "42px", height: "42px", borderRadius: "12px",
                   background: gradient,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "var(--text-1)",
+                  color: "var(--text-on-brand)",
                   boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.22)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  border: "1px solid var(--border-mid)",
                 }}>{icon}</div>
               </div>
               <p style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--text-1)", margin: "0 0 4px", letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</p>
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
               <h2 style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-1)", margin: 0, letterSpacing: "-0.01em" }}>Recent Rounds</h2>
               <Link href="/admin/rounds" style={{ fontSize: "0.75rem", color: "var(--text-4)", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", transition: "color 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
               >View all <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></Link>
             </div>
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
                         padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px",
                         transition: "all 0.15s",
                       }}
-                        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(255,255,255,0.15)"; el.style.background = "var(--bg-3)"; }}
+                        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-mid)"; el.style.background = "var(--bg-3)"; }}
                         onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.background = "var(--bg-2)"; }}
                       >
                         <div style={{
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
                       </div>
                       <span style={{ fontSize: "0.75rem", color: "var(--text-1)", fontWeight: 600 }}>{cnt}</span>
                     </div>
-                    <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
+                    <div style={{ height: "3px", background: "var(--surface)", borderRadius: "100px", overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${pct}%`, background: dot, borderRadius: "100px", transition: "width 0.6s" }} />
                     </div>
                   </div>
@@ -246,8 +246,8 @@ export default function AdminDashboard() {
                 { label: "Buyer Scoring", href: "/admin/buyers/compare", icon: "🏆" },
                 { label: "Export Center", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/export` : "/admin/rounds", icon: "📥" },
               ].map(({ label, href, icon }) => (
-                <Link key={label} href={href} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.04)", transition: "color 0.15s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; }}
+                <Link key={label} href={href} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", textDecoration: "none", borderBottom: "1px solid var(--border)", transition: "color 0.15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = ""; }}
                 >
                   <span style={{ fontSize: "0.85rem" }}>{icon}</span>

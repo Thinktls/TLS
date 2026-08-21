@@ -166,7 +166,7 @@ function NotificationBell() {
           background: "var(--bg-1)", border: "1px solid var(--border-mid)", borderRadius: "16px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.4)", zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid var(--border)" }}>
             <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "var(--text-1)" }}>Notifications</span>
             {count > 0 && <button onClick={markAll} style={{ fontSize: "0.72rem", color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>Mark all read</button>}
           </div>
@@ -178,7 +178,7 @@ function NotificationBell() {
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-hover)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = n.read ? "transparent" : "rgba(61,129,227,0.06)"; }}
               >
-                <div style={{ width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, marginTop: "6px", background: n.read ? "rgba(255,255,255,0.1)" : (CATEGORY_COLOR[n.category] || "#60a5fa") }} />
+                <div style={{ width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, marginTop: "6px", background: n.read ? "var(--surface-hover)" : (CATEGORY_COLOR[n.category] || "#60a5fa") }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: "0.8rem", fontWeight: n.read ? 400 : 600, color: n.read ? "var(--text-3)" : "var(--text-1)", margin: "0 0 2px", lineHeight: 1.35 }}>{n.title}</p>
                   {n.body && <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.body}</p>}
@@ -210,7 +210,7 @@ function isNavActive(href: string, path: string): boolean {
 /* ── Logo ────────────────────────────────────────────────────── */
 function LogoMark() {
   return (
-    <svg width="22" height="22" viewBox="0 0 256 256" fill="white">
+    <svg width="22" height="22" viewBox="0 0 256 256" fill="var(--text-1)">
       <path d="M 0 128 C 70.692 128 128 185.308 128 256 L 64 256 C 64 220.654 35.346 192 0 192 Z M 256 192 C 220.654 192 192 220.654 192 256 L 128 256 C 128 185.308 185.308 128 256 128 Z M 128 0 C 128 70.692 70.692 128 0 128 L 0 64 C 35.346 64 64 35.346 64 0 Z M 192 0 C 192 35.346 220.654 64 256 64 L 256 128 C 185.308 128 128 70.692 128 0 Z" />
     </svg>
   );

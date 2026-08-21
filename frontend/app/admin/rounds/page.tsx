@@ -128,7 +128,7 @@ export default function BidRoundsPage() {
               <button key={s} onClick={() => setFilter(s)} style={{
                 padding: "6px 14px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none",
                 background: filter === s ? "var(--brand)" : "transparent",
-                color: filter === s ? "#ffffff" : "var(--text-4)",
+                color: filter === s ? "var(--text-1)" : "var(--text-4)",
                 fontWeight: filter === s ? 600 : 400,
                 transition: "all 0.15s", fontFamily: "inherit",
               }}>
@@ -220,7 +220,7 @@ export default function BidRoundsPage() {
                       <button
                         onClick={e => { e.stopPropagation(); handleDelete(r.id); }}
                         disabled={deleting === r.id}
-                        style={{ fontSize: "0.71rem", fontWeight: 700, color: "#fff", background: "#ef4444", border: "none", borderRadius: "5px", padding: "3px 10px", cursor: "pointer" }}
+                        style={{ fontSize: "0.71rem", fontWeight: 700, color: "var(--text-1)", background: "#ef4444", border: "none", borderRadius: "5px", padding: "3px 10px", cursor: "pointer" }}
                       >{deleting === r.id ? "…" : "Yes"}</button>
                       <button
                         onClick={e => { e.stopPropagation(); setConfirmId(null); }}

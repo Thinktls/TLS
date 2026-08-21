@@ -80,7 +80,7 @@ const labelStyle: React.CSSProperties = {
   display: "block",
   fontSize: "0.78rem",
   fontWeight: 500,
-  color: "rgba(255,255,255,0.5)",
+  color: "var(--text-3)",
   marginBottom: "6px",
 };
 
@@ -96,21 +96,21 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
   }, [roundId, masterItemId]);
 
   if (loading) return (
-    <td colSpan={8} style={{ padding: "12px 20px", background: "rgba(0,0,0,0.25)" }}>
-      <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.3)" }}>Loading bids...</span>
+    <td colSpan={8} style={{ padding: "12px 20px", background: "var(--surface)" }}>
+      <span style={{ fontSize: "0.78rem", color: "var(--text-4)" }}>Loading bids...</span>
     </td>
   );
 
   if (!bids || bids.length === 0) return (
-    <td colSpan={8} style={{ padding: "12px 20px", background: "rgba(0,0,0,0.25)" }}>
-      <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.25)" }}>No bid data available.</span>
+    <td colSpan={8} style={{ padding: "12px 20px", background: "var(--surface)" }}>
+      <span style={{ fontSize: "0.78rem", color: "var(--text-4)" }}>No bid data available.</span>
     </td>
   );
 
   return (
-    <td colSpan={8} style={{ padding: "0", background: "rgba(0,0,0,0.2)" }}>
+    <td colSpan={8} style={{ padding: "0", background: "var(--surface)" }}>
       <div style={{ padding: "12px 24px 16px" }}>
-        <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 8px" }}>
+        <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 8px" }}>
           All Competing Bids ({bids.length})
         </p>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -119,9 +119,9 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
               {["Buyer", "Unit Price", "Qty", "Status"].map((h) => (
                 <th key={h} style={{
                   textAlign: h === "Unit Price" || h === "Qty" ? "right" : "left",
-                  fontSize: "0.68rem", fontWeight: 600, color: "rgba(255,255,255,0.3)",
+                  fontSize: "0.68rem", fontWeight: 600, color: "var(--text-4)",
                   textTransform: "uppercase", letterSpacing: "0.05em",
-                  paddingBottom: "6px", borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  paddingBottom: "6px", borderBottom: "1px solid var(--border)",
                 }}>
                   {h}
                 </th>
@@ -132,7 +132,7 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
             {bids.map((b) => (
               <tr key={b.bid_line_id} style={{ background: b.is_winner ? "rgba(52,211,153,0.06)" : "transparent" }}>
                 <td style={{ padding: "6px 8px 6px 0", fontSize: "0.78rem" }}>
-                  <span style={{ color: b.is_winner ? "#34d399" : "rgba(255,255,255,0.7)", fontWeight: b.is_winner ? 600 : 400 }}>
+                  <span style={{ color: b.is_winner ? "#34d399" : "var(--text-2)", fontWeight: b.is_winner ? 600 : 400 }}>
                     {b.is_winner ? "★ " : ""}{b.buyer_company || b.buyer_email || `Buyer ${b.buyer_id}`}
                   </span>
                   {b.is_anomaly && (
@@ -141,21 +141,21 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
                     </span>
                   )}
                 </td>
-                <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.78rem", padding: "6px 8px", color: b.is_winner ? "#34d399" : "rgba(255,255,255,0.65)" }}>
+                <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.78rem", padding: "6px 8px", color: b.is_winner ? "#34d399" : "var(--text-2)" }}>
                   {b.unit_price != null ? `$${b.unit_price.toFixed(2)}` : "—"}
                 </td>
-                <td style={{ textAlign: "right", fontSize: "0.78rem", padding: "6px 8px", color: "rgba(255,255,255,0.5)" }}>
+                <td style={{ textAlign: "right", fontSize: "0.78rem", padding: "6px 8px", color: "var(--text-3)" }}>
                   {b.quantity ?? "—"}
                 </td>
                 <td style={{ padding: "6px 0 6px 8px", fontSize: "0.72rem" }}>
                   {b.is_winner ? (
                     <span style={{ color: "#34d399" }}>Winner</span>
                   ) : b.fluffed_loss_price != null ? (
-                    <span style={{ color: "rgba(255,255,255,0.3)" }}>
+                    <span style={{ color: "var(--text-4)" }}>
                       Lost · shown ${b.fluffed_loss_price.toFixed(2)}
                     </span>
                   ) : (
-                    <span style={{ color: "rgba(255,255,255,0.25)" }}>{b.match_status}</span>
+                    <span style={{ color: "var(--text-4)" }}>{b.match_status}</span>
                   )}
                 </td>
               </tr>
@@ -373,7 +373,7 @@ export default function DealsPage() {
             </p>
             <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "0.78rem", color: "var(--text-3, rgba(255,255,255,0.6))", lineHeight: 1.7 }}>
               <li>Every pending deal is locked in — winning buyer and price are recorded to the audit trail.</li>
-              <li><strong style={{ color: "rgba(255,255,255,0.8)" }}>Each assigned buyer is emailed their result automatically.</strong> Winners see the items they won. Buyers who were outbid see each item with their bid next to the winning price.</li>
+              <li><strong style={{ color: "var(--text-1)" }}>Each assigned buyer is emailed their result automatically.</strong> Winners see the items they won. Buyers who were outbid see each item with their bid next to the winning price.</li>
               <li>Buyer scores are recalculated from this round’s wins and losses.</li>
               <li>Exports unlock: Razor CSV, deals workbook, and per-buyer award sheets.</li>
             </ol>
@@ -501,11 +501,11 @@ export default function DealsPage() {
                         setExpandedDeal(isExpanded ? null : d.id);
                       }}
                     >
-                      <td style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: "0.7rem", paddingRight: 0 }}>
+                      <td style={{ textAlign: "center", color: "var(--text-4)", fontSize: "0.7rem", paddingRight: 0 }}>
                         {isExpanded ? "▼" : "▶"}
                       </td>
                       <td style={{ overflow: "hidden" }}>
-                        <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.part_number}</div>
+                        <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "var(--text-3)", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.part_number}</div>
                         <div style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</div>
                       </td>
                       <td style={{ fontSize: "0.8rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500, color: "var(--text-1)" }}>
@@ -568,7 +568,7 @@ export default function DealsPage() {
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr key={`${d.id}-bids`} style={{ background: "rgba(0,0,0,0.15)" }}>
+                      <tr key={`${d.id}-bids`} style={{ background: "var(--surface)" }}>
                         <AllBidsPanel roundId={id as string} masterItemId={d.master_item_id} />
                       </tr>
                     )}
@@ -584,11 +584,11 @@ export default function DealsPage() {
         {awardLot && (
           <div style={{
             position: "fixed", inset: 0, zIndex: 100,
-            background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+            background: "var(--modal-backdrop-bg)", backdropFilter: "blur(8px)",
             display: "flex", alignItems: "flex-end", justifyContent: "center",
           }}>
             <div style={{
-              background: "#0d1826",
+              background: "var(--bg-2)",
               border: "1px solid rgba(61,129,227,0.3)",
               borderRadius: "20px 20px 0 0",
               padding: "24px",
@@ -597,11 +597,11 @@ export default function DealsPage() {
               maxHeight: "90vh",
               overflowY: "auto",
             }}>
-              <div style={{ width: "40px", height: "4px", borderRadius: "2px", background: "rgba(255,255,255,0.12)", margin: "0 auto 20px" }} />
+              <div style={{ width: "40px", height: "4px", borderRadius: "2px", background: "var(--surface-hover)", margin: "0 auto 20px" }} />
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 6px" }}>
                 Award Entire Lot
               </h3>
-              <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", margin: "0 0 20px" }}>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-3)", margin: "0 0 20px" }}>
                 All {deals.length} deals will be reassigned to the selected buyer. Existing winner selections are overridden and deals return to pending approval.
               </p>
 
@@ -657,12 +657,12 @@ export default function DealsPage() {
         {override && (
           <div style={{
             position: "fixed", inset: 0, zIndex: 100,
-            background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+            background: "var(--modal-backdrop-bg)", backdropFilter: "blur(8px)",
             display: "flex", alignItems: "flex-end", justifyContent: "center",
             padding: "0 0 env(safe-area-inset-bottom, 0)",
           }}>
             <div style={{
-              background: "#0d1826",
+              background: "var(--bg-2)",
               border: "1px solid rgba(61,129,227,0.3)",
               borderRadius: "20px 20px 0 0",
               padding: "24px",
@@ -673,12 +673,12 @@ export default function DealsPage() {
             }}>
               <div style={{
                 width: "40px", height: "4px", borderRadius: "2px",
-                background: "rgba(255,255,255,0.12)", margin: "0 auto 20px",
+                background: "var(--surface-hover)", margin: "0 auto 20px",
               }} />
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 6px" }}>
                 Override Deal
               </h3>
-              <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", margin: "0 0 24px" }}>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-3)", margin: "0 0 24px" }}>
                 {override.partNumber} · All overrides are logged with your account.
               </p>
 

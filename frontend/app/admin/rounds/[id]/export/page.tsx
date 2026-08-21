@@ -169,7 +169,7 @@ export default function ExportCenter() {
               />
               {buyers.length > 0 && (
                 <div style={{ marginTop: "12px" }}>
-                  <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: "0 0 8px" }}>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-3)", margin: "0 0 8px" }}>
                     Individual buyer award sheets:
                   </p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -179,16 +179,16 @@ export default function ExportCenter() {
                         onClick={() => downloadFile(`/rounds/${id}/export/award-sheet/${b.id}`, `award_${b.company_name || b.full_name}_${slug}.xlsx`)}
                         style={{
                           padding: "5px 14px",
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.1)",
+                          background: "var(--surface)",
+                          border: "1px solid var(--border-mid)",
                           borderRadius: "8px",
                           fontSize: "0.78rem",
-                          color: "rgba(255,255,255,0.7)",
+                          color: "var(--text-2)",
                           cursor: "pointer",
                           transition: "all 0.15s",
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(61,129,227,0.4)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-mid)")}
                       >
                         ↓ {b.company_name || b.full_name}
                       </button>
@@ -299,27 +299,27 @@ function ExportRow({ label, description, path, filename, ext, internal }: {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "12px 16px",
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.07)",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: "10px",
         transition: "all 0.15s",
         cursor: "pointer",
         width: "100%",
         textAlign: "left",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.14)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"; }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-mid)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
     >
       <div>
         <p style={{ fontWeight: 500, color: "var(--text-1)", margin: "0 0 3px", fontSize: "0.85rem" }}>{label}</p>
-        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", margin: 0 }}>{description}</p>
+        <p style={{ fontSize: "0.75rem", color: "var(--text-3)", margin: 0 }}>{description}</p>
       </div>
       <span style={{
         padding: "3px 10px",
         borderRadius: "6px",
         background: `${extColor[ext] || "rgba(255,255,255,0.1)"}20`,
         border: `1px solid ${extColor[ext] || "rgba(255,255,255,0.1)"}40`,
-        color: extColor[ext] || "rgba(255,255,255,0.5)",
+        color: extColor[ext] || "var(--text-3)",
         fontSize: "0.72rem",
         fontWeight: 700,
         textTransform: "uppercase" as const,

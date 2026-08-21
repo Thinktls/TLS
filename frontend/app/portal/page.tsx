@@ -64,7 +64,7 @@ export default function MyDeals() {
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: "7px 16px", borderRadius: "7px", fontSize: "0.82rem", cursor: "pointer", border: "none",
     background: active ? "rgba(61,129,227,0.18)" : "transparent",
-    color: active ? "white" : "var(--text-4)",
+    color: active ? "var(--text-1)" : "var(--text-4)",
     fontWeight: active ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
   });
 
@@ -87,7 +87,7 @@ export default function MyDeals() {
         {openRounds.length > 0 && (
           <div style={{ marginBottom: "24px", padding: "14px 18px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", flexShrink: 0, animation: "pulse-glow 2s ease infinite" }} />
-            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.8)", margin: 0 }}>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-1)", margin: 0 }}>
               <strong style={{ color: "#34d399" }}>{openRounds.length} round{openRounds.length > 1 ? "s" : ""}</strong> currently accepting bids.{" "}
               <Link href={`/portal/bid?round=${openRounds[0].id}`} style={{ color: "#34d399", textDecoration: "none", fontWeight: 600 }}>Submit your bid →</Link>
             </p>
@@ -101,7 +101,7 @@ export default function MyDeals() {
             { label: "Deals Won",       value: deals.length,   icon: "🏆", color: "#34d399", gradient: "linear-gradient(135deg,rgba(16,185,129,0.15),rgba(52,211,153,0.06))" },
             { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: "💰", color: "#a78bfa", gradient: "linear-gradient(135deg,rgba(139,92,246,0.15),rgba(167,139,250,0.06))" },
           ].map(({ label, value, icon, color, gradient }) => (
-            <div key={label} style={{ background: gradient, border: "1px solid rgba(255,255,255,0.07)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
+            <div key={label} style={{ background: gradient, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>{icon}</div>
               <p style={{ fontSize: "1.8rem", fontWeight: 800, color, margin: "0 0 3px", letterSpacing: "-0.04em" }}>{value}</p>
               <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>{label}</p>
@@ -136,12 +136,12 @@ export default function MyDeals() {
                     background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
                     padding: "16px 20px", display: "flex", alignItems: "center", gap: "14px", transition: "border-color 0.15s",
                   }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.13)"; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-mid)"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
                   >
                     <div style={{
                       width: "40px", height: "40px", borderRadius: "10px", flexShrink: 0,
-                      background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+                      background: "var(--surface)", border: "1px solid var(--border)",
                       display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem",
                     }}>{COMMODITY_ICON[r.commodity] || "📦"}</div>
 

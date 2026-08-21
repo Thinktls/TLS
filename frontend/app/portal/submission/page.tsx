@@ -123,10 +123,10 @@ function SubmissionInner() {
             {/* Stats row */}
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
               {[
-                { label: "Total Lines", val: lines.length, color: "var(--text-1)", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
+                { label: "Total Lines", val: lines.length, color: "var(--text-1)", bg: "var(--surface)", border: "var(--border)" },
                 { label: "Matched",     val: matchedCount, color: "#34d399", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
-                { label: "Exceptions",  val: exceptionCount, color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "rgba(255,255,255,0.03)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
-                { label: "Match Rate",  val: matchRate ? `${matchRate}%` : "—", color: matchRate && Number(matchRate) >= 80 ? "#34d399" : "#fbbf24", bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
+                { label: "Exceptions",  val: exceptionCount, color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "var(--surface)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
+                { label: "Match Rate",  val: matchRate ? `${matchRate}%` : "—", color: matchRate && Number(matchRate) >= 80 ? "#34d399" : "#fbbf24", bg: "var(--surface)", border: "var(--border)" },
               ].map(({ label, val, color, bg, border }) => (
                 <div key={label} style={{ padding: "14px 20px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius-lg)" }}>
                   <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 5px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>
@@ -166,7 +166,7 @@ function SubmissionInner() {
                 <button key={f} onClick={() => setFilter(f)} style={{
                   padding: "5px 14px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none",
                   background: filter === f ? "rgba(61,129,227,0.18)" : "transparent",
-                  color: filter === f ? "white" : "var(--text-4)",
+                  color: filter === f ? "var(--text-1)" : "var(--text-4)",
                   fontWeight: filter === f ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
                 }}>
                   {f === "all" ? `All (${lines.length})` : f === "matched" ? `Matched (${matchedCount})` : `Exceptions (${exceptionCount})`}
@@ -192,7 +192,7 @@ function SubmissionInner() {
                   {filtered.map(l => (
                     <tr key={l.id} style={{ background: l.match_status === "matched" ? "rgba(16,185,129,0.02)" : l.match_status === "exception" ? "rgba(251,146,60,0.02)" : "transparent" }}>
                       <td style={{ color: "var(--text-4)", fontSize: "0.72rem" }}>{l.row_number ?? "—"}</td>
-                      <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: l.match_status === "matched" ? "#34d399" : "white" }}>{l.raw_part_number}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: l.match_status === "matched" ? "#34d399" : "var(--text-1)" }}>{l.raw_part_number}</td>
                       <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.78rem", color: "var(--text-3)" }}>
                         {l.description || "—"}
                       </td>

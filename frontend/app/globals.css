@@ -38,6 +38,7 @@
   --red-dim:     rgba(239,68,68,0.15);
 
   --text-1:      #ffffff;
+  --text-on-brand: #ffffff;
   --text-2:      rgba(255,255,255,0.75);
   --text-3:      rgba(255,255,255,0.48);
   --text-4:      rgba(255,255,255,0.28);
@@ -59,6 +60,32 @@
   --control-hover-bg:  rgba(255,255,255,0.09);
   --topbar-bg:         rgba(7,7,14,0.7);
   --table-row-hover:   rgba(61,129,227,0.05);
+
+  /* ── Spacing scale — mirrors lib/design-tokens.ts spacing{} ─────────────── */
+  /* New components should use these instead of ad-hoc px values. Existing */
+  /* inline styles are untouched; this is additive, not a breaking change. */
+  --space-0:  0px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  28px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* ── Motion — mirrors lib/design-tokens.ts motion{} ──────────────────────── */
+  --duration-fast:   120ms;
+  --duration-normal: 200ms;
+  --duration-slow:   300ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --modal-backdrop-bg:   rgba(4,4,10,0.6);
+  --modal-backdrop-blur: blur(6px);
 }
 
 /* ── Light theme ────────────────────────────────────────────── */
@@ -73,6 +100,7 @@
   --border-mid:  rgba(0,0,0,0.14);
 
   --text-1:      #0f0f1a;
+  --text-on-brand: #ffffff;
   --text-2:      rgba(15,15,26,0.72);
   --text-3:      rgba(15,15,26,0.5);
   --text-4:      rgba(15,15,26,0.32);
@@ -99,6 +127,9 @@
   --glass-blur-heavy: blur(60px) saturate(1.8) brightness(1.02);
   --glass-shimmer:    rgba(255,255,255,0.3);
   --shadow-glass: 0 4px 16px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.95) inset;
+
+  --modal-backdrop-bg:   rgba(15,15,26,0.22);
+  --modal-backdrop-blur: blur(4px);
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
@@ -403,6 +434,7 @@ body[data-theme="light"] {
 }
 .badge::before {
   content: '';
+  display: var(--badge-dot-display, block);
   width: 5px; height: 5px;
   border-radius: 50%;
   background: currentColor;

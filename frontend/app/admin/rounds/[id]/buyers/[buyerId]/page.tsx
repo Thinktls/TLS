@@ -135,9 +135,9 @@ export default function BuyerRoundBidsPage() {
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
           {[
-            { label: "Lines Submitted", val: lines.length,     color: "var(--text-1)",   bg: "rgba(255,255,255,0.03)", border: "var(--border)" },
+            { label: "Lines Submitted", val: lines.length,     color: "var(--text-1)",   bg: "var(--surface)", border: "var(--border)" },
             { label: "Matched",         val: matchedCount,     color: "#34d399", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
-            { label: "Exceptions",      val: exceptionCount,   color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "rgba(255,255,255,0.03)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
+            { label: "Exceptions",      val: exceptionCount,   color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "var(--surface)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
             { label: "Lines Won",       val: winnerCount,      color: "#a78bfa", bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)" },
           ].map(({ label, val, color, bg, border }) => (
             <div key={label} style={{ padding: "14px 18px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius-lg)" }}>
@@ -200,7 +200,7 @@ export default function BuyerRoundBidsPage() {
               <button key={key} onClick={() => setFilter(key)} style={{
                 padding: "5px 13px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none", fontFamily: "inherit",
                 background: filter === key ? "rgba(61,129,227,0.18)" : "transparent",
-                color: filter === key ? "white" : "var(--text-4)",
+                color: filter === key ? "var(--text-1)" : "var(--text-4)",
                 fontWeight: filter === key ? 600 : 400, transition: "all 0.15s",
               }}>
                 {label}
@@ -223,7 +223,7 @@ export default function BuyerRoundBidsPage() {
               <tbody>
                 {filtered.map(line => (
                   <tr key={line.id} style={{ background: line.is_winner ? "rgba(16,185,129,0.03)" : line.match_status === "exception" ? "rgba(251,146,60,0.02)" : "transparent" }}>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: line.is_winner ? "#34d399" : line.match_status === "exception" ? "#fb923c" : "white" }}>
+                    <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: line.is_winner ? "#34d399" : line.match_status === "exception" ? "#fb923c" : "var(--text-1)" }}>
                       {line.raw_part_number}
                     </td>
                     <td style={{ maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.78rem", color: "var(--text-3)" }}>

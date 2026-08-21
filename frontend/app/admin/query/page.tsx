@@ -68,7 +68,7 @@ export default function NLQueryPage() {
             >
               {loading ? (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ width: "12px", height: "12px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
+                  <span style={{ width: "12px", height: "12px", borderRadius: "50%", border: "2px solid var(--glass-border)", borderTopColor: "var(--text-1)", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
                   <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </span>
               ) : "Ask →"}
@@ -76,7 +76,7 @@ export default function NLQueryPage() {
           </div>
 
           <div style={{ marginTop: "16px" }}>
-            <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.25)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600 }}>
+            <p style={{ fontSize: "0.68rem", color: "var(--text-4)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600 }}>
               Example questions
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
@@ -87,11 +87,11 @@ export default function NLQueryPage() {
                   disabled={loading}
                   style={{
                     padding: "5px 14px",
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: "100px",
                     fontSize: "0.77rem",
-                    color: "rgba(255,255,255,0.5)",
+                    color: "var(--text-3)",
                     cursor: loading ? "not-allowed" : "pointer",
                     transition: "all 0.15s",
                     fontFamily: "inherit",
@@ -99,14 +99,14 @@ export default function NLQueryPage() {
                   onMouseEnter={(e) => {
                     if (!loading) {
                       (e.currentTarget as HTMLButtonElement).style.background = "rgba(61,129,227,0.12)";
-                      (e.currentTarget as HTMLButtonElement).style.color = "white";
+                      (e.currentTarget as HTMLButtonElement).style.color = "var(--text-1)";
                       (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(61,129,227,0.3)";
                     }
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-                    (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)";
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.08)";
+                    (e.currentTarget as HTMLButtonElement).style.background = "var(--surface)";
+                    (e.currentTarget as HTMLButtonElement).style.color = "var(--text-3)";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)";
                   }}
                 >
                   {ex}
@@ -142,14 +142,14 @@ export default function NLQueryPage() {
             {/* Question */}
             <div style={{ marginBottom: "18px" }}>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Question</p>
-              <p style={{ fontSize: "0.92rem", fontWeight: 500, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+              <p style={{ fontSize: "0.92rem", fontWeight: 500, color: "var(--text-1)", margin: 0 }}>
                 {result.question}
               </p>
             </div>
 
             {/* Generated SQL */}
-            <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: "10px", padding: "14px 16px", marginBottom: "18px" }}>
-              <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "rgba(255,255,255,0.3)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            <div style={{ background: "var(--surface)", borderRadius: "10px", padding: "14px 16px", marginBottom: "18px" }}>
+              <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 Generated SQL
               </p>
               <code style={{ fontSize: "0.79rem", color: "rgba(147,197,253,0.85)", fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
@@ -164,21 +164,21 @@ export default function NLQueryPage() {
                 borderRadius: "100px",
                 fontSize: "0.75rem",
                 fontWeight: 700,
-                background: result.count > 0 ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.06)",
-                color: result.count > 0 ? "#34d399" : "rgba(255,255,255,0.35)",
-                border: `1px solid ${result.count > 0 ? "rgba(52,211,153,0.25)" : "rgba(255,255,255,0.1)"}`,
+                background: result.count > 0 ? "rgba(52,211,153,0.12)" : "var(--surface)",
+                color: result.count > 0 ? "#34d399" : "var(--text-3)",
+                border: `1px solid ${result.count > 0 ? "rgba(52,211,153,0.25)" : "var(--border-mid)"}`,
               }}>
                 {result.count} {result.count === 1 ? "row" : "rows"} returned
               </span>
               {result.truncated && (
-                <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.3)" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-4)" }}>
                   · showing first 200
                 </span>
               )}
             </div>
 
             {result.count === 0 && (
-              <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.3)", margin: "8px 0 0", fontStyle: "italic" }}>
+              <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: "8px 0 0", fontStyle: "italic" }}>
                 No matching records found. The query ran successfully — your data just doesn't match this condition.
               </p>
             )}

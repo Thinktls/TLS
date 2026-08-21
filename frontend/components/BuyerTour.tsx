@@ -136,8 +136,8 @@ function Tooltip({
   return (
     <div style={{
       ...containerStyle,
-      background: "rgba(15,15,24,0.96)",
-      border: "1px solid rgba(255,255,255,0.14)",
+      background: "var(--bg-2)",
+      border: "1px solid var(--border-mid)",
       borderRadius: "16px",
       padding: "20px",
       boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(61,129,227,0.18)",
@@ -152,11 +152,11 @@ function Tooltip({
         {!isLast && (
           <button onClick={onSkip} style={{
             background: "none", border: "none", cursor: "pointer", fontSize: "0.72rem",
-            color: "rgba(255,255,255,0.3)", fontFamily: "inherit", padding: "2px 6px",
+            color: "var(--text-4)", fontFamily: "inherit", padding: "2px 6px",
             borderRadius: "4px", transition: "color 0.15s",
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--text-2)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-4)")}
           >
             Skip tour ✕
           </button>
@@ -169,7 +169,7 @@ function Tooltip({
           {STEPS.filter(s => s.id !== "welcome" && s.id !== "done").map((s, i) => (
             <div key={s.id} style={{
               width: "5px", height: "5px", borderRadius: "50%",
-              background: i < stepIndex ? "#3D81E3" : i === stepIndex - 1 ? "#3D81E3" : "rgba(255,255,255,0.15)",
+              background: i < stepIndex ? "#3D81E3" : i === stepIndex - 1 ? "#3D81E3" : "var(--surface-hover)",
               transition: "background 0.2s",
             }} />
           ))}
@@ -177,10 +177,10 @@ function Tooltip({
       )}
 
       {/* Content */}
-      <h3 style={{ margin: "0 0 8px", fontSize: "0.95rem", fontWeight: 700, color: "white", letterSpacing: "-0.02em", lineHeight: 1.3 }}>
+      <h3 style={{ margin: "0 0 8px", fontSize: "0.95rem", fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em", lineHeight: 1.3 }}>
         {step.title}
       </h3>
-      <p style={{ margin: "0 0 18px", fontSize: "0.82rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.55 }}>
+      <p style={{ margin: "0 0 18px", fontSize: "0.82rem", color: "var(--text-2)", lineHeight: 1.55 }}>
         {step.body}
       </p>
 
@@ -188,20 +188,20 @@ function Tooltip({
       <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
         {!isFirst && !isLast && (
           <button onClick={onPrev} style={{
-            background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)",
-            border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px",
+            background: "var(--surface)", color: "var(--text-2)",
+            border: "1px solid var(--border-mid)", borderRadius: "8px",
             padding: "8px 14px", fontSize: "0.8rem", fontFamily: "inherit",
             cursor: "pointer", transition: "all 0.15s", fontWeight: 500,
           }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-hover)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
           >
             ← Back
           </button>
         )}
         <button onClick={onNext} style={{
           background: isLast ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#3D81E3,#5a6cf5)",
-          color: "white", border: "none", borderRadius: "8px",
+          color: "var(--text-on-brand)", border: "none", borderRadius: "8px",
           padding: "8px 18px", fontSize: "0.8rem", fontFamily: "inherit",
           cursor: "pointer", fontWeight: 600, letterSpacing: "-0.01em",
           boxShadow: isLast ? "0 2px 12px rgba(16,185,129,0.3)" : "0 2px 12px rgba(61,129,227,0.3)",
@@ -316,7 +316,7 @@ export default function BuyerTour() {
         onClick={finish}
         style={{
           position: "fixed", inset: 0,
-          background: "rgba(0,0,0,0.72)",
+          background: "var(--modal-backdrop-bg)",
           zIndex: 9998,
           backdropFilter: "blur(2px)",
           WebkitBackdropFilter: "blur(2px)",

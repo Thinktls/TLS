@@ -9,7 +9,7 @@ const VIDEO_SRC =
 
 function LogoMark({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 256 256" fill="white">
+    <svg width={size} height={size} viewBox="0 0 256 256" fill="#ffffff">
       <path d="M 0 128 C 70.692 128 128 185.308 128 256 L 64 256 C 64 220.654 35.346 192 0 192 Z M 256 192 C 220.654 192 192 220.654 192 256 L 128 256 C 128 185.308 185.308 128 256 128 Z M 128 0 C 128 70.692 70.692 128 0 128 L 0 64 C 35.346 64 64 35.346 64 0 Z M 192 0 C 192 35.346 220.654 64 256 64 L 256 128 C 185.308 128 128 70.692 128 0 Z" />
     </svg>
   );
@@ -77,7 +77,7 @@ function SetupPasswordInner() {
           padding: 14px;
           border-radius: 14px;
           background: linear-gradient(135deg, #3D81E3 0%, #00c6fb 100%);
-          color: white;
+          color: #ffffff;
           font-weight: 700;
           font-size: 0.95rem;
           border: none;
@@ -109,16 +109,16 @@ function SetupPasswordInner() {
               }}>
                 <LogoMark size={28} />
               </div>
-              <h1 style={{ fontSize: "2.4rem", fontWeight: 700, letterSpacing: "-0.05em", margin: 0, color: "var(--text-1)" }}>
+              <h1 style={{ fontSize: "2.4rem", fontWeight: 700, letterSpacing: "-0.05em", margin: 0, color: "#ffffff" }}>
                 Think<span className="shiny-text">TLS</span>
               </h1>
-              <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.35)", marginTop: "10px" }}>
+              <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.5)", marginTop: "10px" }}>
                 {validating ? "Verifying your invite..." : tokenInvalid ? "Invalid invite link" : `Welcome, ${buyerName}`}
               </p>
             </div>
 
             {validating ? (
-              <div style={{ textAlign: "center", color: "rgba(255,255,255,0.4)" }}>Checking invite...</div>
+              <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)" }}>Checking invite...</div>
             ) : tokenInvalid ? (
               <div style={{
                 background: "rgba(239,68,68,0.12)",
@@ -128,24 +128,24 @@ function SetupPasswordInner() {
                 textAlign: "center",
               }}>
                 <p style={{ color: "#f87171", fontWeight: 600, margin: "0 0 8px" }}>Invite link is invalid or expired</p>
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.83rem", margin: 0 }}>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.83rem", margin: 0 }}>
                   Please ask your ThinkTLS administrator to resend your invite.
                 </p>
               </div>
             ) : (
               <div style={{
                 background: "rgba(10,10,10,0.55)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.13)",
                 backdropFilter: "blur(24px)",
                 borderRadius: "28px",
                 padding: "44px 40px",
               }}>
-                <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 6px", fontSize: "1rem" }}>Set your password</p>
-                <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", margin: "0 0 24px" }}>{email}</p>
+                <p style={{ fontWeight: 600, color: "#ffffff", margin: "0 0 6px", fontSize: "1rem" }}>Set your password</p>
+                <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.5)", margin: "0 0 24px" }}>{email}</p>
 
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "rgba(255,255,255,0.45)", marginBottom: "8px" }}>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "rgba(255,255,255,0.5)", marginBottom: "8px" }}>
                       New Password
                     </label>
                     <input
@@ -159,7 +159,7 @@ function SetupPasswordInner() {
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "rgba(255,255,255,0.45)", marginBottom: "8px" }}>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 500, color: "rgba(255,255,255,0.5)", marginBottom: "8px" }}>
                       Confirm Password
                     </label>
                     <input

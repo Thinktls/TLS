@@ -270,15 +270,15 @@ export default function BuyersPage() {
               <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#60a5fa", margin: 0 }}>
                 ✓ Credentials ready — share these with the buyer
               </p>
-              <button onClick={() => setNewCredentials(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>✕</button>
+              <button onClick={() => setNewCredentials(null)} style={{ background: "none", border: "none", color: "var(--text-3)", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontFamily: "monospace", fontSize: "0.85rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ color: "rgba(255,255,255,0.4)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Email</span>
-                <span style={{ color: "var(--text-1)", background: "rgba(255,255,255,0.07)", padding: "4px 10px", borderRadius: "6px" }}>{newCredentials.email}</span>
+                <span style={{ color: "var(--text-3)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Email</span>
+                <span style={{ color: "var(--text-1)", background: "var(--surface-hover)", padding: "4px 10px", borderRadius: "6px" }}>{newCredentials.email}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ color: "rgba(255,255,255,0.4)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Password</span>
+                <span style={{ color: "var(--text-3)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Password</span>
                 <span style={{ color: "#34d399", background: "rgba(52,211,153,0.08)", padding: "4px 10px", borderRadius: "6px", letterSpacing: "0.05em" }}>{newCredentials.password}</span>
                 <button
                   onClick={() => navigator.clipboard.writeText(newCredentials.password).then(() => flash("✓ Password copied"))}
@@ -344,7 +344,7 @@ export default function BuyersPage() {
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>
                   Password&nbsp;
-                  <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                  <span style={{ color: "var(--text-4)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
                     — leave blank to auto-generate · buyer can change it from Profile
                   </span>
                 </label>
@@ -408,7 +408,7 @@ export default function BuyersPage() {
                   <tr key={b.id}>
                     <td style={{ fontWeight: 500, color: "var(--text-1)" }}>{b.company_name || "—"}</td>
                     <td style={{ color: "var(--text-2)" }}>{b.full_name}</td>
-                    <td style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)" }}>{b.email}</td>
+                    <td style={{ fontSize: "0.8rem", color: "var(--text-3)" }}>{b.email}</td>
 
                     {/* Fluff % — inline edit */}
                     <td style={{ textAlign: "center" }}>
@@ -423,7 +423,7 @@ export default function BuyersPage() {
                             onChange={(e) => setFluffValue(e.target.value)}
                             style={{
                               width: "64px",
-                              background: "rgba(255,255,255,0.08)",
+                              background: "var(--surface-hover)",
                               border: "1px solid rgba(61,129,227,0.4)",
                               borderRadius: "6px",
                               padding: "4px 8px",
@@ -433,19 +433,19 @@ export default function BuyersPage() {
                             }}
                           />
                           <button aria-label="Save fluff percentage" onClick={() => saveFluff(b.id)} style={{ fontSize: "0.72rem", color: "#34d399", background: "none", border: "none", cursor: "pointer" }}>✓</button>
-                          <button aria-label="Cancel fluff edit" onClick={() => setEditingFluff(null)} style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                          <button aria-label="Cancel fluff edit" onClick={() => setEditingFluff(null)} style={{ fontSize: "0.72rem", color: "var(--text-3)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
                         </div>
                       ) : (
                         <button
                           aria-label={`Edit fluff percentage for ${b.full_name}`}
                           onClick={() => { setEditingFluff(b.id); setFluffValue(String(b.fluff_percentage)); }}
                           style={{
-                            background: "rgba(255,255,255,0.06)",
-                            border: "1px solid rgba(255,255,255,0.1)",
+                            background: "var(--surface)",
+                            border: "1px solid var(--border-mid)",
                             borderRadius: "6px",
                             padding: "3px 10px",
                             fontSize: "0.8rem",
-                            color: "rgba(255,255,255,0.7)",
+                            color: "var(--text-2)",
                             cursor: "pointer",
                           }}
                         >

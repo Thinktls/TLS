@@ -41,7 +41,7 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
     <tr>
       <td style={{ padding: "14px 16px" }}>
         <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.88rem" }}>{buyer.company_name || buyer.full_name}</div>
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.75rem" }}>{buyer.email}</div>
+        <div style={{ color: "var(--text-3)", fontSize: "0.75rem" }}>{buyer.email}</div>
       </td>
       <td style={{ padding: "14px 16px" }}>
         <span style={{
@@ -67,7 +67,7 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
               border: "none",
               cursor: "pointer",
               position: "relative",
-              background: enabled ? "#3D81E3" : "rgba(255,255,255,0.12)",
+              background: enabled ? "#3D81E3" : "var(--surface-hover)",
               transition: "background 0.2s",
               flexShrink: 0,
             }}
@@ -79,11 +79,11 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
               width: "14px",
               height: "14px",
               borderRadius: "50%",
-              background: "white",
+              background: "var(--text-1)",
               transition: "left 0.2s",
             }} />
           </button>
-          <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.78rem" }}>
+          <span style={{ color: "var(--text-3)", fontSize: "0.78rem" }}>
             {enabled ? "On" : "Off"}
           </span>
         </div>
@@ -100,27 +100,27 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
             disabled={!enabled}
             style={{
               width: "80px",
-              background: enabled ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "var(--surface)",
+              border: "1px solid var(--border-mid)",
               borderRadius: "8px",
-              color: enabled ? "white" : "rgba(255,255,255,0.3)",
+              color: enabled ? "var(--text-1)" : "var(--text-4)",
               padding: "6px 10px",
               fontSize: "0.875rem",
               outline: "none",
               fontFamily: "inherit",
             }}
           />
-          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>%</span>
+          <span style={{ color: "var(--text-3)", fontSize: "0.85rem" }}>%</span>
         </div>
       </td>
       <td style={{ padding: "14px 16px" }}>
-        <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.45)" }}>
+        <div style={{ fontSize: "0.8rem", color: "var(--text-3)" }}>
           If real price = $1,000 →{" "}
-          <span style={{ color: enabled ? "#fbbf24" : "rgba(255,255,255,0.3)", fontWeight: 600 }}>
+          <span style={{ color: enabled ? "#fbbf24" : "var(--text-4)", fontWeight: 600 }}>
             ${fluffedPrice.toFixed(2)}
           </span>
           {enabled && pct > 0 && (
-            <span style={{ color: "rgba(255,255,255,0.3)", marginLeft: "4px" }}>
+            <span style={{ color: "var(--text-4)", marginLeft: "4px" }}>
               (+{pct}%)
             </span>
           )}
@@ -139,7 +139,7 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
         ) : saved ? (
           <span style={{ color: "#34d399", fontSize: "0.8rem", fontWeight: 600 }}>✓ Saved</span>
         ) : (
-          <span style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.8rem" }}>—</span>
+          <span style={{ color: "var(--text-4)", fontSize: "0.8rem" }}>—</span>
         )}
       </td>
     </tr>
@@ -208,7 +208,7 @@ export default function FluffSettingsPage() {
           padding: "14px 18px",
           marginBottom: "24px",
           fontSize: "0.85rem",
-          color: "rgba(255,255,255,0.7)",
+          color: "var(--text-2)",
           display: "flex",
           gap: "12px",
           alignItems: "flex-start",
@@ -223,7 +223,7 @@ export default function FluffSettingsPage() {
 
         {/* Bulk setter */}
         <div className="glass" style={{ borderRadius: "12px", padding: "18px 20px", marginBottom: "24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-          <span style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.875rem", fontWeight: 500 }}>
+          <span style={{ color: "var(--text-2)", fontSize: "0.875rem", fontWeight: 500 }}>
             Apply to all buyers:
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -237,8 +237,8 @@ export default function FluffSettingsPage() {
               onChange={e => setGlobalPct(parseFloat(e.target.value) || "")}
               style={{
                 width: "90px",
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                background: "var(--surface)",
+                border: "1px solid var(--border-mid)",
                 borderRadius: "8px",
                 color: "var(--text-1)",
                 padding: "7px 10px",
@@ -247,7 +247,7 @@ export default function FluffSettingsPage() {
                 fontFamily: "inherit",
               }}
             />
-            <span style={{ color: "rgba(255,255,255,0.4)" }}>%</span>
+            <span style={{ color: "var(--text-3)" }}>%</span>
           </div>
           <button
             className="btn-brand"
@@ -269,7 +269,7 @@ export default function FluffSettingsPage() {
           <div style={{ color: "#f87171", padding: "20px", textAlign: "center" }}>{error}</div>
         ) : buyers.length === 0 ? (
           <div className="glass" style={{ borderRadius: "12px", padding: "48px", textAlign: "center" }}>
-            <p style={{ color: "rgba(255,255,255,0.4)" }}>No buyers registered yet.</p>
+            <p style={{ color: "var(--text-3)" }}>No buyers registered yet.</p>
           </div>
         ) : (
           <div className="glass dark-table-wrapper" style={{ borderRadius: "12px", overflow: "hidden" }}>

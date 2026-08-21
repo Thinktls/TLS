@@ -260,7 +260,7 @@ function SubmitBidInner() {
                     onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
                     onClick={() => selectedRound && !uploading && fileRef.current?.click()}
                     style={{
-                      border: `2px dashed ${dragOver ? "rgba(61,129,227,0.7)" : selectedRound ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
+                      border: `2px dashed ${dragOver ? "rgba(61,129,227,0.7)" : selectedRound ? "var(--border-mid)" : "var(--border)"}`,
                       borderRadius: "var(--radius-xl)", padding: "56px 32px", textAlign: "center",
                       cursor: selectedRound && !uploading ? "pointer" : "default",
                       background: dragOver ? "rgba(61,129,227,0.06)" : "var(--bg-2)",
@@ -325,7 +325,7 @@ function SubmitBidInner() {
                             </thead>
                             <tbody>
                               {preview.rows.map((row, i) => (
-                                <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
                                   <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{i + 1}</td>
                                   <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", whiteSpace: "nowrap" }}>{row.raw_part_number}</td>
                                   <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description || "—"}</td>
@@ -431,7 +431,7 @@ function SubmitBidInner() {
                           {masterItems.map((item, idx) => {
                             const priced = inlinePrices[item.id] && parseFloat(inlinePrices[item.id]) > 0;
                             return (
-                              <tr key={item.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: priced ? "rgba(52,211,153,0.04)" : "transparent", transition: "background 0.15s" }}>
+                              <tr key={item.id} style={{ borderBottom: "1px solid var(--border)", background: priced ? "rgba(52,211,153,0.04)" : "transparent", transition: "background 0.15s" }}>
                                 <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{idx + 1}</td>
                                 <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.part_number}</td>
                                 <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.description}>{item.description || item.manufacturer || "—"}</td>
