@@ -22,13 +22,13 @@ const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   },
   {
     icon: "ai",
-    title: "AI-Powered Matching",
-    desc: "Three-tier engine: exact match, then fuzzy (RapidFuzz), then Claude AI — automatically resolves part number variants.",
+    title: "AI Powered Matching",
+    desc: "Three tier engine: exact match, then fuzzy (RapidFuzz), then Claude AI — automatically resolves part number variants.",
   },
   {
     icon: "success",
     title: "Winner Selection",
-    desc: "Best-price winner per line with configurable fluff pricing per buyer. Full exception review queue.",
+    desc: "Best price winner per line with configurable fluff pricing per buyer. Full exception review queue.",
   },
   {
     icon: "reports",
@@ -38,11 +38,11 @@ const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   {
     icon: "mail",
     title: "Email Integration",
-    desc: "SendGrid-powered buyer invites, award sheets, and inbound email bid submission via webhook.",
+    desc: "SendGrid powered buyer invites, award sheets, and inbound email bid submission via webhook.",
   },
   {
     icon: "userCheck",
-    title: "Role-Based Access",
+    title: "Role Based Access",
     desc: "Separate admin and buyer portals. Buyers only see their assigned rounds and their own results.",
   },
 ];
@@ -216,7 +216,7 @@ export default function LandingPage() {
           </h1>
 
           <p style={{ fontSize: "clamp(1rem, 2vw, 1.25rem)", color: "rgba(255,255,255,0.5)", maxWidth: "600px", margin: "0 auto 48px", lineHeight: 1.7, fontWeight: 400 }}>
-            Automate buyer bid collection, AI-powered part matching, winner selection,
+            Automate buyer bid collection, AI powered part matching, winner selection,
             and deal approval — all in one cinematic platform.
           </p>
 
@@ -232,10 +232,10 @@ export default function LandingPage() {
         <section style={{ position: "relative", zIndex: 1, maxWidth: "900px", margin: "0 auto 100px", padding: "0 24px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
             {[
-              { value: "3-Tier AI", label: "Part Matching Engine" },
+              { value: "3 Tier AI", label: "Part Matching Engine" },
               { value: "100%", label: "Buyer Data Isolation" },
               { value: "9 Formats", label: "Export Options" },
-              { value: "Real-Time", label: "Processing & Analytics" },
+              { value: "Real Time", label: "Processing & Analytics" },
             ].map((s) => (
               <div key={s.label} className="stat-card">
                 <div style={{ fontSize: "1.9rem", fontWeight: 800, letterSpacing: "-0.04em", color: "#00c6fb", marginBottom: "6px" }}>
