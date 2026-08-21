@@ -85,6 +85,7 @@ class RoundCreate(BaseModel):
     notes: Optional[str] = None
     reserve_price_enabled: bool = False
     auto_approve_enabled: bool = False
+    auto_send_invites: bool = False
 
 
 class RoundOut(BaseModel):
@@ -99,6 +100,7 @@ class RoundOut(BaseModel):
     notes: Optional[str] = None
     reserve_price_enabled: bool = False
     auto_approve_enabled: bool = False
+    auto_send_invites: bool = False
     created_at: Optional[datetime] = None
     master_file_uploaded_at: Optional[datetime] = None
     opened_at: Optional[datetime] = None
@@ -367,6 +369,7 @@ class RoundPatch(BaseModel):
     submission_deadline: Optional[datetime] = None
     reserve_price_enabled: Optional[bool] = None
     auto_approve_enabled: Optional[bool] = None
+    auto_send_invites: Optional[bool] = None
 
 
 @router.patch("/{round_id}")
@@ -383,16 +386,64 @@ def patch_round(round_id: int, req: RoundPatch, db: Session = Depends(get_db), _
 
 
 @router.post("/{round_id}/open")
-def open_round(round_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+def open_round(
+    round_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
     if not r.master_file_uploaded:
         raise HTTPException(400, "Upload master file before opening round")
+    
+    # Only auto-send on first open (draft -> open), not on reopen
+    was_draft = r.status == "draft"
     r.status = "open"
     r.opened_at = datetime.now(timezone.utc)
     db.commit()
-    return {"status": "open"}
+    
+    # Auto-send invitations if enabled and this is the first open
+    invitations_sent = 0
+    if was_draft and r.auto_send_invites:
+        # Query buyers with invite_status=pending for this round
+        assigned = db.execute(
+            text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid AND invite_status = 'pending'"),
+            {"rid": round_id},
+        ).fetchall()
+        
+        if assigned:
+            # Format deadline for email
+            if r.submission_deadline:
+                deadline_str = format_et(r.submission_deadline)
+            else:
+                deadline_str = "See admin for deadline"
+            upload_url = f"{settings.FRONTEND_URL}/portal/bid?round={round_id}"
+            
+            buyer_ids = [row.buyer_id for row in assigned]
+            buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids), User.is_active == True).all()}
+            
+            for row in assigned:
+                buyer = buyers.get(row.buyer_id)
+                if not buyer:
+                    continue
+                background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
+                db.execute(
+                    text(
+                        "UPDATE round_buyers "
+                        "SET invite_status = 'sent', "
+                        "    invited_at = now() "
+                        "WHERE round_id=:rid AND buyer_id=:bid"
+                    ),
+                    {"rid": round_id, "bid": buyer.id},
+                )
+                buyer.last_invited_date = datetime.now(timezone.utc)
+                invitations_sent += 1
+            
+            db.commit()
+    
+    return {"status": "open", "invitations_sent": invitations_sent}
 
 
 @router.post("/{round_id}/reopen")
@@ -635,7 +686,7 @@ def send_invitations(
         buyer = buyers.get(row.buyer_id)
         if not buyer:
             continue
-        background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url)
+        background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
         db.execute(
             # Never downgrade a buyer who has already uploaded back to 'sent' — on a resend that
             # would wipe their progress out of the participation tracker and make it look like

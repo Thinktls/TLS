@@ -17,6 +17,7 @@ interface Round {
   closed_at: string | null;
   processing_started_at: string | null;
   completed_at: string | null;
+  notes: string | null;
 }
 interface Summary {
   total_bid_lines: number; matched: number; exceptions: number;
@@ -177,6 +178,8 @@ export default function RoundDetail() {
   const [msgType, setMsgType] = useState<"ok" | "err">("ok");
   const [showBuyerPicker, setShowBuyerPicker] = useState(false);
   const [selectedBuyerIds, setSelectedBuyerIds] = useState<Set<number>>(new Set());
+  const [notesInput, setNotesInput] = useState("");
+  const [editingNotes, setEditingNotes] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -195,6 +198,18 @@ export default function RoundDetail() {
     setRound(r); setSummary(s); setAssignedBuyers(ab);
     setSelectedBuyerIds(new Set(ab.map((b: AssignedBuyer) => b.id)));
     setBidFiles(bf);
+  }
+
+  async function saveNotes() {
+    if (!id) return;
+    try {
+      const res = await api.patch(`/rounds/${id}`, { notes: notesInput });
+      setRound((prev) => (prev ? { ...prev, notes: res.data.notes } : prev));
+      setEditingNotes(false);
+      flash("Notes saved");
+    } catch (err: any) {
+      flash(err?.response?.data?.detail || "Failed to save notes", "err");
+    }
   }
 
   useEffect(() => { load(); }, [id]);
@@ -482,6 +497,26 @@ export default function RoundDetail() {
               </button>
             )}
           </div>
+
+          {/* Notes */}
+          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+            <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 14px" }}>Notes</p>
+            {editingNotes ? (
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-start" }}>
+                <textarea
+                  value={notesInput}
+                  onChange={(e) => setNotesInput(e.target.value)}
+                  rows={4}
+                  style={{ flex: 1, minWidth: 300, padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text-1)", fontSize: "0.85rem", fontFamily: "inherit", resize: "vertical" }}                  placeholder="Enter notes for buyers (visible in bid portal and invitation emails)..."
+                />
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <button onClick={saveNotes} className="btn-brand" style={{ minWidth: 100 }}>                    Save                  </button>
+                  <button onClick={() => { setNotesInput(round?.notes || ""); setEditingNotes(false); }} className="btn-ghost" style={{ minWidth: 100 }}>                    Cancel                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>                  {round?.notes ? (                    <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-2)", whiteSpace: "pre-wrap" }}>{round.notes}</p>                  ) : (                    <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-4)" }}>No notes added</p>                  )}                </div>                <button onClick={() => { setNotesInput(round?.notes || ""); setEditingNotes(true); }} className="btn-ghost" style={{ fontSize: "0.8rem" }}>                  Edit                </button>              </div>            )}          </div>
 
           {/* Processing progress */}
           {round.status === "processing" && (

@@ -49,6 +49,7 @@ class BidRound(Base):
     # true when an admin explicitly enabled it for this round, because those emails can't be
     # recalled. A round with any unresolved exception always stops for manual review.
     auto_approve_enabled = Column(Boolean, default=False, nullable=False, server_default="false")
+    auto_send_invites = Column(Boolean, default=False, nullable=False, server_default="false")
 
     # Master file tracking
     master_file_uploaded = Column(Boolean, default=False)

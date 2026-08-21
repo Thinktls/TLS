@@ -67,6 +67,7 @@ def list_open_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)
             "deadline": r.submission_deadline,
             "invite_status": assigned_map.get(r.id),
             "assigned": True,
+            "notes": r.notes,
         }
         for r in rounds
     ]

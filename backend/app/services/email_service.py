@@ -200,9 +200,9 @@ def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str) ->
         return {"ok": False, "provider": "sendgrid", "detail": detail}
 
 
-def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, commodity: str, deadline: str, upload_url: str):
+def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, commodity: str, deadline: str, upload_url: str, notes: str | None = None):
     from app.services.email_templates import bid_invitation_email
-    subject, html = bid_invitation_email(buyer_name, round_name, commodity, deadline, upload_url)
+    subject, html = bid_invitation_email(buyer_name, round_name, commodity, deadline, upload_url, notes)
     _send(buyer_email, buyer_name, subject, html)
 
 

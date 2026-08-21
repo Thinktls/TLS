@@ -143,6 +143,7 @@ export default function NewRound() {
         customer: form.customer || null,
         notes: form.notes || null,
         submission_deadline: form.submission_deadline ? new Date(form.submission_deadline).toISOString() : null,
+        auto_send_invites: sendInvites,
       };
       const res = await api.post("/rounds/", payload);
       setRoundId(res.data.id);

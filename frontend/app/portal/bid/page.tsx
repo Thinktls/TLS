@@ -10,6 +10,7 @@ interface Round {
   id: number; name: string; commodity: string;
   customer: string | null; deadline: string | null;
   invite_status: string | null; assigned: boolean;
+  notes: string | null;
 }
 
 interface PreviewRow {
@@ -209,6 +210,14 @@ function SubmitBidInner() {
                         </div>
                       )}
                       {round.customer && <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>Customer: {round.customer}</p>}
+                       {round.notes && (
+                         <div style={{ marginTop: 12, padding: 12, background: "var(--bg-2)", borderRadius: 8, border: "1px solid var(--border-2)" }}>
+                           <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-2)", fontWeight: 500 }}>Notes from Admin:</p>
+                           <p style={{ margin: "8px 0 0", fontSize: "0.8rem", color: "var(--text-3)", whiteSpace: "pre-wrap" }}>
+                             {round.notes}
+                           </p>
+                         </div>
+                       )}
                     </div>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <button
