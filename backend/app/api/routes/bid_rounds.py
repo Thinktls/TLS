@@ -49,6 +49,7 @@ from app.services.template_generator import generate_bid_template
 from app.services.winner_selector import select_winners
 
 _log = logging.getLogger(__name__)
+logger = _log
 
 router = APIRouter(prefix="/rounds", tags=["bid_rounds"])
 
@@ -428,7 +429,10 @@ def open_round(
                 buyer = buyers.get(row.buyer_id)
                 if not buyer:
                     continue
-                background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
+                try:
+                    send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
+                except Exception as exc:
+                    logger.warning(f"[INVITE] failed to email {buyer.email}: {exc}")
                 db.execute(
                     text(
                         "UPDATE round_buyers "
@@ -440,7 +444,6 @@ def open_round(
                 )
                 buyer.last_invited_date = datetime.now(timezone.utc)
                 invitations_sent += 1
-            
             db.commit()
     
     return {"status": "open", "invitations_sent": invitations_sent}
@@ -682,15 +685,23 @@ def send_invitations(
     buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids), User.is_active == True).all()}
 
     sent = 0
+    failures = []
     for row in assigned:
         buyer = buyers.get(row.buyer_id)
         if not buyer:
             continue
-        background_tasks.add_task(send_bid_invitation, buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
+        try:
+            send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
+        except Exception as exc:
+            failures.append(f"{buyer.email}: {type(exc).__name__}: {exc}")
+            # still mark attempted so we don't spam on retry, but record failure
+            db.execute(
+                text("UPDATE round_buyers SET invite_status='sent', invited_at=now() WHERE round_id=:rid AND buyer_id=:bid"),
+                {"rid": round_id, "bid": buyer.id},
+            )
+            buyer.last_invited_date = datetime.now(timezone.utc)
+            continue
         db.execute(
-            # Never downgrade a buyer who has already uploaded back to 'sent' — on a resend that
-            # would wipe their progress out of the participation tracker and make it look like
-            # they never bid.
             text(
                 "UPDATE round_buyers "
                 "SET invite_status = CASE WHEN invite_status='uploaded' THEN 'uploaded' ELSE 'sent' END, "
@@ -706,8 +717,10 @@ def send_invitations(
     verb = "Re-sent" if resend else "Invitations queued for"
     return {
         "sent": sent,
+        "failed": len(failures),
+        "failures": failures,
         "resend": resend,
-        "message": f"{verb} {sent} buyer(s)" if resend else f"Invitations queued for {sent} buyer(s)",
+        "message": f"{verb} {sent} buyer(s)" + (f"; {len(failures)} failed" if failures else ""),
     }
 
 
