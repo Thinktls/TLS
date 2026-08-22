@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
@@ -37,6 +37,70 @@ function greeting() {
   return "Good evening";
 }
 
+function StatCard({
+  label, value, sub, gradient, icon,
+}: { label: string; value: number; sub: string; gradient: string; icon: React.ReactNode }) {
+  return (
+    <div className="stat-card">
+      <div style={{ marginBottom: "18px" }}>
+        <div style={{
+          width: "42px", height: "42px", borderRadius: "12px",
+          background: gradient,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--text-on-brand)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.22)",
+          border: "1px solid var(--border-mid)",
+        }}>{icon}</div>
+      </div>
+      <p style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--text-1)", margin: "0 0 4px", letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</p>
+      <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-3)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+      <p style={{ fontSize: "0.7rem", color: "var(--text-4)", margin: 0 }}>{sub}</p>
+    </div>
+  );
+}
+
+function RoundRow({ round }: { round: Round }) {
+  const meta = STATUS_META[round.status] || STATUS_META.draft;
+  return (
+    <Link href={`/admin/rounds/${round.id}`} className="dash-round-row">
+      <div className="dash-commodity-icon">{COMMODITY_ICON[round.commodity] || COMMODITY_ICON.other}</div>
+      <div className="dash-round-info">
+        <p className="dash-round-name">{round.name}</p>
+        <p className="dash-round-sub">
+          {round.total_line_items.toLocaleString()} items
+          {round.submission_deadline && ` · Due ${fmtDatetimeShort(round.submission_deadline)}`}
+        </p>
+      </div>
+      <span className={`badge ${meta.badge}`}>{round.status}</span>
+    </Link>
+  );
+}
+
+function StatusRow({
+  label, dot, count, total,
+}: { label: string; dot: string; count: number; total: number }) {
+  const pct = total ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="dash-status-row">
+      <div className="dash-status-head">
+        <div className="dash-status-label"><span className="dash-dot" style={{ background: dot }} />{label}</div>
+        <span className="dash-status-count">{count}</span>
+      </div>
+      <div className="dash-progress"><div className="dash-progress-fill" style={{ width: `${pct}%`, background: dot }} /></div>
+    </div>
+  );
+}
+
+function QuickLink({ label, href, icon }: { label: string; href: string; icon: string }) {
+  return (
+    <Link href={href} className="dash-quick-link">
+      <span className="dash-quick-icon">{icon}</span>
+      <span className="dash-quick-label">{label}</span>
+      <svg className="dash-quick-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </Link>
+  );
+}
+
 export default function AdminDashboard() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [buyers, setBuyers] = useState<Buyer[]>([]);
@@ -52,17 +116,15 @@ export default function AdminDashboard() {
 
   if (loading) return (
     <AdminLayout>
-      <div style={{ maxWidth: "960px" }}>
-        {/* Header skeleton */}
-        <div style={{ marginBottom: "32px" }}>
+      <div className="dash-wrap animate-in">
+        <div className="dash-header">
           <div className="skeleton skeleton-text" style={{ width: "80px", marginBottom: "8px" }} />
           <div className="skeleton skeleton-title" style={{ width: "200px", height: "1.6rem", marginBottom: "8px" }} />
           <div className="skeleton skeleton-text" style={{ width: "140px" }} />
         </div>
-        {/* KPI card skeletons */}
-        <div className="stat-grid" style={{ marginBottom: "32px" }}>
-          {[1,2,3,4].map(i => (
-            <div key={i} style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "22px 24px" }}>
+        <div className="stat-grid">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="stat-card">
               <div className="skeleton skeleton-circle" style={{ width: "42px", height: "42px", marginBottom: "18px" }} />
               <div className="skeleton" style={{ width: "60px", height: "2rem", marginBottom: "8px" }} />
               <div className="skeleton skeleton-text" style={{ width: "80px", marginBottom: "4px" }} />
@@ -70,10 +132,9 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
-        {/* Table skeleton */}
-        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "20px", marginBottom: "20px" }}>
+        <div className="dash-panel">
           <div className="skeleton skeleton-title" style={{ width: "120px", marginBottom: "16px" }} />
-          {[1,2,3,4,5,6].map(i => (
+          {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="skeleton skeleton-row" style={{ marginBottom: i < 6 ? "4px" : 0 }} />
           ))}
         </div>
@@ -81,11 +142,11 @@ export default function AdminDashboard() {
     </AdminLayout>
   );
 
-  const openRounds    = rounds.filter(r => r.status === "open");
+  const openRounds     = rounds.filter(r => r.status === "open");
   const completeRounds = rounds.filter(r => r.status === "complete");
-  const processing    = rounds.filter(r => r.status === "processing");
-  const activeB       = buyers.filter(b => b.is_active);
-  const recent        = rounds.slice(0, 6);
+  const processing     = rounds.filter(r => r.status === "processing");
+  const activeB        = buyers.filter(b => b.is_active);
+  const recent         = rounds.slice(0, 6);
 
   const stats: { label: string; value: number; sub: string; gradient: string; icon: React.ReactNode }[] = [
     {
@@ -110,44 +171,31 @@ export default function AdminDashboard() {
     },
   ];
 
+  const quickLinks = [
+    { label: "Bid Comparison", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/comparison` : "/admin/rounds", icon: "📊" },
+    { label: "Approve Deals", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/deals` : "/admin/rounds", icon: "✅" },
+    { label: "Buyer Scoring", href: "/admin/buyers/compare", icon: "🏆" },
+    { label: "Export Center", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/export` : "/admin/rounds", icon: "📥" },
+  ];
+
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "960px" }} className="animate-in">
+      <div className="dash-wrap animate-in">
 
         {/* Header */}
-        <div style={{ marginBottom: "32px" }}>
-          <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: "0 0 4px", letterSpacing: "0.02em" }}>{greeting()},</p>
-          <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 6px", lineHeight: 1.1 }}>
-            {name}
-          </h1>
-          <p style={{ fontSize: "0.83rem", color: "var(--text-3)", margin: 0 }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-          </p>
+        <div className="dash-header">
+          <p className="dash-greeting">{greeting()},</p>
+          <h1 className="dash-title">{name}</h1>
+          <p className="dash-date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
         </div>
 
         {/* KPI cards */}
         <div className="stat-grid">
-          {stats.map(({ label, value, sub, gradient, icon }) => (
-            <div key={label} className="stat-card">
-              <div style={{ marginBottom: "18px" }}>
-                <div style={{
-                  width: "42px", height: "42px", borderRadius: "12px",
-                  background: gradient,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "var(--text-on-brand)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.22)",
-                  border: "1px solid var(--border-mid)",
-                }}>{icon}</div>
-              </div>
-              <p style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--text-1)", margin: "0 0 4px", letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</p>
-              <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-3)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
-              <p style={{ fontSize: "0.7rem", color: "var(--text-4)", margin: 0 }}>{sub}</p>
-            </div>
-          ))}
+          {stats.map(s => <StatCard key={s.label} {...s} />)}
         </div>
 
         {/* Quick actions */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "32px", flexWrap: "wrap" }}>
+        <div className="dash-actions">
           <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New Bid Round
@@ -164,97 +212,38 @@ export default function AdminDashboard() {
         <div className="two-col-layout">
 
           {/* Recent rounds */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-              <h2 style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-1)", margin: 0, letterSpacing: "-0.01em" }}>Recent Rounds</h2>
-              <Link href="/admin/rounds" style={{ fontSize: "0.75rem", color: "var(--text-4)", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", transition: "color 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
-              >View all <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></Link>
+          <div className="dash-col-main">
+            <div className="dash-section-head">
+              <h2 className="dash-section-title">Recent Rounds</h2>
+              <Link href="/admin/rounds" className="dash-view-all">
+                View all <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </Link>
             </div>
 
             {recent.length === 0 ? (
-              <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-lg)", padding: "48px", textAlign: "center" }}>
-                <p style={{ color: "var(--text-4)", fontSize: "0.88rem", margin: "0 0 12px" }}>No rounds yet</p>
+              <div className="dash-empty">
+                <p className="dash-empty-text">No rounds yet</p>
                 <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none", fontSize: "0.82rem" }}>Create first round →</Link>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {recent.map(r => {
-                  const meta = STATUS_META[r.status] || STATUS_META.draft;
-                  return (
-                    <Link key={r.id} href={`/admin/rounds/${r.id}`} style={{ textDecoration: "none" }}>
-                      <div style={{
-                        background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
-                        padding: "14px 16px", display: "flex", alignItems: "center", gap: "12px",
-                        transition: "all 0.15s",
-                      }}
-                        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-mid)"; el.style.background = "var(--bg-3)"; }}
-                        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.background = "var(--bg-2)"; }}
-                      >
-                        <div style={{
-                          width: "36px", height: "36px", borderRadius: "9px", flexShrink: 0,
-                          background: "var(--surface)", border: "1px solid var(--border)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          color: "var(--text-3)",
-                        }}>{COMMODITY_ICON[r.commodity] || COMMODITY_ICON.other}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 2px", fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
-                          <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0 }}>
-                            {r.total_line_items.toLocaleString()} items
-                            {r.submission_deadline && ` · Due ${fmtDatetimeShort(r.submission_deadline)}`}
-                          </p>
-                        </div>
-                        <span className={`badge ${meta.badge}`}>{r.status}</span>
-                      </div>
-                    </Link>
-                  );
-                })}
+              <div className="dash-rounds">
+                {recent.map(r => <RoundRow key={r.id} round={r} />)}
               </div>
             )}
           </div>
 
           {/* Right column — summary */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px" }}>
-              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 16px" }}>Round Status</p>
-              {Object.entries(STATUS_META).map(([key, { label, dot }]) => {
-                const cnt = rounds.filter(r => r.status === key).length;
-                const pct = rounds.length ? Math.round(cnt / rounds.length * 100) : 0;
-                return (
-                  <div key={key} style={{ marginBottom: "10px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: dot }} />
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-3)" }}>{label}</span>
-                      </div>
-                      <span style={{ fontSize: "0.75rem", color: "var(--text-1)", fontWeight: 600 }}>{cnt}</span>
-                    </div>
-                    <div style={{ height: "3px", background: "var(--surface)", borderRadius: "100px", overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: dot, borderRadius: "100px", transition: "width 0.6s" }} />
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="dash-col-side">
+            <div className="dash-panel">
+              <p className="dash-panel-label">Round Status</p>
+              {Object.entries(STATUS_META).map(([key, { label, dot }]) => (
+                <StatusRow key={key} label={label} dot={dot} count={rounds.filter(r => r.status === key).length} total={rounds.length} />
+              ))}
             </div>
 
-            <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px" }}>
-              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>Quick Links</p>
-              {[
-                { label: "Bid Comparison", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/comparison` : "/admin/rounds", icon: "📊" },
-                { label: "Approve Deals", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/deals` : "/admin/rounds", icon: "✅" },
-                { label: "Buyer Scoring", href: "/admin/buyers/compare", icon: "🏆" },
-                { label: "Export Center", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/export` : "/admin/rounds", icon: "📥" },
-              ].map(({ label, href, icon }) => (
-                <Link key={label} href={href} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", textDecoration: "none", borderBottom: "1px solid var(--border)", transition: "color 0.15s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = ""; }}
-                >
-                  <span style={{ fontSize: "0.85rem" }}>{icon}</span>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{label}</span>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: "auto", color: "var(--text-4)" }}><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              ))}
+            <div className="dash-panel">
+              <p className="dash-panel-label">Quick Links</p>
+              {quickLinks.map(q => <QuickLink key={q.label} {...q} />)}
             </div>
           </div>
         </div>
