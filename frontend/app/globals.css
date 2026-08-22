@@ -266,7 +266,7 @@ body[data-theme="light"] {
 .card:hover {
   border-color: var(--border-mid);
   background: var(--glass-bg-heavy);
-  box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.10) inset;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.30), 0 1px 0 rgba(255,255,255,0.08) inset;
 }
 .card:hover::after { opacity: 1; }
 
@@ -320,8 +320,8 @@ body[data-theme="light"] {
 }
 .stat-card:hover {
   border-color: rgba(61,129,227,0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.10) inset;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.30), 0 1px 0 rgba(255,255,255,0.08) inset;
 }
 /* Specular top-edge highlight */
 .stat-card::before {
@@ -582,9 +582,9 @@ body[data-theme="light"] {
   padding: 11px 16px;
   font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-4);
+  color: var(--text-3);
   border-bottom: 1px solid var(--border);
 }
 .dark-table td {
@@ -932,3 +932,49 @@ body[data-theme="light"] {
 .dash-view-all:hover { color: var(--text-1); }
 
 
+
+/* -- Premium layout primitives --------------------------------- */
+/* Reusable building blocks for the enterprise SaaS look (Linear/Stripe-style):
+   restrained type scale, consistent 20px card padding, 16/24px grid gaps,
+   layered subtle shadows instead of heavy glow. Theme-aware via tokens. */
+
+/* Page header block */
+.page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:28px; flex-wrap:wrap; }
+.page-header-text { min-width:0; }
+.page-eyebrow { font-size:0.7rem; font-weight:650; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-4); margin:0 0 6px; }
+.page-title { font-size:1.35rem; font-weight:700; letter-spacing:-0.02em; color:var(--text-1); margin:0; line-height:1.2; }
+.page-subtitle { font-size:0.83rem; color:var(--text-3); margin:4px 0 0; }
+.page-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+/* Content shell */
+.page-shell { width:100%; max-width:1280px; margin:0 auto; }
+.page-section { margin-bottom:28px; }
+.section-title { font-size:0.95rem; font-weight:650; color:var(--text-1); letter-spacing:-0.01em; margin:0 0 12px; }
+
+/* Toolbar row above tables */
+.toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 16px; border-bottom:1px solid var(--border); }
+
+/* Panel with integrated table header — calmer glass, softer depth */
+.panel {
+  background:var(--glass-bg);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border);
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  box-shadow:var(--shadow-glass);
+}
+.panel-head {
+  padding:16px 20px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+/* KPI row */
+.kpi-grid { display:grid; gap:14px; }
+@media(min-width:640px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+@media(min-width:1024px){ .kpi-grid{grid-template-columns:repeat(4,1fr);} }

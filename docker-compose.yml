@@ -37,6 +37,9 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       FROM_EMAIL: ${FROM_EMAIL:-bids@thinktls.com}
       FROM_NAME: ${FROM_NAME:-ThinkTLS Bid Desk}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-}
+      REPLY_TO_EMAIL: ${REPLY_TO_EMAIL:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
       RAZOR_API_URL: ${RAZOR_API_URL:-}
       RAZOR_API_KEY: ${RAZOR_API_KEY:-}
       AUTO_PUSH_RAZOR: ${AUTO_PUSH_RAZOR:-false}

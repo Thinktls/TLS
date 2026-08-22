@@ -103,7 +103,7 @@ function RoundTimeline({ round }: { round: Round }) {
   ];
 
   return (
-    <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+    <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
       <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 20px" }}>Round Timeline</p>
       <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
         {steps.map((step, i) => {
@@ -381,7 +381,7 @@ export default function RoundDetail() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "900px" }} className="animate-in">
+      <div className="page-shell animate-in">
 
         {/* Breadcrumb */}
         <Link href="/admin/rounds" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "20px" }}>
@@ -390,13 +390,15 @@ export default function RoundDetail() {
         </Link>
 
         {/* Page header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "28px", flexWrap: "wrap" }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
           <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
             <div style={{ width: "48px", height: "48px", borderRadius: "13px", background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>
               {COMMODITY_ICON[round.commodity] || "📦"}
             </div>
             <div>
-              <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 6px", lineHeight: 1.3 }}>
+              <h1 className="page-title" style={{ margin: "0 0 6px", lineHeight: 1.3 }}>
                 {round.name}
               </h1>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -407,6 +409,7 @@ export default function RoundDetail() {
                 <span style={{ fontSize: "0.68rem", color: "var(--text-4)", fontFamily: "monospace" }}>#{round.id}</span>
               </div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -424,7 +427,7 @@ export default function RoundDetail() {
 
         {/* ── Summary stats (when available) ── */}
         {summary && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "20px" }}>
+          <div className="kpi-grid" style={{ marginBottom: "20px" }}>
             {[
               { label: "Bid Lines",   val: summary.total_bid_lines.toLocaleString(), color: "var(--text-1)",   bg: "var(--surface)" },
               { label: "Matched",     val: summary.matched.toLocaleString(),          color: "var(--success)", bg: "var(--success-dim)" },
@@ -442,7 +445,7 @@ export default function RoundDetail() {
         )}
 
         {/* ── Round Controls ── */}
-        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+        <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
           <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 14px" }}>Round Controls</p>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {round.status === "draft" && (
@@ -499,7 +502,7 @@ export default function RoundDetail() {
           </div>
 
           {/* Notes */}
-          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+          <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
             <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 14px" }}>Notes</p>
             {editingNotes ? (
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-start" }}>
@@ -550,7 +553,7 @@ export default function RoundDetail() {
 
         {/* ── Exports & Actions (complete/processing) ── */}
         {(round.status === "complete" || round.status === "processing") && (
-          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+          <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
             <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 14px" }}>Exports & Actions</p>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <Link href={`/admin/rounds/${id}/comparison`} className="btn-brand" style={{ textDecoration: "none" }}>
@@ -588,7 +591,7 @@ export default function RoundDetail() {
         )}
 
         {/* ── Master File ── */}
-        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+        <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
             <div>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>Master File</p>
@@ -617,7 +620,7 @@ export default function RoundDetail() {
         </div>
 
         {/* ── Assigned Buyers ── */}
-        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+        <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
             <div>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 2px" }}>Assigned Buyers</p>
@@ -714,7 +717,7 @@ export default function RoundDetail() {
 
         {/* ── Submitted Bid Files ── */}
         {bidFiles.length > 0 && (
-          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+          <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
             <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 14px" }}>
               Submitted Bid Files ({bidFiles.length})
             </p>
@@ -777,14 +780,14 @@ export default function RoundDetail() {
 
         {/* ── Buyer Participation ── */}
         {assignedBuyers.length > 0 && (
-          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+          <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Buyer Participation</p>
               <Link href={`/admin/rounds/${id}/participation`} className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.78rem" }}>
                 Live Tracker →
               </Link>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+            <div className="kpi-grid">
               {[
                 { label: "Invited",  count: assignedBuyers.filter(b => b.invite_status !== "pending").length, color: "var(--info)", bg: "var(--brand-dim)" },
                 { label: "Uploaded", count: uploadedCount,  color: "var(--success)", bg: "var(--success-dim)" },

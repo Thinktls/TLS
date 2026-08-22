@@ -45,10 +45,13 @@ function ResultsInner() {
 
   return (
     <BuyerLayout>
-      <div style={{ maxWidth: "940px" }} className="animate-in">
-        <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>My Results</h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Bid outcomes for completed rounds.</p>
+      <div className="page-shell animate-in">
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Bid Portal</p>
+            <h1 className="page-title">My Results</h1>
+            <p className="page-subtitle">Bid outcomes for completed rounds.</p>
+          </div>
         </div>
 
         {rounds.length === 0 ? (
@@ -85,8 +88,8 @@ function ResultsInner() {
             {result && !loading && (
               <>
                 {/* Stats row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <div className="toolbar" style={{ marginBottom: "20px", paddingLeft: 0, paddingRight: 0, borderTop: "none" }}>
+                  <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", flex: 1 }}>
                     {[
                       { label: "Won",      val: result.won,  bg: "var(--success-dim)",  border: "var(--success-dim)",  color: "var(--success)" },
                       { label: "Lost",     val: result.lost, bg: "var(--danger-dim)",  border: "var(--danger-dim)", color: "var(--danger)" },
@@ -121,7 +124,7 @@ function ResultsInner() {
                 {/* Summed-by-model view — one line per model with won/lost totals, so a buyer
                     with thousands of per-device results sees the picture at a glance. */}
                 {filterOutcome === "model" ? (
-                  <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+                  <div className="panel">
                     <table className="dark-table">
                       <thead>
                         <tr>
@@ -153,7 +156,7 @@ function ResultsInner() {
 
                 {/* Per-line table (hidden in the summed-by-model view) */}
                 {filterOutcome !== "model" && (
-                <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+                <div className="panel">
                   <table className="dark-table">
                     <thead>
                       <tr>

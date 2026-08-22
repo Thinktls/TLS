@@ -35,22 +35,17 @@ export default function NLQueryPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "900px" }} className="animate-in">
-        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
-          AI Query
-        </h1>
-        <p style={{ fontSize: "0.82rem", color: "var(--text-4)", marginBottom: "28px" }}>
-          Ask questions about your bids in plain English — the AI translates to SQL and runs it live.
-        </p>
+      <div className="page-shell animate-in">
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Intelligence</p>
+            <h1 className="page-title">AI Query</h1>
+            <p className="page-subtitle">Ask questions about your bids in plain English — the AI translates to SQL and runs it live.</p>
+          </div>
+        </div>
 
         {/* Query input */}
-        <div style={{
-          background: "var(--bg-2)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-xl)",
-          padding: "24px",
-          marginBottom: "16px",
-        }}>
+        <div className="panel" style={{ padding: "24px", marginBottom: "16px" }}>
           <div style={{ display: "flex", gap: "12px" }}>
             <input
               value={question}
@@ -133,12 +128,7 @@ export default function NLQueryPage() {
         )}
 
         {result && (
-          <div style={{
-            background: "var(--bg-2)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-xl)",
-            padding: "24px",
-          }}>
+          <div className="panel" style={{ padding: "24px" }}>
             {/* Question */}
             <div style={{ marginBottom: "18px" }}>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Question</p>

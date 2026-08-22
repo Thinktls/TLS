@@ -155,12 +155,15 @@ function SubmitBidInner() {
 
   return (
     <BuyerLayout>
-      <div style={{ maxWidth: "860px" }} className="animate-in">
+      <div className="page-shell animate-in">
 
         {/* Header */}
-        <div style={{ marginBottom: "20px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.3 }}>Submit a Bid</h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Choose a round, then upload your priced file or enter prices directly on-screen.</p>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Bid Portal</p>
+            <h1 className="page-title">Submit a Bid</h1>
+            <p className="page-subtitle">Choose a round, then upload your priced file or enter prices directly on-screen.</p>
+          </div>
         </div>
 
         {/* How it works */}

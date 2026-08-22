@@ -52,17 +52,18 @@ export default function ExportCenter() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "780px" }} className="animate-in">
+      <div className="page-shell animate-in">
         <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           Round Detail
         </Link>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "4px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+        <div className="page-header" style={{ marginBottom: "16px" }}>
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
+            <h1 className="page-title">
               Export Center
             </h1>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+            <p className="page-subtitle">
               {roundName}
             </p>
           </div>
@@ -269,13 +270,7 @@ function HeroCard({ onClick, accent, badge, title, description }: {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{
-      background: "var(--bg-2)",
-      border: "1px solid var(--border)",
-      borderRadius: "var(--radius-xl)",
-      padding: "24px",
-      marginBottom: "16px",
-    }}>
+    <div className="panel" style={{ padding: "24px", marginBottom: "16px" }}>
       <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 16px", fontSize: "0.9rem" }}>{title}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {children}

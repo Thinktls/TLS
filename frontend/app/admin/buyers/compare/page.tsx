@@ -131,17 +131,20 @@ export default function BuyerComparePage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1200px" }} className="animate-in">
+      <div className="page-shell animate-in">
         {/* Header */}
-        <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyer Comparison</h1>
-          <p style={{ color: "var(--text-4)", fontSize: "0.85rem", margin: 0 }}>
-            {buyers.length} buyers · Avg win rate {avgWinRate.toFixed(1)}% · Total value awarded {fmt(totalValue)}
-          </p>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Buyers</p>
+            <h1 className="page-title">Buyer Comparison</h1>
+            <p className="page-subtitle">
+              {buyers.length} buyers · Avg win rate {avgWinRate.toFixed(1)}% · Total value awarded {fmt(totalValue)}
+            </p>
+          </div>
         </div>
 
         {/* Summary KPI row */}
-        <div className="mobile-stack" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "24px" }}>
+        <div className="mobile-stack kpi-grid" style={{ marginBottom: "24px" }}>
           {[
             { label: "Total Buyers", value: buyers.length, sub: `${buyers.filter(b => b.is_active).length} active` },
             { label: "Total Awarded", value: fmt(totalValue), sub: "across all rounds", color: "var(--success)" },

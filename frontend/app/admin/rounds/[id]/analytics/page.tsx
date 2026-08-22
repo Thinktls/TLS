@@ -143,26 +143,29 @@ export default function RoundAnalyticsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1100px" }} className="animate-in">
+      <div className="page-shell animate-in">
         {/* Breadcrumb + title */}
         <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           {round.name}
         </Link>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
-          <div>
-            <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>Round Analytics</h1>
-            <p style={{ color: "var(--text-4)", fontSize: "0.82rem", margin: 0 }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
+            <h1 className="page-title">Round Analytics</h1>
+            <p className="page-subtitle">
               {round.commodity} · {round.status} {round.submission_deadline ? `· Deadline ${fmtDate(round.submission_deadline)}` : ""}
             </p>
           </div>
-          <Link href={`/admin/rounds/${id}/export`} style={{ textDecoration: "none" }}>
-            <button className="btn-ghost" style={{ fontSize: "0.82rem" }}>Exports →</button>
-          </Link>
+          <div className="page-actions">
+            <Link href={`/admin/rounds/${id}/export`} style={{ textDecoration: "none" }}>
+              <button className="btn-ghost" style={{ fontSize: "0.82rem" }}>Exports →</button>
+            </Link>
+          </div>
         </div>
 
         {/* Top KPI row */}
-        <div className="mobile-stack" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "28px" }}>
+        <div className="mobile-stack kpi-grid" style={{ marginBottom: "28px" }}>
           <KpiCard label="Awarded Value" value={`$${fmt(overview.total_awarded_value)}`} sub={`${overview.approved_deals} deals`} color="var(--success)" />
           <KpiCard label="Coverage" value={`${overview.coverage_pct}%`} sub={`${overview.items_with_bids}/${overview.total_master_items} items bid`} color="var(--info)" />
           <KpiCard label="Exception Rate" value={`${overview.exception_rate_pct}%`} sub={`${overview.exception_lines} lines flagged`} color={overview.exception_rate_pct > 20 ? "var(--warning)" : "var(--text-1)"} />

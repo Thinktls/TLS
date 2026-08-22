@@ -188,16 +188,17 @@ export default function FluffSettingsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1100px" }} className="animate-in">
+      <div className="page-shell animate-in">
         {/* Header */}
-        <div style={{ marginBottom: "28px" }}>
-          <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 4px" }}>
-            Fluff Engine Settings
-          </h1>
-          <p style={{ color: "var(--text-4)", fontSize: "0.875rem", margin: 0 }}>
-            Configure the price obfuscation percentage each losing buyer sees on their loss notice.
-            The real winning price is never revealed directly.
-          </p>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Buyers</p>
+            <h1 className="page-title">Fluff Engine Settings</h1>
+            <p className="page-subtitle">
+              Configure the price obfuscation percentage each losing buyer sees on their loss notice.
+              The real winning price is never revealed directly.
+            </p>
+          </div>
         </div>
 
         {/* Info callout */}

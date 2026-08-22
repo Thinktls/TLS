@@ -64,7 +64,7 @@ function ResetPasswordForm() {
           </div>
         </div>
 
-        <div className="glass" style={{ borderRadius: "16px", padding: "40px 36px" }}>
+        <div className="glass" style={{ borderRadius: "var(--radius-lg)", padding: "40px", border: "1px solid var(--glass-border)" }}>
           {done ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>✅</div>
@@ -80,7 +80,7 @@ function ResetPasswordForm() {
             </div>
           ) : (
             <>
-              <h1 style={{ color: "#ffffff", fontSize: "1.25rem", fontWeight: 700, marginBottom: "6px" }}>
+              <h1 style={{ color: "#ffffff", fontSize: "1.15rem", fontWeight: 650, letterSpacing: "-0.02em", marginBottom: "6px" }}>
                 Set new password
               </h1>
               <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", marginBottom: "28px" }}>

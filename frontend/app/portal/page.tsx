@@ -70,17 +70,15 @@ export default function MyDeals() {
 
   return (
     <BuyerLayout>
-      <div style={{ maxWidth: "860px" }} className="animate-in">
+      <div className="page-shell animate-in">
 
         {/* Header */}
-        <div style={{ marginBottom: "28px" }}>
-          <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: "0 0 4px" }}>{greeting()},</p>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.1 }}>
-            {name} <span style={{ fontSize: "1rem" }}>👋</span>
-          </h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
-            {rounds.length} round{rounds.length !== 1 ? "s" : ""} invited · {openRounds.length} open
-          </p>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">{greeting()}, Bid Portal</p>
+            <h1 className="page-title">{name} <span style={{ fontSize: "1rem" }}>👋</span></h1>
+            <p className="page-subtitle">{rounds.length} round{rounds.length !== 1 ? "s" : ""} invited · {openRounds.length} open</p>
+          </div>
         </div>
 
         {/* Alert if open rounds */}
@@ -95,13 +93,13 @@ export default function MyDeals() {
         )}
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "28px" }}>
+        <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", marginBottom: "28px" }}>
           {[
             { label: "Rounds Invited",  value: rounds.length,  icon: "🗂", color: "var(--info)", gradient: "linear-gradient(135deg,var(--brand-dim),transparent)" },
             { label: "Deals Won",       value: deals.length,   icon: "🏆", color: "var(--success)", gradient: "linear-gradient(135deg,var(--success-dim),transparent)" },
             { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: "💰", color: "var(--violet-bright)", gradient: "linear-gradient(135deg,var(--violet-dim),transparent)" },
           ].map(({ label, value, icon, color, gradient }) => (
-            <div key={label} style={{ background: gradient, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
+            <div key={label} style={{ background: gradient, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 22px", boxShadow: "var(--shadow-glass)" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>{icon}</div>
               <p style={{ fontSize: "1.8rem", fontWeight: 800, color, margin: "0 0 3px", letterSpacing: "-0.04em" }}>{value}</p>
               <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>{label}</p>

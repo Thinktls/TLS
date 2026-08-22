@@ -182,16 +182,17 @@ export default function BuyersPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1180px" }} className="animate-in">
+      <div className="page-shell animate-in">
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyers</h1>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Buyers</p>
+            <h1 className="page-title">Buyers</h1>
+            <p className="page-subtitle">
               {buyers.length} buyer{buyers.length !== 1 ? "s" : ""} · <span style={{ color: "var(--success)" }}>{signedInCount} signed in</span>
             </p>
           </div>
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div className="page-actions">
             <button onClick={() => setShowDiag(!showDiag)} className="btn-ghost" title="Diagnose email delivery">
               ✉ Email check
             </button>
@@ -201,17 +202,6 @@ export default function BuyersPage() {
               )}
             </button>
           </div>
-        </div>
-
-        {/* Search */}
-        <div style={{ marginBottom: "16px" }}>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search buyers by company, name, or email…"
-            className="glass-input"
-            style={{ width: "100%", maxWidth: "420px" }}
-          />
         </div>
 
         {/* Email diagnostics — send a real test email and see the actual result/error */}
@@ -385,12 +375,16 @@ export default function BuyersPage() {
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Add your first buyer using the button above.</p>
           </div>
         ) : (
-          <div style={{
-            background: "var(--bg-2)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-xl)",
-            overflowX: "auto",
-          }}>
+          <div className="panel" style={{ overflowX: "auto" }}>
+            <div className="panel-head">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search buyers by company, name, or email…"
+                className="glass-input"
+                style={{ width: "100%", maxWidth: "420px" }}
+              />
+            </div>
             <table className="dark-table" style={{ minWidth: "820px" }}>
               <thead>
                 <tr>

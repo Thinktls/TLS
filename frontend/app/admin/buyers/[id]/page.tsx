@@ -94,19 +94,20 @@ export default function BuyerProfilePage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "820px" }} className="animate-in">
+      <div className="page-shell animate-in">
         <Link href="/admin/buyers" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           Buyers
         </Link>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Buyers</p>
+            <h1 className="page-title">
               {profile.full_name}
             </h1>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+            <p className="page-subtitle">
               {profile.company_name || profile.email}
             </p>
             <span style={{
@@ -122,7 +123,7 @@ export default function BuyerProfilePage() {
               {profile.is_active ? "Active" : "Disabled"}
             </span>
           </div>
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div className="page-actions">
             <button onClick={sendInvite} className="btn-brand" style={{ fontSize: "0.8rem" }}>
               Resend Invite
             </button>

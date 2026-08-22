@@ -82,22 +82,25 @@ export default function BidRoundsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "880px" }} className="animate-in">
+      <div className="page-shell animate-in">
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Bid Rounds</h1>
-            <p style={{ fontSize: "0.8rem", color: "var(--text-4)", margin: 0 }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
+            <h1 className="page-title">Bid Rounds</h1>
+            <p className="page-subtitle">
               {counts.total} total &nbsp;·&nbsp;
               <span style={{ color: "var(--success)" }}>{counts.open} open</span> &nbsp;·&nbsp;
               <span style={{ color: "var(--violet-bright)" }}>{counts.complete} complete</span>
             </p>
           </div>
-          <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Round
-          </Link>
+          <div className="page-actions">
+            <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Round
+            </Link>
+          </div>
         </div>
 
         {/* Search bar */}

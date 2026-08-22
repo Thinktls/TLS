@@ -312,30 +312,24 @@ export default function DealsPage() {
 
   return (
     <AdminLayout>
-      <div className="animate-in">
+      <div className="page-shell animate-in">
         <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           Round Detail
         </Link>
 
         {/* Header */}
-        <div style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "12px",
-          marginBottom: "24px",
-        }}>
-          <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
+            <h1 className="page-title">
               Deal Approval
             </h1>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+            <p className="page-subtitle">
               {deals.length} deals · ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })} total · Click any row to see all competing bids
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <div className="page-actions">
             <button
               onClick={() => setAwardLot({ buyerId: "", reason: "" })}
               className="btn-ghost"
@@ -417,7 +411,7 @@ export default function DealsPage() {
         </div>
 
         {viewMode === "model" ? (
-          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
+          <div className="panel">
             {rollupLoading && <p style={{ padding: "24px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>Summing…</p>}
             {!rollupLoading && rollup && rollup.rollup.length === 0 && (
               <p style={{ padding: "24px", textAlign: "center", color: "var(--text-4)", fontSize: "0.85rem" }}>No deals yet.</p>
@@ -458,11 +452,7 @@ export default function DealsPage() {
             )}
           </div>
         ) : (
-        <div style={{
-          background: "var(--bg-2)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-xl)",
-        }}>
+        <div className="panel">
           <table className="dark-table" style={{ width: "100%", tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: "28px" }} />

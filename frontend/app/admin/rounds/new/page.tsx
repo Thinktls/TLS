@@ -248,14 +248,17 @@ export default function NewRound() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "560px" }} className="animate-in">
+      <div className="page-shell animate-in">
         <Link href="/admin/rounds" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           Bid Rounds
         </Link>
-        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 28px" }}>
-          New Bid Round
-        </h1>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
+            <h1 className="page-title">New Bid Round</h1>
+          </div>
+        </div>
 
         <StepIndicator current={step} total={4} />
 

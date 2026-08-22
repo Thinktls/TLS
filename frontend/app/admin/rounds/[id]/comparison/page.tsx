@@ -113,21 +113,22 @@ export default function ComparisonPage() {
 
   return (
     <AdminLayout>
-      <div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-          <div>
+      <div className="page-shell animate-in">
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
             <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
               Round Detail
             </Link>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+            <h1 className="page-title">
               Bid Comparison
             </h1>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+            <p className="page-subtitle">
               {roundName} · {rows.length.toLocaleString()} items · {buyers.length} buyer{buyers.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div className="page-actions">
             <button
               aria-label="Export bid comparison as Excel file"
               onClick={() => downloadFile(`/rounds/${id}/export/comparison.xlsx`, `comparison_round_${id}.xlsx`)}
@@ -189,12 +190,7 @@ export default function ComparisonPage() {
         )}
 
         {/* Scrollable table container */}
-        <div style={{
-          background: "var(--bg-2)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-xl)",
-          overflow: "hidden",
-        }}>
+        <div className="panel">
           {/* Single horizontal scroll context — header and body scroll together */}
           <div style={{ overflowX: "auto" }}>
             <div style={{ width: totalWidth, minWidth: "100%" }}>

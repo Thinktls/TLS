@@ -134,18 +134,17 @@ export default function ReportsDashboard() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "1100px" }} className="animate-in">
-        <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
-            Reports
-          </h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
-            Platform-wide performance and buyer analytics
-          </p>
+      <div className="page-shell animate-in">
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Reports</p>
+            <h1 className="page-title">Reports</h1>
+            <p className="page-subtitle">Platform-wide performance and buyer analytics</p>
+          </div>
         </div>
 
         {/* KPI cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "32px" }}>
+        <div className="kpi-grid" style={{ marginBottom: "32px" }}>
           {kpiCards.map(({ label, value, color }) => (
             <div key={label} style={{
               background: "var(--bg-2)",
@@ -162,13 +161,7 @@ export default function ReportsDashboard() {
         </div>
 
         {/* Monthly Deal Value Bar Chart (recharts) */}
-        <div style={{
-          background: "var(--bg-2)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-xl)",
-          padding: "24px",
-          marginBottom: "24px",
-        }}>
+        <div className="panel" style={{ padding: "24px", marginBottom: "24px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
             <p style={{ fontWeight: 600, color: "var(--text-1)", margin: 0, fontSize: "0.9rem" }}>
               Monthly Deal Value
@@ -206,7 +199,7 @@ export default function ReportsDashboard() {
 
         {/* Round-over-round trends — deal value per completed round with participation/exception context */}
         {trends.length > 0 && (
-          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "24px", marginBottom: "16px" }}>
+          <div className="panel" style={{ padding: "24px", marginBottom: "16px" }}>
             <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 4px", fontSize: "0.9rem" }}>Round-over-Round Trends</p>
             <p style={{ fontSize: "0.75rem", color: "var(--text-4)", margin: "0 0 16px" }}>Deal value per completed round (most recent {trends.length}).</p>
             <ResponsiveContainer width="100%" height={220}>
@@ -260,12 +253,7 @@ export default function ReportsDashboard() {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           {/* Buyer Performance Table */}
-          <div style={{
-            background: "var(--bg-2)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-xl)",
-            padding: "24px",
-          }}>
+          <div className="panel" style={{ padding: "24px" }}>
             <p style={{ fontWeight: 600, color: "var(--text-1)", margin: "0 0 16px", fontSize: "0.9rem" }}>
               Top Buyers by Margin
             </p>
@@ -319,12 +307,7 @@ export default function ReportsDashboard() {
           </div>
 
           {/* Recent Rounds */}
-          <div style={{
-            background: "var(--bg-2)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-xl)",
-            padding: "24px",
-          }}>
+          <div className="panel" style={{ padding: "24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
               <p style={{ fontWeight: 600, color: "var(--text-1)", margin: 0, fontSize: "0.9rem" }}>Recent Rounds</p>
               <Link href="/admin/rounds" style={{ fontSize: "0.75rem", color: "var(--text-3)", textDecoration: "none" }}>

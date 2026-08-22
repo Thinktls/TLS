@@ -102,7 +102,7 @@ export default function BuyerRoundBidsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "980px" }} className="animate-in">
+      <div className="page-shell animate-in">
 
         {/* Breadcrumb */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", fontSize: "0.78rem", color: "var(--text-4)" }}>
@@ -114,18 +114,20 @@ export default function BuyerRoundBidsPage() {
         </div>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px", gap: "16px", flexWrap: "wrap" }}>
+        <div className="page-header">
+          <div className="page-header-text">
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "linear-gradient(135deg,var(--info-bg),var(--violet-bright-bg))", border: "1px solid var(--info-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: "var(--info)", flexShrink: 0 }}>
               {initials(buyer.full_name)}
             </div>
             <div>
-              <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 3px" }}>{buyer.full_name}</h1>
-              <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+              <h1 className="page-title" style={{ margin: "0 0 3px" }}>{buyer.full_name}</h1>
+              <p className="page-subtitle">
                 {buyer.company_name && <span style={{ color: "var(--text-3)" }}>{buyer.company_name} · </span>}
                 {buyer.email}
               </p>
             </div>
+          </div>
           </div>
           <Link href={`/admin/buyers/${buyerId}`} className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.8rem" }}>
             View Full Profile →
@@ -133,7 +135,7 @@ export default function BuyerRoundBidsPage() {
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
+        <div className="kpi-grid" style={{ marginBottom: "20px" }}>
           {[
             { label: "Lines Submitted", val: lines.length,     color: "var(--text-1)",   bg: "var(--surface)", border: "var(--border)" },
             { label: "Matched",         val: matchedCount,     color: "var(--success)", bg: "var(--success-bg)", border: "var(--success-border)" },
@@ -208,7 +210,7 @@ export default function BuyerRoundBidsPage() {
             ))}
           </div>
 
-          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden", overflowX: "auto" }}>
+          <div className="panel" style={{ overflowX: "auto" }}>
             <table className="dark-table" style={{ minWidth: "700px" }}>
               <thead>
                 <tr>

@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        <div className="glass" style={{ borderRadius: "16px", padding: "40px 36px" }}>
+        <div className="glass" style={{ borderRadius: "var(--radius-lg)", padding: "40px", border: "1px solid var(--glass-border)" }}>
           {sent ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📧</div>
@@ -81,8 +81,9 @@ export default function ForgotPasswordPage() {
             <>
               <h1 style={{
                 color: "#ffffff",
-                fontSize: "1.25rem",
-                fontWeight: 700,
+                fontSize: "1.15rem",
+                fontWeight: 650,
+                letterSpacing: "-0.02em",
                 marginBottom: "6px",
               }}>Reset your password</h1>
               <p style={{

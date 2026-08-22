@@ -41,16 +41,17 @@ export default function ProfilePage() {
 
   return (
     <BuyerLayout>
-      <div style={{ maxWidth: "520px" }} className="animate-in">
-        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
-          My Profile
-        </h1>
-        <p style={{ fontSize: "0.82rem", color: "var(--text-4)", marginBottom: "28px" }}>
-          Manage your account details and password.
-        </p>
+      <div className="page-shell animate-in" style={{ maxWidth: "520px" }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Bid Portal</p>
+            <h1 className="page-title">My Profile</h1>
+            <p className="page-subtitle">Manage your account details and password.</p>
+          </div>
+        </div>
 
         {/* Account info */}
-        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px", marginBottom: "16px" }}>
+        <div className="panel" style={{ padding: "22px", marginBottom: "16px" }}>
           <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 16px" }}>Account</p>
           {user ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -74,7 +75,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Change password */}
-        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "22px" }}>
+        <div className="panel" style={{ padding: "22px" }}>
           <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 18px" }}>Change Password</p>
 
           {msg && (
@@ -114,7 +115,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Help section */}
-        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 24px" }}>
+        <div className="panel" style={{ padding: "20px 24px" }}>
           <h2 style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-4)", letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 12px" }}>Help & Onboarding</h2>
           <p style={{ fontSize: "0.82rem", color: "var(--text-3)", margin: "0 0 14px" }}>Replay the guided tour to rediscover features at any time.</p>
           <button

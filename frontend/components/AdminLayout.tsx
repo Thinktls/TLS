@@ -166,7 +166,7 @@ function NotificationBell() {
           background: "var(--bg-1)", border: "1px solid var(--border-mid)", borderRadius: "16px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.4)", zIndex: 9999, overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
             <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "var(--text-1)" }}>Notifications</span>
             {count > 0 && <button onClick={markAll} style={{ fontSize: "0.72rem", color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>Mark all read</button>}
           </div>
@@ -174,7 +174,7 @@ function NotificationBell() {
             {items.length === 0 && <p style={{ textAlign: "center", padding: "32px 0", color: "var(--text-4)", fontSize: "0.82rem" }}>All caught up</p>}
             {items.map(n => (
               <div key={n.id} onClick={() => { if (!n.read) markRead(n.id); if (n.link) window.location.href = n.link; }}
-                style={{ padding: "12px 16px", cursor: n.link ? "pointer" : "default", background: n.read ? "transparent" : "var(--brand-dim)", borderBottom: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "flex-start", transition: "background 0.15s" }}
+                style={{ padding: "12px 16px", margin: "4px 6px", borderRadius: "8px", cursor: n.link ? "pointer" : "default", background: n.read ? "transparent" : "var(--brand-dim)", borderBottom: "none", display: "flex", gap: "10px", alignItems: "flex-start", transition: "background 0.15s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-hover)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = n.read ? "transparent" : "var(--brand-dim)"; }}
               >

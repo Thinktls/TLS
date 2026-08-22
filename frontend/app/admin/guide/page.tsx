@@ -92,15 +92,16 @@ const sections: Section[] = [
 export default function AdminGuidePage() {
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "860px" }} className="animate-in">
-        <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ color: "var(--text-1)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.04em", margin: "0 0 8px" }}>
-            Admin Handover Guide
-          </h1>
-          <p style={{ color: "var(--text-3)", fontSize: "0.9rem", lineHeight: 1.6 }}>
-            Complete operational reference for ThinkTLS Bid Desk administrators.
-            Covers daily workflows, configuration, exports, integrations, and troubleshooting.
-          </p>
+      <div className="page-shell animate-in">
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Guide</p>
+            <h1 className="page-title">Admin Handover Guide</h1>
+            <p className="page-subtitle">
+              Complete operational reference for ThinkTLS Bid Desk administrators.
+              Covers daily workflows, configuration, exports, integrations, and troubleshooting.
+            </p>
+          </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

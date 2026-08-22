@@ -105,22 +105,23 @@ export default function ParticipationTracker() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "900px" }} className="animate-in">
+      <div className="page-shell animate-in">
         <Link href={`/admin/rounds/${id}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "var(--text-4)", textDecoration: "none", marginBottom: "10px" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           Round Detail
         </Link>
 
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "24px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
+            <h1 className="page-title">
               Buyer Participation
             </h1>
-            <p style={{ fontSize: "0.8rem", color: "var(--text-4)", margin: 0 }}>
+            <p className="page-subtitle">
               Live status · refreshes every 30s · last updated {timeAgo(lastRefresh.toISOString())}
             </p>
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div className="page-actions">
             <label style={{ fontSize: "0.78rem", color: "var(--text-3)", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
               <input
                 type="checkbox"
@@ -137,7 +138,7 @@ export default function ParticipationTracker() {
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "24px" }}>
+        <div className="kpi-grid" style={{ marginBottom: "24px" }}>
           <StatBox label="Total Buyers" value={stats.total} color="var(--text-1)" />
           <StatBox label="Invited" value={stats.sent} color="var(--info)" />
           <StatBox label="Uploaded" value={stats.uploaded} color="var(--success)" />

@@ -297,7 +297,7 @@ export default function ExceptionsPage() {
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: "920px" }} className="animate-in">
+      <div className="page-shell animate-in">
         {/* Toast */}
         {toast && (
           <div style={{
@@ -318,16 +318,17 @@ export default function ExceptionsPage() {
         </Link>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px", lineHeight: 1.3 }}>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Rounds</p>
+            <h1 className="page-title">
               Review Flagged Bids
             </h1>
-            <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
+            <p className="page-subtitle">
               These bid lines couldn't be automatically matched. For each one: accept a suggestion, search the catalog, or reject the line.
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <div className="page-actions">
             {stats && stats.ai_suggestions_available > 0 && (
               <button
                 onClick={bulkApproveAI}

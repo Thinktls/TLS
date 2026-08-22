@@ -137,10 +137,10 @@ function SetupPasswordInner() {
                 background: "var(--surface)",
                 border: "1px solid rgba(255,255,255,0.13)",
                 backdropFilter: "blur(24px)",
-                borderRadius: "28px",
-                padding: "44px 40px",
+                borderRadius: "var(--radius-lg)",
+                padding: "40px",
               }}>
-                <p style={{ fontWeight: 600, color: "#ffffff", margin: "0 0 6px", fontSize: "1rem" }}>Set your password</p>
+                <p style={{ fontWeight: 650, color: "#ffffff", margin: "0 0 6px", fontSize: "1.15rem", letterSpacing: "-0.02em" }}>Set your password</p>
                 <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.5)", margin: "0 0 24px" }}>{email}</p>
 
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

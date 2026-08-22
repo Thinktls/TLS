@@ -79,8 +79,8 @@ export default function LoginPage() {
           border: 1px solid rgba(255,255,255,0.12);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
-          border-radius: 28px;
-          padding: 44px 40px;
+          border-radius: var(--radius-lg);
+          padding: 40px;
           transition: border-color 0.3s;
         }
         .glass-card:hover {

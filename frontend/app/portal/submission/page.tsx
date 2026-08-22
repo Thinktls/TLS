@@ -64,12 +64,15 @@ function SubmissionInner() {
 
   return (
     <BuyerLayout>
-      <div style={{ maxWidth: "1060px" }} className="animate-in">
+      <div className="page-shell animate-in">
 
         {/* Header */}
-        <div style={{ marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>My Submission</h1>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Review your parsed bid lines and match status.</p>
+        <div className="page-header">
+          <div className="page-header-text">
+            <p className="page-eyebrow">Bid Portal</p>
+            <h1 className="page-title">My Submission</h1>
+            <p className="page-subtitle">Review your parsed bid lines and match status.</p>
+          </div>
         </div>
 
         {/* Round selector */}
@@ -121,7 +124,7 @@ function SubmissionInner() {
             </div>
 
             {/* Stats row */}
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
+            <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", marginBottom: "20px" }}>
               {[
                 { label: "Total Lines", val: lines.length, color: "var(--text-1)", bg: "var(--surface)", border: "var(--border)" },
                 { label: "Matched",     val: matchedCount, color: "var(--success)", bg: "var(--success-dim)", border: "var(--success-dim)" },
@@ -175,7 +178,7 @@ function SubmissionInner() {
             </div>
 
             {/* Table */}
-            <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden", overflowX: "auto" }}>
+            <div className="panel" style={{ overflowX: "auto" }}>
               <table className="dark-table" style={{ minWidth: "720px" }}>
                 <thead>
                   <tr>
