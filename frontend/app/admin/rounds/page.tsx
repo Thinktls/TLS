@@ -74,7 +74,7 @@ export default function BidRoundsPage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -90,8 +90,8 @@ export default function BidRoundsPage() {
             <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Bid Rounds</h1>
             <p style={{ fontSize: "0.8rem", color: "var(--text-4)", margin: 0 }}>
               {counts.total} total &nbsp;·&nbsp;
-              <span style={{ color: "#34d399" }}>{counts.open} open</span> &nbsp;·&nbsp;
-              <span style={{ color: "#a78bfa" }}>{counts.complete} complete</span>
+              <span style={{ color: "var(--success)" }}>{counts.open} open</span> &nbsp;·&nbsp;
+              <span style={{ color: "var(--violet-bright)" }}>{counts.complete} complete</span>
             </p>
           </div>
           <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none" }}>
@@ -183,7 +183,7 @@ export default function BidRoundsPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "2px" }}>
                         <p style={{ fontWeight: 700, color: "var(--text-1)", margin: 0, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
                         {!r.master_file_uploaded && (
-                          <span style={{ fontSize: "0.67rem", color: "#f59e0b", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", padding: "1px 7px", borderRadius: "100px", flexShrink: 0 }}>No master file</span>
+                          <span style={{ fontSize: "0.67rem", color: "var(--warning)", background: "var(--warning-dim)", border: "1px solid var(--warning)", padding: "1px 7px", borderRadius: "100px", flexShrink: 0 }}>No master file</span>
                         )}
                       </div>
                       <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>
@@ -214,13 +214,14 @@ export default function BidRoundsPage() {
                   {confirmId === r.id ? (
                     <div style={{
                       display: "flex", alignItems: "center", gap: "4px",
-                      background: "var(--bg-1)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: "8px", padding: "4px 8px",
+                      background: "var(--bg-1)", border: "1px solid var(--danger-dim)", borderRadius: "8px", padding: "4px 8px",
                     }}>
                       <span style={{ fontSize: "0.71rem", color: "var(--text-3)", whiteSpace: "nowrap", marginRight: "2px" }}>Delete?</span>
                       <button
                         onClick={e => { e.stopPropagation(); handleDelete(r.id); }}
                         disabled={deleting === r.id}
-                        style={{ fontSize: "0.71rem", fontWeight: 700, color: "var(--text-1)", background: "#ef4444", border: "none", borderRadius: "5px", padding: "3px 10px", cursor: "pointer" }}
+                        className="btn-danger"
+                        style={{ fontSize: "0.71rem", fontWeight: 700, padding: "3px 10px" }}
                       >{deleting === r.id ? "…" : "Yes"}</button>
                       <button
                         onClick={e => { e.stopPropagation(); setConfirmId(null); }}
@@ -235,15 +236,15 @@ export default function BidRoundsPage() {
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "center",
                         width: "30px", height: "30px", borderRadius: "7px",
-                        background: r.status === "open" || r.status === "processing" ? "transparent" : "rgba(239,68,68,0.1)",
-                        border: r.status === "open" || r.status === "processing" ? "1px solid transparent" : "1px solid rgba(239,68,68,0.25)",
-                        color: r.status === "open" || r.status === "processing" ? "var(--text-4)" : "#f87171",
+                        background: r.status === "open" || r.status === "processing" ? "transparent" : "var(--danger-dim)",
+                        border: r.status === "open" || r.status === "processing" ? "1px solid transparent" : "1px solid var(--danger-dim)",
+                        color: r.status === "open" || r.status === "processing" ? "var(--text-4)" : "var(--danger)",
                         cursor: r.status === "open" || r.status === "processing" ? "not-allowed" : "pointer",
                         opacity: r.status === "open" || r.status === "processing" ? 0.35 : 1,
                         transition: "all 0.15s",
                       }}
-                      onMouseEnter={e => { if (r.status !== "open" && r.status !== "processing") { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(239,68,68,0.18)"; el.style.borderColor = "rgba(239,68,68,0.4)"; } }}
-                      onMouseLeave={e => { if (r.status !== "open" && r.status !== "processing") { const el = e.currentTarget as HTMLElement; el.style.background = "rgba(239,68,68,0.1)"; el.style.borderColor = "rgba(239,68,68,0.25)"; } }}
+                      onMouseEnter={e => { if (r.status !== "open" && r.status !== "processing") { const el = e.currentTarget as HTMLElement; el.style.background = "var(--danger)"; el.style.borderColor = "var(--danger)"; } }}
+                      onMouseLeave={e => { if (r.status !== "open" && r.status !== "processing") { const el = e.currentTarget as HTMLElement; el.style.background = "var(--danger-dim)"; el.style.borderColor = "var(--danger-dim)"; } }}
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>

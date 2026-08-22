@@ -88,7 +88,7 @@ export default function BuyerRoundBidsPage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--info-border)", borderTopColor: "var(--info)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -96,7 +96,7 @@ export default function BuyerRoundBidsPage() {
 
   if (!buyer) return (
     <AdminLayout>
-      <div style={{ textAlign: "center", paddingTop: "80px", color: "#f87171" }}>Buyer not found.</div>
+      <div style={{ textAlign: "center", paddingTop: "80px", color: "var(--danger)" }}>Buyer not found.</div>
     </AdminLayout>
   );
 
@@ -116,7 +116,7 @@ export default function BuyerRoundBidsPage() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px", gap: "16px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "linear-gradient(135deg,rgba(61,129,227,0.25),rgba(99,102,241,0.15))", border: "1px solid rgba(61,129,227,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>
+            <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "linear-gradient(135deg,var(--info-bg),var(--violet-bright-bg))", border: "1px solid var(--info-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: "var(--info)", flexShrink: 0 }}>
               {initials(buyer.full_name)}
             </div>
             <div>
@@ -136,9 +136,9 @@ export default function BuyerRoundBidsPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "20px" }}>
           {[
             { label: "Lines Submitted", val: lines.length,     color: "var(--text-1)",   bg: "var(--surface)", border: "var(--border)" },
-            { label: "Matched",         val: matchedCount,     color: "#34d399", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
-            { label: "Exceptions",      val: exceptionCount,   color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "var(--surface)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
-            { label: "Lines Won",       val: winnerCount,      color: "#a78bfa", bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)" },
+            { label: "Matched",         val: matchedCount,     color: "var(--success)", bg: "var(--success-bg)", border: "var(--success-border)" },
+            { label: "Exceptions",      val: exceptionCount,   color: exceptionCount > 0 ? "var(--orange)" : "var(--text-3)", bg: exceptionCount > 0 ? "var(--orange-bg)" : "var(--surface)", border: exceptionCount > 0 ? "var(--orange-border)" : "var(--border)" },
+            { label: "Lines Won",       val: winnerCount,      color: "var(--violet-bright)", bg: "var(--violet-bright-bg)", border: "var(--violet-bright-border)" },
           ].map(({ label, val, color, bg, border }) => (
             <div key={label} style={{ padding: "14px 18px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius-lg)" }}>
               <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 5px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>
@@ -155,8 +155,8 @@ export default function BuyerRoundBidsPage() {
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "9px", background: "rgba(61,129,227,0.1)", border: "1px solid rgba(61,129,227,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <div style={{ width: "38px", height: "38px", borderRadius: "9px", background: "var(--info-bg)", border: "1px solid var(--info-border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--info)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
                 <div>
                   <p style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-1)", margin: "0 0 3px", fontFamily: "monospace" }}>{bidFile.filename}</p>
@@ -173,7 +173,7 @@ export default function BuyerRoundBidsPage() {
                     ↓ Download Original
                   </button>
                 ) : (
-                  <button onClick={() => downloadFile(`/rounds/${roundId}/bid-files/${bidFile.id}/reconstruct`, bidFile.filename.replace(/\.[^.]+$/, "_reconstructed.xlsx"))} className="btn-ghost" style={{ fontSize: "0.78rem", padding: "6px 14px", borderColor: "rgba(251,191,36,0.3)", color: "#fbbf24" }} title="Original file no longer on disk — downloads a reconstruction from the parsed bid line data">
+                  <button onClick={() => downloadFile(`/rounds/${roundId}/bid-files/${bidFile.id}/reconstruct`, bidFile.filename.replace(/\.[^.]+$/, "_reconstructed.xlsx"))} className="btn-ghost" style={{ fontSize: "0.78rem", padding: "6px 14px", borderColor: "var(--warning-border)", color: "var(--warning)" }} title="Original file no longer on disk — downloads a reconstruction from the parsed bid line data">
                     ↓ Download (Reconstructed)
                   </button>
                 )}
@@ -186,7 +186,7 @@ export default function BuyerRoundBidsPage() {
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
             <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Bid Lines</p>
-            {winRate && <span style={{ fontSize: "0.78rem", color: "var(--text-4)" }}>Win rate: <strong style={{ color: "#a78bfa" }}>{winRate}%</strong></span>}
+            {winRate && <span style={{ fontSize: "0.78rem", color: "var(--text-4)" }}>Win rate: <strong style={{ color: "var(--violet-bright)" }}>{winRate}%</strong></span>}
           </div>
 
           {/* Filter tabs */}
@@ -199,7 +199,7 @@ export default function BuyerRoundBidsPage() {
             ] as const).map(({ key, label }) => (
               <button key={key} onClick={() => setFilter(key)} style={{
                 padding: "5px 13px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none", fontFamily: "inherit",
-                background: filter === key ? "rgba(61,129,227,0.18)" : "transparent",
+                background: filter === key ? "var(--info-bg)" : "transparent",
                 color: filter === key ? "var(--text-1)" : "var(--text-4)",
                 fontWeight: filter === key ? 600 : 400, transition: "all 0.15s",
               }}>
@@ -222,14 +222,14 @@ export default function BuyerRoundBidsPage() {
               </thead>
               <tbody>
                 {filtered.map(line => (
-                  <tr key={line.id} style={{ background: line.is_winner ? "rgba(16,185,129,0.03)" : line.match_status === "exception" ? "rgba(251,146,60,0.02)" : "transparent" }}>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: line.is_winner ? "#34d399" : line.match_status === "exception" ? "#fb923c" : "var(--text-1)" }}>
+                  <tr key={line.id} style={{ background: line.is_winner ? "var(--success-bg)" : line.match_status === "exception" ? "var(--orange-bg)" : "transparent" }}>
+                    <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: line.is_winner ? "var(--success)" : line.match_status === "exception" ? "var(--orange)" : "var(--text-1)" }}>
                       {line.raw_part_number}
                     </td>
                     <td style={{ maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.78rem", color: "var(--text-3)" }}>
                       {line.description || "—"}
                     </td>
-                    <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.82rem", fontWeight: line.is_winner ? 700 : 400, color: line.is_winner ? "#34d399" : "var(--text-2)" }}>
+                    <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.82rem", fontWeight: line.is_winner ? 700 : 400, color: line.is_winner ? "var(--success)" : "var(--text-2)" }}>
                       {line.unit_price != null ? `$${line.unit_price.toFixed(2)}` : "—"}
                     </td>
                     <td style={{ textAlign: "right", color: "var(--text-3)", fontSize: "0.82rem" }}>{line.quantity ?? "—"}</td>
@@ -244,7 +244,7 @@ export default function BuyerRoundBidsPage() {
                       {line.is_anomaly && <span title="Flagged as a possible price typo — this bid is far from the others on the same item. See the Exceptions page for the full reason." className="badge badge-closed" style={{ marginLeft: "4px", cursor: "help" }}>anomaly</span>}
                     </td>
                     <td style={{ textAlign: "center" }}>
-                      {line.is_winner ? <span style={{ color: "#34d399", fontSize: "1rem" }}>★</span> : <span style={{ color: "var(--text-4)" }}>—</span>}
+                      {line.is_winner ? <span style={{ color: "var(--success)", fontSize: "1rem" }}>★</span> : <span style={{ color: "var(--text-4)" }}>—</span>}
                     </td>
                   </tr>
                 ))}

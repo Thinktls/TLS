@@ -112,7 +112,7 @@ function SubmitBidInner() {
     fd.append("offer_terms", offerTerms);
     try {
       const res = await api.post(`/buyer/rounds/${selectedRound}/bid`, fd, { timeout: 180000 });
-      setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:#34d399;font-weight:600">View full submission →</a>`);
+      setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:var(--success);font-weight:600">View full submission →</a>`);
       setStep("done");
       setHasSubmission(true);
     } catch (err: any) {
@@ -142,7 +142,7 @@ function SubmitBidInner() {
     setSubmitting(true); setError("");
     try {
       const res = await api.post(`/buyer/rounds/${selectedRound}/bid-inline`, { lines, offer_terms: offerTerms });
-      setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:#34d399;font-weight:600">View full submission →</a>`);
+      setMsg(`${res.data.message || "Bid submitted!"} — <a href="/portal/submission?round=${selectedRound}" style="color:var(--success);font-weight:600">View full submission →</a>`);
       setInlineDone(true);
       setHasSubmission(true);
     } catch (err: any) {
@@ -172,7 +172,7 @@ function SubmitBidInner() {
           ].map(({ n, title, body }, i) => (
             <div key={n} style={{ flex: 1, padding: "14px 18px", borderRight: i < 2 ? "1px solid var(--border)" : "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                <span style={{ width: "20px", height: "20px", borderRadius: "50%", background: "rgba(61,129,227,0.2)", color: "#60a5fa", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</span>
+                <span style={{ width: "20px", height: "20px", borderRadius: "50%", background: "var(--brand-dim)", color: "var(--info)", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</span>
                 <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-2)" }}>{title}</span>
               </div>
               <p style={{ fontSize: "0.71rem", color: "var(--text-4)", margin: 0, lineHeight: 1.45, paddingLeft: "28px" }}>{body}</p>
@@ -200,13 +200,13 @@ function SubmitBidInner() {
               </select>
 
               {round && (
-                <div style={{ marginTop: "14px", padding: "12px 14px", background: "rgba(61,129,227,0.06)", border: "1px solid rgba(61,129,227,0.12)", borderRadius: "var(--radius-sm)" }}>
+                <div style={{ marginTop: "14px", padding: "12px 14px", background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", borderRadius: "var(--radius-sm)" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
                     <div>
                       {round.deadline && (
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <span style={{ fontSize: "0.75rem", color: "#fbbf24", fontWeight: 500 }}>Deadline: {fmtDatetime(round.deadline)}</span>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ stroke: "var(--warning)" }} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span style={{ fontSize: "0.75rem", color: "var(--warning)", fontWeight: 500 }}>Deadline: {fmtDatetime(round.deadline)}</span>
                         </div>
                       )}
                       {round.customer && <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>Customer: {round.customer}</p>}
@@ -249,7 +249,7 @@ function SubmitBidInner() {
                     style={{
                       padding: "8px 18px", borderRadius: "var(--radius)", fontSize: "0.82rem", fontWeight: 600,
                       border: mode === m ? "1px solid var(--brand)" : "1px solid var(--border)",
-                      background: mode === m ? "rgba(61,129,227,0.12)" : "var(--bg-2)",
+                      background: mode === m ? "var(--brand-dim)" : "var(--bg-2)",
                       color: mode === m ? "var(--brand)" : "var(--text-3)",
                       cursor: "pointer", transition: "all 0.15s",
                     }}>
@@ -269,10 +269,10 @@ function SubmitBidInner() {
                     onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
                     onClick={() => selectedRound && !uploading && fileRef.current?.click()}
                     style={{
-                      border: `2px dashed ${dragOver ? "rgba(61,129,227,0.7)" : selectedRound ? "var(--border-mid)" : "var(--border)"}`,
+                      border: `2px dashed ${dragOver ? "var(--brand-glow)" : selectedRound ? "var(--border-mid)" : "var(--border)"}`,
                       borderRadius: "var(--radius-xl)", padding: "56px 32px", textAlign: "center",
                       cursor: selectedRound && !uploading ? "pointer" : "default",
-                      background: dragOver ? "rgba(61,129,227,0.06)" : "var(--bg-2)",
+                      background: dragOver ? "var(--brand-dim)" : "var(--bg-2)",
                       transition: "all 0.2s", position: "relative", overflow: "hidden",
                     }}
                   >
@@ -336,10 +336,10 @@ function SubmitBidInner() {
                               {preview.rows.map((row, i) => (
                                 <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
                                   <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{i + 1}</td>
-                                  <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", whiteSpace: "nowrap" }}>{row.raw_part_number}</td>
+                                  <td style={{ padding: "7px 12px", color: "var(--info)", fontFamily: "monospace", fontSize: "0.77rem", whiteSpace: "nowrap" }}>{row.raw_part_number}</td>
                                   <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.description || "—"}</td>
                                   {hasCategory && <td style={{ padding: "7px 12px", color: "var(--text-3)", whiteSpace: "nowrap" }}>{row.category || "—"}</td>}
-                                  <td style={{ padding: "7px 12px", color: row.unit_price ? "#34d399" : "var(--text-4)", whiteSpace: "nowrap" }}>
+                                  <td style={{ padding: "7px 12px", color: row.unit_price ? "var(--success)" : "var(--text-4)", whiteSpace: "nowrap" }}>
                                     {row.unit_price != null ? `$${row.unit_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                                   </td>
                                   <td style={{ padding: "7px 12px", color: "var(--text-2)" }}>{row.quantity}</td>
@@ -366,7 +366,7 @@ function SubmitBidInner() {
                 )}
 
                 {step === "done" && msg && (
-                  <div style={{ padding: "14px 18px", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "#34d399", lineHeight: 1.6 }}>
+                  <div style={{ padding: "14px 18px", background: "var(--success-dim)", border: "1px solid var(--success-dim)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "var(--success)", lineHeight: 1.6 }}>
                     ✓ <span dangerouslySetInnerHTML={{ __html: msg }} />
                   </div>
                 )}
@@ -378,9 +378,9 @@ function SubmitBidInner() {
                 )}
 
                 {step === "upload" && (
-                  <div style={{ background: "rgba(61,129,227,0.05)", border: "1px solid rgba(61,129,227,0.12)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
+                  <div style={{ background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
                     <p style={{ fontWeight: 700, color: "var(--text-2)", margin: "0 0 12px", fontSize: "0.82rem" }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" style={{ marginRight: "7px", verticalAlign: "middle" }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--info)" strokeWidth="2" style={{ marginRight: "7px", verticalAlign: "middle" }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                       Submission Tips
                     </p>
                     <ul style={{ margin: 0, paddingLeft: "18px", color: "var(--text-4)", fontSize: "0.78rem", lineHeight: 1.8 }}>
@@ -399,7 +399,7 @@ function SubmitBidInner() {
               <>
                 {inlineDone ? (
                   <>
-                    <div style={{ padding: "14px 18px", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "#34d399", lineHeight: 1.6 }}>
+                    <div style={{ padding: "14px 18px", background: "var(--success-dim)", border: "1px solid var(--success-dim)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "var(--success)", lineHeight: 1.6 }}>
                       ✓ <span dangerouslySetInnerHTML={{ __html: msg }} />
                     </div>
                     <button onClick={() => { setInlineDone(false); setInlinePrices({}); setMsg(""); }}
@@ -440,9 +440,9 @@ function SubmitBidInner() {
                           {masterItems.map((item, idx) => {
                             const priced = inlinePrices[item.id] && parseFloat(inlinePrices[item.id]) > 0;
                             return (
-                              <tr key={item.id} style={{ borderBottom: "1px solid var(--border)", background: priced ? "rgba(52,211,153,0.04)" : "transparent", transition: "background 0.15s" }}>
+                              <tr key={item.id} style={{ borderBottom: "1px solid var(--border)", background: priced ? "var(--success-dim)" : "transparent", transition: "background 0.15s" }}>
                                 <td style={{ padding: "7px 12px", color: "var(--text-4)", fontSize: "0.72rem", fontVariantNumeric: "tabular-nums" }}>{idx + 1}</td>
-                                <td style={{ padding: "7px 12px", color: "#60a5fa", fontFamily: "monospace", fontSize: "0.77rem", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.part_number}</td>
+                                <td style={{ padding: "7px 12px", color: "var(--info)", fontFamily: "monospace", fontSize: "0.77rem", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.part_number}</td>
                                 <td style={{ padding: "7px 12px", color: "var(--text-3)", maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.description}>{item.description || item.manufacturer || "—"}</td>
                                 <td style={{ padding: "7px 12px", color: "var(--text-4)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{item.quantity}</td>
                                 <td style={{ padding: "4px 8px" }}>
@@ -455,8 +455,8 @@ function SubmitBidInner() {
                                     onChange={e => setInlinePrices(p => ({ ...p, [item.id]: e.target.value }))}
                                     style={{
                                       width: "110px", padding: "5px 8px", borderRadius: "6px",
-                                      border: priced ? "1px solid rgba(52,211,153,0.4)" : "1px solid var(--border)",
-                                      background: "var(--bg)", color: priced ? "#34d399" : "var(--text-1)",
+                                      border: priced ? "1px solid var(--success-strong)" : "1px solid var(--border)",
+                                      background: "var(--bg)", color: priced ? "var(--success)" : "var(--text-1)",
                                       fontSize: "0.82rem", outline: "none", fontVariantNumeric: "tabular-nums",
                                     }}
                                   />
@@ -484,7 +484,7 @@ function SubmitBidInner() {
 
             {/* Error */}
             {error && (
-              <div style={{ padding: "14px 18px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "#f87171" }}>
+              <div style={{ padding: "14px 18px", background: "var(--danger-dim)", border: "1px solid var(--danger-dim)", borderRadius: "var(--radius)", fontSize: "0.83rem", color: "var(--danger)" }}>
                 {error}
               </div>
             )}
@@ -522,7 +522,7 @@ function TermsField({ value, onChange }: { value: string; onChange: (v: string) 
 
 export default function SubmitBid() {
   return (
-    <Suspense fallback={<BuyerLayout><div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}><div style={{ width: "24px", height: "24px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div></BuyerLayout>}>
+    <Suspense fallback={<BuyerLayout><div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}><div style={{ width: "24px", height: "24px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div></BuyerLayout>}>
       <SubmitBidInner />
     </Suspense>
   );

@@ -55,12 +55,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </p>
             {this.state.error && (
               <pre style={{
-                background: "rgba(255,0,0,0.08)",
-                border: "1px solid rgba(255,0,0,0.2)",
+                background: "var(--danger-dim)",
+                border: "1px solid var(--danger-dim)",
                 borderRadius: "8px",
                 padding: "12px",
                 fontSize: "0.75rem",
-                color: "#f87171",
+                color: "var(--danger)",
                 textAlign: "left",
                 overflowX: "auto",
                 marginBottom: "24px",

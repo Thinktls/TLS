@@ -73,7 +73,7 @@ export default function ChatWidget({ role, roundId }: Props) {
         style={{
           position: "fixed", bottom: "24px", right: "24px",
           width: "48px", height: "48px", borderRadius: "50%",
-          background: "linear-gradient(135deg, #3D81E3, #6366f1)",
+          background: "var(--brand-gradient)",
           border: "none", cursor: "pointer", zIndex: 9999,
           display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: "0 4px 20px rgba(61,129,227,0.45)",
@@ -81,7 +81,7 @@ export default function ChatWidget({ role, roundId }: Props) {
         }}
         onMouseEnter={e => {
           (e.currentTarget as HTMLElement).style.transform = "scale(1.08)";
-          (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 28px rgba(61,129,227,0.6)";
+          (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 28px var(--brand)";
         }}
         onMouseLeave={e => {
           (e.currentTarget as HTMLElement).style.transform = "scale(1)";
@@ -116,12 +116,12 @@ export default function ChatWidget({ role, roundId }: Props) {
           <div style={{
             padding: "14px 16px",
             borderBottom: "1px solid var(--border)",
-            background: "linear-gradient(135deg, rgba(61,129,227,0.12), rgba(99,102,241,0.08))",
+            background: "linear-gradient(135deg, var(--brand-dim), var(--brand-dim))",
             display: "flex", alignItems: "center", gap: "10px", flexShrink: 0,
           }}>
             <div style={{
               width: "32px", height: "32px", borderRadius: "8px",
-              background: "linear-gradient(135deg, #3D81E3, #6366f1)",
+              background: "var(--brand-gradient)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,10 +130,10 @@ export default function ChatWidget({ role, roundId }: Props) {
               </svg>
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 600, color: "var(--text-1, #e2e8f0)" }}>
+              <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 600, color: "var(--text-1)" }}>
                 ThinkTLS AI
               </p>
-              <p style={{ margin: 0, fontSize: "0.68rem", color: "var(--text-4, #64748b)" }}>
+              <p style={{ margin: 0, fontSize: "0.68rem", color: "var(--text-4)" }}>
                 {role === "admin" ? "Platform assistant" : "Bid portal assistant"}
               </p>
             </div>
@@ -142,7 +142,7 @@ export default function ChatWidget({ role, roundId }: Props) {
               title="Clear chat"
               style={{
                 marginLeft: "auto", background: "none", border: "none", cursor: "pointer",
-                color: "var(--text-4, #64748b)", padding: "4px", borderRadius: "6px",
+                color: "var(--text-4)", padding: "4px", borderRadius: "6px",
                 display: "flex", alignItems: "center",
               }}
             >
@@ -157,10 +157,10 @@ export default function ChatWidget({ role, roundId }: Props) {
             {isEmpty && (
               <div style={{ textAlign: "center", marginTop: "40px" }}>
                 <div style={{ fontSize: "2rem", marginBottom: "12px" }}>💬</div>
-                <p style={{ fontSize: "0.82rem", color: "var(--text-3, #94a3b8)", margin: "0 0 6px", fontWeight: 600 }}>
+                <p style={{ fontSize: "0.82rem", color: "var(--text-3)", margin: "0 0 6px", fontWeight: 600 }}>
                   {role === "admin" ? "Ask about platform activity" : "Ask about your bids & rounds"}
                 </p>
-                <p style={{ fontSize: "0.72rem", color: "var(--text-4, #64748b)", margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, lineHeight: 1.5 }}>
                   {role === "admin"
                     ? "Round stats, deal totals, buyer activity…"
                     : "Open rounds, deadlines, your wins…"}
@@ -178,7 +178,7 @@ export default function ChatWidget({ role, roundId }: Props) {
                   padding: "9px 13px",
                   borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                   background: m.role === "user"
-                    ? "linear-gradient(135deg, #3D81E3, #6366f1)"
+                    ? "var(--brand-gradient)"
                     : "var(--surface)",
                   border: m.role === "user" ? "none" : "1px solid var(--border)",
                   fontSize: "0.8rem",
@@ -204,7 +204,7 @@ export default function ChatWidget({ role, roundId }: Props) {
                   {[0,1,2].map(d => (
                     <span key={d} style={{
                       width: "6px", height: "6px", borderRadius: "50%",
-                      background: "var(--text-4, #64748b)",
+                      background: "var(--text-4)",
                       animation: "chatDot 1.2s infinite",
                       animationDelay: `${d * 0.2}s`,
                       display: "inline-block",
@@ -217,8 +217,8 @@ export default function ChatWidget({ role, roundId }: Props) {
             {error && (
               <div style={{
                 padding: "8px 12px", borderRadius: "10px",
-                background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)",
-                fontSize: "0.75rem", color: "#f87171",
+                background: "var(--danger-dim)", border: "1px solid var(--danger-dim)",
+                fontSize: "0.75rem", color: "var(--danger)",
               }}>{error}</div>
             )}
 
@@ -243,12 +243,12 @@ export default function ChatWidget({ role, roundId }: Props) {
                 flex: 1, resize: "none", background: "var(--input-bg)",
                 border: "1px solid var(--border)",
                 borderRadius: "10px", padding: "9px 12px",
-                fontSize: "0.8rem", color: "var(--text-1, #e2e8f0)",
+                fontSize: "0.8rem", color: "var(--text-1)",
                 outline: "none", lineHeight: 1.5,
                 maxHeight: "100px", overflowY: "auto",
                 fontFamily: "inherit",
               }}
-              onFocus={e => { e.currentTarget.style.borderColor = "rgba(61,129,227,0.5)"; }}
+              onFocus={e => { e.currentTarget.style.borderColor = "var(--brand)"; }}
               onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
             />
             <button
@@ -257,7 +257,7 @@ export default function ChatWidget({ role, roundId }: Props) {
               style={{
                 width: "36px", height: "36px", borderRadius: "10px", flexShrink: 0,
                 background: input.trim() && !loading
-                  ? "linear-gradient(135deg, #3D81E3, #6366f1)"
+                  ? "var(--brand-gradient)"
                   : "var(--surface)",
                 border: "none", cursor: input.trim() && !loading ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",

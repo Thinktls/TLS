@@ -49,8 +49,8 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
           borderRadius: "100px",
           fontSize: "0.72rem",
           fontWeight: 600,
-          background: buyer.is_active ? "rgba(52,211,153,0.12)" : "rgba(248,113,113,0.12)",
-          color: buyer.is_active ? "#34d399" : "#f87171",
+          background: buyer.is_active ? "var(--success-dim)" : "var(--danger-dim)",
+          color: buyer.is_active ? "var(--success)" : "var(--danger)",
         }}>
           {buyer.is_active ? "Active" : "Inactive"}
         </span>
@@ -67,7 +67,7 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
               border: "none",
               cursor: "pointer",
               position: "relative",
-              background: enabled ? "#3D81E3" : "var(--surface-hover)",
+              background: enabled ? "var(--brand)" : "var(--surface-hover)",
               transition: "background 0.2s",
               flexShrink: 0,
             }}
@@ -116,7 +116,7 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
       <td style={{ padding: "14px 16px" }}>
         <div style={{ fontSize: "0.8rem", color: "var(--text-3)" }}>
           If real price = $1,000 →{" "}
-          <span style={{ color: enabled ? "#fbbf24" : "var(--text-4)", fontWeight: 600 }}>
+          <span style={{ color: enabled ? "var(--warning)" : "var(--text-4)", fontWeight: 600 }}>
             ${fluffedPrice.toFixed(2)}
           </span>
           {enabled && pct > 0 && (
@@ -137,7 +137,7 @@ function FluffRow({ buyer, onSave }: { buyer: Buyer; onSave: (id: number, pct: n
             {saving ? "Saving…" : "Save"}
           </button>
         ) : saved ? (
-          <span style={{ color: "#34d399", fontSize: "0.8rem", fontWeight: 600 }}>✓ Saved</span>
+          <span style={{ color: "var(--success)", fontSize: "0.8rem", fontWeight: 600 }}>✓ Saved</span>
         ) : (
           <span style={{ color: "var(--text-4)", fontSize: "0.8rem" }}>—</span>
         )}
@@ -202,8 +202,8 @@ export default function FluffSettingsPage() {
 
         {/* Info callout */}
         <div style={{
-          background: "rgba(61,129,227,0.08)",
-          border: "1px solid rgba(61,129,227,0.2)",
+          background: "var(--brand-dim)",
+          border: "1px solid var(--brand-dim)",
           borderRadius: "10px",
           padding: "14px 18px",
           marginBottom: "24px",
@@ -262,11 +262,11 @@ export default function FluffSettingsPage() {
         {/* Table */}
         {loading ? (
           <div style={{ display: "flex", justifyContent: "center", paddingTop: "40px" }}>
-            <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+            <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         ) : error ? (
-          <div style={{ color: "#f87171", padding: "20px", textAlign: "center" }}>{error}</div>
+          <div style={{ color: "var(--danger)", padding: "20px", textAlign: "center" }}>{error}</div>
         ) : buyers.length === 0 ? (
           <div className="glass" style={{ borderRadius: "12px", padding: "48px", textAlign: "center" }}>
             <p style={{ color: "var(--text-3)" }}>No buyers registered yet.</p>

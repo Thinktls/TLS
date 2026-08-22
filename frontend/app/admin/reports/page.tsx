@@ -56,10 +56,10 @@ interface RoundTrend {
 
 const statusColor: Record<string, string> = {
   draft: "var(--text-3)",
-  open: "#34d399",
-  closed: "#fbbf24",
-  processing: "#60a5fa",
-  complete: "#a78bfa",
+  open: "var(--success)",
+  closed: "var(--warning)",
+  processing: "var(--info)",
+  complete: "var(--violet-bright)",
 };
 
 function fmt(n: number) {
@@ -73,13 +73,13 @@ function CustomTooltip({ active, payload, label }: any) {
   return (
     <div style={{
       background: "var(--bg-2)",
-      border: "1px solid rgba(61,129,227,0.3)",
+      border: "1px solid var(--brand-dim)",
       borderRadius: "10px",
       padding: "10px 14px",
       fontSize: "0.8rem",
     }}>
       <p style={{ color: "var(--text-3)", margin: "0 0 4px" }}>{label}</p>
-      <p style={{ color: "#34d399", fontWeight: 700, margin: "0 0 2px" }}>
+      <p style={{ color: "var(--success)", fontWeight: 700, margin: "0 0 2px" }}>
         ${payload[0].value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
       </p>
       <p style={{ color: "var(--text-3)", margin: 0 }}>{payload[0].payload.count} deals</p>
@@ -108,7 +108,7 @@ export default function ReportsDashboard() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -116,7 +116,7 @@ export default function ReportsDashboard() {
 
   if (!data) return (
     <AdminLayout>
-      <div style={{ color: "#f87171", paddingTop: "60px", textAlign: "center" }}>Failed to load report data.</div>
+      <div style={{ color: "var(--danger)", paddingTop: "60px", textAlign: "center" }}>Failed to load report data.</div>
     </AdminLayout>
   );
 
@@ -124,11 +124,11 @@ export default function ReportsDashboard() {
   const maxVal = Math.max(...monthly.map((m) => m.value), 1);
 
   const kpiCards = [
-    { label: "Deal Value (30d)", value: `$${kpis.total_deal_value_30d.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#34d399" },
+    { label: "Deal Value (30d)", value: `$${kpis.total_deal_value_30d.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "var(--success)" },
     { label: "All-Time Deal Value", value: `$${kpis.total_deal_value_all_time.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "var(--text-1)" },
-    { label: "Avg Margin %", value: `${kpis.avg_margin_pct.toFixed(1)}%`, color: kpis.avg_margin_pct > 10 ? "#34d399" : "#fbbf24" },
-    { label: "Active Buyers", value: kpis.active_buyers, color: "#a78bfa" },
-    { label: "Unbid Rate", value: `${kpis.unbid_rate_pct.toFixed(1)}%`, color: kpis.unbid_rate_pct > 20 ? "#f87171" : "#60a5fa" },
+    { label: "Avg Margin %", value: `${kpis.avg_margin_pct.toFixed(1)}%`, color: kpis.avg_margin_pct > 10 ? "var(--success)" : "var(--warning)" },
+    { label: "Active Buyers", value: kpis.active_buyers, color: "var(--violet-bright)" },
+    { label: "Unbid Rate", value: `${kpis.unbid_rate_pct.toFixed(1)}%`, color: kpis.unbid_rate_pct > 20 ? "var(--danger)" : "var(--info)" },
     { label: "Total Rounds", value: kpis.total_rounds, color: "var(--text-1)" },
   ];
 
@@ -196,7 +196,7 @@ export default function ReportsDashboard() {
                 {monthly.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.value === maxVal ? "#3D81E3" : "rgba(61,129,227,0.45)"}
+                    style={{ fill: entry.value === maxVal ? "var(--brand)" : "var(--brand-dim)" }}
                   />
                 ))}
               </Bar>
@@ -224,7 +224,7 @@ export default function ReportsDashboard() {
                 />
                 <Bar dataKey="total_value" radius={[4, 4, 0, 0]}>
                   {trends.map((t, i) => (
-                    <Cell key={`t-${i}`} fill={t.exception_rate_pct > 5 ? "rgba(251,191,36,0.7)" : "rgba(52,211,153,0.6)"} />
+                    <Cell key={`t-${i}`} style={{ fill: t.exception_rate_pct > 5 ? "var(--warning-dim)" : "var(--success-dim)" }} />
                   ))}
                 </Bar>
               </BarChart>
@@ -246,10 +246,10 @@ export default function ReportsDashboard() {
                     <tr key={t.id}>
                       <td style={{ color: "var(--text-1)", fontSize: "0.82rem" }}>{t.name}<span style={{ color: "var(--text-4)", fontSize: "0.7rem" }}> · {t.commodity}</span></td>
                       <td style={{ textAlign: "right" }}>{t.deals.toLocaleString()}</td>
-                      <td style={{ textAlign: "right", color: "#34d399", fontWeight: 600 }}>${t.total_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td style={{ textAlign: "right", color: "var(--success)", fontWeight: 600 }}>${t.total_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
                       <td style={{ textAlign: "right", color: "var(--text-3)" }}>{t.avg_price ? `$${t.avg_price.toFixed(2)}` : "—"}</td>
                       <td style={{ textAlign: "right", color: "var(--text-3)" }}>{t.participants}/{t.invited} ({t.participation_pct}%)</td>
-                      <td style={{ textAlign: "right", color: t.exception_rate_pct > 5 ? "#fbbf24" : "var(--text-3)" }}>{t.exception_rate_pct}%</td>
+                      <td style={{ textAlign: "right", color: t.exception_rate_pct > 5 ? "var(--warning)" : "var(--text-3)" }}>{t.exception_rate_pct}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -308,7 +308,7 @@ export default function ReportsDashboard() {
                           </p>
                         </div>
                       </div>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#34d399", fontFamily: "monospace" }}>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--success)", fontFamily: "monospace" }}>
                         ${b.total_margin_contribution.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </span>
                     </div>

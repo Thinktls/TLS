@@ -67,7 +67,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div style={{ display: "flex", justifyContent: "center", padding: "20px" }}>
-              <div style={{ width: "22px", height: "22px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+              <div style={{ width: "22px", height: "22px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           )}
@@ -80,9 +80,9 @@ export default function ProfilePage() {
           {msg && (
             <div style={{
               marginBottom: "16px", padding: "10px 14px", borderRadius: "8px", fontSize: "0.82rem",
-              background: msgType === "ok" ? "rgba(52,211,153,0.1)" : "rgba(239,68,68,0.1)",
-              border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
-              color: msgType === "ok" ? "#34d399" : "#f87171",
+              background: msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)",
+              border: `1px solid ${msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)"}`,
+              color: msgType === "ok" ? "var(--success)" : "var(--danger)",
             }}>
               {msg}
             </div>

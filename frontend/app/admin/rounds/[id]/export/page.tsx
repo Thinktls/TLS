@@ -70,8 +70,7 @@ export default function ExportCenter() {
             <button
               onClick={sendResultsNotifications}
               disabled={sending}
-              className="btn-brand"
-              style={{ background: "#0d7c66" }}
+              className="btn-success"
             >
               {sending ? "Sending..." : "Send Results to All Buyers"}
             </button>
@@ -81,9 +80,9 @@ export default function ExportCenter() {
         {msg && (
           <div style={{
             marginTop: "12px", marginBottom: "8px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
-            background: msgType === "ok" ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
-            border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: msgType === "ok" ? "#34d399" : "#f87171",
+            background: msgType === "ok" ? "var(--success-bg)" : "var(--danger-bg)",
+            border: `1px solid ${msgType === "ok" ? "var(--success-border)" : "var(--danger-border)"}`,
+            color: msgType === "ok" ? "var(--success)" : "var(--danger)",
           }}>
             {msg}
           </div>
@@ -92,13 +91,13 @@ export default function ExportCenter() {
         {!isComplete && (
           <div style={{
             padding: "14px 18px",
-            background: "rgba(251,191,36,0.1)",
-            border: "1px solid rgba(251,191,36,0.2)",
+            background: "var(--warning-bg)",
+            border: "1px solid var(--warning-border)",
             borderRadius: "12px",
             marginTop: "12px",
             marginBottom: "24px",
             fontSize: "0.83rem",
-            color: "#fbbf24",
+            color: "var(--warning)",
           }}>
             ⚠ Round is not yet complete. Some exports will be empty until bids are processed and deals approved.
           </div>
@@ -109,14 +108,14 @@ export default function ExportCenter() {
         {/* The two things admins actually reach for — everything else is tucked under Advanced. */}
         <HeroCard
           onClick={() => downloadFile(`/rounds/${id}/export/report-pack.zip`, `winning_buyers_report_${slug}.zip`)}
-          accent="#0d7c66"
+          accent="var(--success)"
           badge="ZIP"
           title="Download Full Report of Winning Buyers"
           description="One ZIP with everything: who won each item and at what price, the professional bid-comparison sheet, per-buyer award sheets, and the Razor upload files. This is the all-in-one report."
         />
         <HeroCard
           onClick={() => downloadFile(`/rounds/${id}/export/razor-per-customer.zip`, `razor_upload_${slug}.zip`)}
-          accent="#3d81e3"
+          accent="var(--info)"
           badge="RAZOR"
           title="Razor Upload — one file per winning customer"
           description="Exactly what you upload into Razor: one Excel per winning customer, one row per physical device with Model, Serial, UID and Price. Approved deals only."
@@ -289,7 +288,7 @@ function ExportRow({ label, description, path, filename, ext, internal }: {
   label: string; description: string; path: string; filename: string; ext: string; internal?: boolean;
 }) {
   const extColor: Record<string, string> = {
-    xlsx: "#34d399", csv: "#60a5fa", zip: "#fbbf24", view: "#a78bfa",
+    xlsx: "var(--success)", csv: "var(--info)", zip: "var(--warning)", view: "var(--violet-bright)",
   };
 
   const inner = (
@@ -317,8 +316,8 @@ function ExportRow({ label, description, path, filename, ext, internal }: {
       <span style={{
         padding: "3px 10px",
         borderRadius: "6px",
-        background: `${extColor[ext] || "rgba(255,255,255,0.1)"}20`,
-        border: `1px solid ${extColor[ext] || "rgba(255,255,255,0.1)"}40`,
+        background: `${extColor[ext] || "var(--surface)"}20`,
+        border: `1px solid ${extColor[ext] || "var(--surface)"}40`,
         color: extColor[ext] || "var(--text-3)",
         fontSize: "0.72rem",
         fontWeight: 700,

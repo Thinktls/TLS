@@ -32,11 +32,11 @@ interface ParticipationData {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pending:    { label: "Not Invited",  color: "var(--text-3)", bg: "var(--surface)" },
-  sent:       { label: "Invited",      color: "#60a5fa",               bg: "rgba(96,165,250,0.12)" },
-  uploaded:   { label: "Uploaded",     color: "#34d399",               bg: "rgba(52,211,153,0.12)" },
-  processing: { label: "Processing",   color: "#fbbf24",               bg: "rgba(251,191,36,0.12)" },
-  ready:      { label: "Ready",        color: "#a78bfa",               bg: "rgba(167,139,250,0.12)" },
-  error:      { label: "Error",        color: "#f87171",               bg: "rgba(248,113,113,0.12)" },
+  sent:       { label: "Invited",      color: "var(--info)",               bg: "var(--info-dim)" },
+  uploaded:   { label: "Uploaded",     color: "var(--success)",               bg: "var(--success-dim)" },
+  processing: { label: "Processing",   color: "var(--warning)",               bg: "var(--warning-dim)" },
+  ready:      { label: "Ready",        color: "var(--violet-bright)",               bg: "var(--violet-dim)" },
+  error:      { label: "Error",        color: "var(--danger)",               bg: "var(--danger-dim)" },
 };
 
 function timeAgo(iso: string | null): string {
@@ -91,7 +91,7 @@ export default function ParticipationTracker() {
   if (!data) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -126,7 +126,7 @@ export default function ParticipationTracker() {
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
-                style={{ accentColor: "#3D81E3" }}
+                style={{ accentColor: "var(--brand)" }}
               />
               Auto-refresh
             </label>
@@ -139,9 +139,9 @@ export default function ParticipationTracker() {
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "24px" }}>
           <StatBox label="Total Buyers" value={stats.total} color="var(--text-1)" />
-          <StatBox label="Invited" value={stats.sent} color="#60a5fa" />
-          <StatBox label="Uploaded" value={stats.uploaded} color="#34d399" />
-          <StatBox label="No Response" value={stats.no_response} color="#f87171" />
+          <StatBox label="Invited" value={stats.sent} color="var(--info)" />
+          <StatBox label="Uploaded" value={stats.uploaded} color="var(--success)" />
+          <StatBox label="No Response" value={stats.no_response} color="var(--danger)" />
         </div>
 
         {/* Progress bar */}
@@ -155,7 +155,7 @@ export default function ParticipationTracker() {
           <div style={{
             height: "100%",
             width: `${stats.total > 0 ? (stats.uploaded / stats.total) * 100 : 0}%`,
-            background: "linear-gradient(90deg, #3D81E3, #34d399)",
+            background: "linear-gradient(90deg, var(--brand), var(--success))",
             borderRadius: "100px",
             transition: "width 0.6s ease",
           }} />
@@ -164,7 +164,7 @@ export default function ParticipationTracker() {
         {/* Uploaded buyers */}
         {uploaded.length > 0 && (
           <section style={{ marginBottom: "24px" }}>
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 600, color: "#34d399", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <h3 style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--success)", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Submitted ({uploaded.length})
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -176,7 +176,7 @@ export default function ParticipationTracker() {
         {/* No response buyers */}
         {noResponse.length > 0 && (
           <section style={{ marginBottom: "24px" }}>
-            <h3 style={{ fontSize: "0.82rem", fontWeight: 600, color: "#fbbf24", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <h3 style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--warning)", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Invited — No Response ({noResponse.length})
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -243,7 +243,7 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
         {b.uploaded_at && (
           <div style={{ textAlign: "right" }}>
             <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--text-3)" }}>uploaded</p>
-            <p style={{ margin: 0, fontSize: "0.78rem", color: "#34d399", fontWeight: 500 }}>
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--success)", fontWeight: 500 }}>
               {timeAgo(b.uploaded_at)}
             </p>
           </div>

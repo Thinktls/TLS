@@ -82,7 +82,7 @@ export default function ComparisonPage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -91,7 +91,7 @@ export default function ComparisonPage() {
   if (loadError || !data) return (
     <AdminLayout>
       <div style={{ textAlign: "center", paddingTop: "80px" }}>
-        <p style={{ color: "#f87171", fontSize: "0.9rem", marginBottom: "12px" }}>Failed to load comparison data.</p>
+        <p style={{ color: "var(--danger)", fontSize: "0.9rem", marginBottom: "12px" }}>Failed to load comparison data.</p>
         <button onClick={fetchData} className="btn-ghost" style={{ fontSize: "0.82rem" }}>Retry</button>
       </div>
     </AdminLayout>
@@ -142,9 +142,9 @@ export default function ComparisonPage() {
         {/* Legend */}
         <div style={{ display: "flex", gap: "16px", marginBottom: "12px", fontSize: "0.75rem" }}>
           {[
-            { color: "#34d399", bg: "rgba(52,211,153,0.12)", label: "Winner", tip: "Highest valid bid on this item — the awarded price." },
-            { color: "#f87171", bg: "rgba(239,68,68,0.1)", label: "Below reserve", tip: "Bid is under your minimum acceptable price and can't win without an override." },
-            { color: "#fbbf24", bg: "rgba(251,191,36,0.1)", label: "Anomaly", tip: "Possible price typo — this bid is far above or below the others on the same item." },
+            { color: "var(--success)", bg: "var(--success-bg)", label: "Winner", tip: "Highest valid bid on this item — the awarded price." },
+            { color: "var(--danger)", bg: "var(--danger-bg)", label: "Below reserve", tip: "Bid is under your minimum acceptable price and can't win without an override." },
+            { color: "var(--warning)", bg: "var(--warning-bg)", label: "Anomaly", tip: "Possible price typo — this bid is far above or below the others on the same item." },
             { color: "var(--text-4)", bg: "transparent", label: "not quoted", tip: "This buyer did not put a price on this device — either they left it blank or never bid on it." },
           ].map(({ color, bg, label, tip }) => (
             <div key={label} title={tip} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "help" }}>
@@ -168,13 +168,13 @@ export default function ComparisonPage() {
                   title={`${c.buyer} priced ${c.quoted.toLocaleString()} of ${c.total_items.toLocaleString()} devices in this round and did not quote ${c.not_quoted.toLocaleString()}.`}
                   style={{
                     padding: "6px 12px", borderRadius: "8px", cursor: "help",
-                    background: full ? "rgba(52,211,153,0.08)" : "rgba(251,191,36,0.07)",
-                    border: `1px solid ${full ? "rgba(52,211,153,0.25)" : "rgba(251,191,36,0.22)"}`,
+                    background: full ? "var(--success-bg)" : "var(--warning-bg)",
+                    border: `1px solid ${full ? "var(--success-border)" : "var(--warning-border)"}`,
                     fontSize: "0.72rem",
                   }}
                 >
                   <span style={{ color: "var(--text-1)", fontWeight: 600 }}>{c.buyer}</span>
-                  <span style={{ color: full ? "#34d399" : "#fbbf24", marginLeft: "8px" }}>
+                  <span style={{ color: full ? "var(--success)" : "var(--warning)", marginLeft: "8px" }}>
                     quoted {c.quoted.toLocaleString()}/{c.total_items.toLocaleString()} ({c.quoted_pct}%)
                   </span>
                   {!full && (
@@ -214,7 +214,7 @@ export default function ComparisonPage() {
                     {buyerIdMap[b] ? (
                       <Link
                         href={`/admin/rounds/${id}/buyers/${buyerIdMap[b]}`}
-                        style={{ color: "#60a5fa", textDecoration: "none", fontSize: "0.72rem", fontWeight: 700 }}
+                        style={{ color: "var(--info)", textDecoration: "none", fontSize: "0.72rem", fontWeight: 700 }}
                         title={`View ${b}'s bids for this round`}
                       >
                         {b} ↗
@@ -275,8 +275,8 @@ export default function ComparisonPage() {
                               <span style={{
                                 fontSize: "0.7rem", fontWeight: 600,
                                 padding: "2px 7px", borderRadius: "4px",
-                                background: "rgba(52,211,153,0.1)", color: "#34d399",
-                                border: "1px solid rgba(52,211,153,0.2)",
+                                background: "var(--success-bg)", color: "var(--success)",
+                                border: "1px solid var(--success-border)",
                                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                                 maxWidth: "100%",
                               }}>{row.category}</span>
@@ -320,9 +320,9 @@ export default function ComparisonPage() {
                           let color = "var(--text-2)";
                           let fw: string | number = 400;
 
-                          if (isWinner) { bg = "rgba(52,211,153,0.12)"; color = "#34d399"; fw = 700; }
-                          else if (belowReserve) { bg = "rgba(239,68,68,0.08)"; color = "#f87171"; }
-                          else if (isAnomaly) { bg = "rgba(251,191,36,0.08)"; color = "#fbbf24"; }
+                          if (isWinner) { bg = "var(--success-bg)"; color = "var(--success)"; fw = 700; }
+                          else if (belowReserve) { bg = "var(--danger-bg)"; color = "var(--danger)"; }
+                          else if (isAnomaly) { bg = "var(--warning-bg)"; color = "var(--warning)"; }
 
                           return (
                             <div

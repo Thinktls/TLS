@@ -142,8 +142,8 @@ export default function AdminGuidePage() {
         <div style={{
           marginTop: "28px",
           padding: "16px 20px",
-          background: "rgba(61,129,227,0.06)",
-          border: "1px solid rgba(61,129,227,0.15)",
+          background: "var(--brand-dim)",
+          border: "1px solid var(--brand-dim)",
           borderRadius: "12px",
           fontSize: "0.82rem",
           color: "var(--text-3)",

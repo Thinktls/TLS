@@ -22,10 +22,10 @@ const COMMODITY_ICON: Record<string, string> = {
 };
 const ROUND_STATUS_COLOR: Record<string, { color: string; badge: string }> = {
   draft:      { color: "var(--text-4)",  badge: "badge-draft" },
-  open:       { color: "#34d399",        badge: "badge-open" },
-  closed:     { color: "#fbbf24",        badge: "badge-closed" },
-  processing: { color: "#60a5fa",        badge: "badge-processing" },
-  complete:   { color: "#a78bfa",        badge: "badge-complete" },
+  open:       { color: "var(--success)",        badge: "badge-open" },
+  closed:     { color: "var(--warning)",        badge: "badge-closed" },
+  processing: { color: "var(--info)",        badge: "badge-processing" },
+  complete:   { color: "var(--violet-bright)",        badge: "badge-complete" },
 };
 
 function greeting() {
@@ -52,7 +52,7 @@ export default function MyDeals() {
   if (loading) return (
     <BuyerLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </BuyerLayout>
@@ -63,7 +63,7 @@ export default function MyDeals() {
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: "7px 16px", borderRadius: "7px", fontSize: "0.82rem", cursor: "pointer", border: "none",
-    background: active ? "rgba(61,129,227,0.18)" : "transparent",
+    background: active ? "var(--brand-dim)" : "transparent",
     color: active ? "var(--text-1)" : "var(--text-4)",
     fontWeight: active ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
   });
@@ -85,11 +85,11 @@ export default function MyDeals() {
 
         {/* Alert if open rounds */}
         {openRounds.length > 0 && (
-          <div style={{ marginBottom: "24px", padding: "14px 18px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", flexShrink: 0, animation: "pulse-glow 2s ease infinite" }} />
+          <div style={{ marginBottom: "24px", padding: "14px 18px", background: "var(--success-dim)", border: "1px solid var(--success-dim)", borderRadius: "var(--radius)", display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--success-strong)", flexShrink: 0, animation: "pulse-glow 2s ease infinite" }} />
             <p style={{ fontSize: "0.82rem", color: "var(--text-1)", margin: 0 }}>
-              <strong style={{ color: "#34d399" }}>{openRounds.length} round{openRounds.length > 1 ? "s" : ""}</strong> currently accepting bids.{" "}
-              <Link href={`/portal/bid?round=${openRounds[0].id}`} style={{ color: "#34d399", textDecoration: "none", fontWeight: 600 }}>Submit your bid →</Link>
+              <strong style={{ color: "var(--success)" }}>{openRounds.length} round{openRounds.length > 1 ? "s" : ""}</strong> currently accepting bids.{" "}
+              <Link href={`/portal/bid?round=${openRounds[0].id}`} style={{ color: "var(--success)", textDecoration: "none", fontWeight: 600 }}>Submit your bid →</Link>
             </p>
           </div>
         )}
@@ -97,9 +97,9 @@ export default function MyDeals() {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "28px" }}>
           {[
-            { label: "Rounds Invited",  value: rounds.length,  icon: "🗂", color: "#60a5fa", gradient: "linear-gradient(135deg,rgba(61,129,227,0.15),rgba(99,102,241,0.08))" },
-            { label: "Deals Won",       value: deals.length,   icon: "🏆", color: "#34d399", gradient: "linear-gradient(135deg,rgba(16,185,129,0.15),rgba(52,211,153,0.06))" },
-            { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: "💰", color: "#a78bfa", gradient: "linear-gradient(135deg,rgba(139,92,246,0.15),rgba(167,139,250,0.06))" },
+            { label: "Rounds Invited",  value: rounds.length,  icon: "🗂", color: "var(--info)", gradient: "linear-gradient(135deg,var(--brand-dim),transparent)" },
+            { label: "Deals Won",       value: deals.length,   icon: "🏆", color: "var(--success)", gradient: "linear-gradient(135deg,var(--success-dim),transparent)" },
+            { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: "💰", color: "var(--violet-bright)", gradient: "linear-gradient(135deg,var(--violet-dim),transparent)" },
           ].map(({ label, value, icon, color, gradient }) => (
             <div key={label} style={{ background: gradient, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 22px" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>{icon}</div>
@@ -201,11 +201,11 @@ export default function MyDeals() {
                 <tbody>
                   {deals.map(d => (
                     <tr key={d.id}>
-                      <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "#60a5fa" }}>{d.part_number}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--info)" }}>{d.part_number}</td>
                       <td style={{ maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</td>
                       <td style={{ textAlign: "right" }}>{d.quantity}</td>
                       <td style={{ textAlign: "right", fontFamily: "monospace" }}>${d.winning_price.toFixed(2)}</td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "#34d399" }}>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--success)" }}>
                         ${d.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td style={{ textAlign: "center" }}>

@@ -140,13 +140,13 @@ function Tooltip({
       border: "1px solid var(--border-mid)",
       borderRadius: "16px",
       padding: "20px",
-      boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(61,129,227,0.18)",
+      boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px var(--brand-dim)",
       backdropFilter: "blur(20px)",
       WebkitBackdropFilter: "blur(20px)",
     }}>
       {/* Step counter */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-        <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(61,129,227,0.9)" }}>
+        <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--brand)" }}>
           {isFirst ? "Getting started" : isLast ? "All done" : `Step ${stepIndex} of ${total - 2}`}
         </span>
         {!isLast && (
@@ -169,7 +169,7 @@ function Tooltip({
           {STEPS.filter(s => s.id !== "welcome" && s.id !== "done").map((s, i) => (
             <div key={s.id} style={{
               width: "5px", height: "5px", borderRadius: "50%",
-              background: i < stepIndex ? "#3D81E3" : i === stepIndex - 1 ? "#3D81E3" : "var(--surface-hover)",
+              background: i < stepIndex ? "var(--brand)" : i === stepIndex - 1 ? "var(--brand)" : "var(--surface-hover)",
               transition: "background 0.2s",
             }} />
           ))}
@@ -200,11 +200,11 @@ function Tooltip({
           </button>
         )}
         <button onClick={onNext} style={{
-          background: isLast ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#3D81E3,#5a6cf5)",
+          background: isLast ? "linear-gradient(135deg, var(--success-strong), #059669)" : "linear-gradient(135deg, var(--brand), #5a6cf5)",
           color: "var(--text-on-brand)", border: "none", borderRadius: "8px",
           padding: "8px 18px", fontSize: "0.8rem", fontFamily: "inherit",
           cursor: "pointer", fontWeight: 600, letterSpacing: "-0.01em",
-          boxShadow: isLast ? "0 2px 12px rgba(16,185,129,0.3)" : "0 2px 12px rgba(61,129,227,0.3)",
+          boxShadow: isLast ? "0 2px 12px var(--success-dim)" : "0 2px 12px var(--brand-dim)",
           transition: "all 0.2s",
         }}
           onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-1px)")}
@@ -335,7 +335,7 @@ export default function BuyerTour() {
           borderRadius: "10px",
           zIndex: 9999,
           pointerEvents: "none",
-          boxShadow: "0 0 0 2px rgba(61,129,227,0.6), 0 0 0 4px rgba(61,129,227,0.2)",
+          boxShadow: "0 0 0 2px var(--brand), 0 0 0 4px rgba(61,129,227,0.2)",
           background: "transparent",
         }} />
       )}

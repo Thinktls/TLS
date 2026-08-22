@@ -1,13 +1,13 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
-/* â”€â”€ Design Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Design Tokens ──────────────────────────────────────────── */
 :root {
   --bg:          #07070e;
   --bg-1:        #0c0c16;
   --bg-2:        #10101c;
   --bg-3:        #171724;
 
-  /* Liquid glass â€” translucent glass layers for backdrop-filter surfaces */
+  /* Liquid glass — translucent glass layers for backdrop-filter surfaces */
   --glass-bg:         rgba(255,255,255,0.055);
   --glass-bg-heavy:   rgba(255,255,255,0.08);
   --glass-border:     rgba(255,255,255,0.12);
@@ -25,6 +25,8 @@
   --brand:       #3D81E3;
   --brand-dim:   rgba(61,129,227,0.18);
   --brand-glow:  rgba(61,129,227,0.25);
+  --brand-2: #6366f1;
+  --brand-gradient: linear-gradient(135deg, #3D81E3 0%, #6366f1 100%);
 
   --indigo:      #6366f1;
   --violet:      #8b5cf6;
@@ -36,6 +38,24 @@
   --amber-dim:   rgba(245,158,11,0.15);
   --red:         #ef4444;
   --red-dim:     rgba(239,68,68,0.15);
+
+  /* Semantic status (match current inline hex for safe find-replace) */
+  --success: #34d399;
+  --success-dim: rgba(52,211,153,0.15);
+  --success-strong: #10b981;
+  --danger: #f87171;
+  --danger-dim: rgba(248,113,113,0.15);
+  --danger-strong: #ef4444;
+  --warning: #fbbf24;
+  --warning-dim: rgba(245,158,11,0.15);
+  --info: #60a5fa;
+  --info-dim: rgba(96,165,250,0.15);
+  --violet-bright: #a78bfa;
+  --violet-dim: rgba(167,139,250,0.15);
+  --orange: #fb923c;
+  --orange-dim: rgba(251,146,60,0.15);
+  --magenta: #c084fc;
+  --magenta-dim: rgba(192,132,252,0.15);
 
   --text-1:      #ffffff;
   --text-on-brand: #ffffff;
@@ -61,7 +81,7 @@
   --topbar-bg:         rgba(7,7,14,0.7);
   --table-row-hover:   rgba(61,129,227,0.05);
 
-  /* â”€â”€ Spacing scale â€” mirrors lib/design-tokens.ts spacing{} â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Spacing scale — mirrors lib/design-tokens.ts spacing{} ─────────────── */
   /* New components should use these instead of ad-hoc px values. Existing */
   /* inline styles are untouched; this is additive, not a breaking change. */
   --space-0:  0px;
@@ -78,7 +98,7 @@
   --space-16: 64px;
   --space-20: 80px;
 
-  /* â”€â”€ Motion â€” mirrors lib/design-tokens.ts motion{} â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Motion — mirrors lib/design-tokens.ts motion{} ──────────────────────── */
   --duration-fast:   120ms;
   --duration-normal: 200ms;
   --duration-slow:   300ms;
@@ -88,7 +108,7 @@
   --modal-backdrop-blur: blur(6px);
 }
 
-/* â”€â”€ Light theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Light theme ────────────────────────────────────────────── */
 [data-theme="light"] {
   --bg:          #eef0f6;
   --bg-1:        #f5f6fa;
@@ -117,7 +137,7 @@
   --topbar-bg:         rgba(245,246,250,0.92);
   --table-row-hover:   rgba(61,129,227,0.05);
 
-  /* Light-mode liquid glass â€” frosted white glass over light backgrounds */
+  /* Light-mode liquid glass — frosted white glass over light backgrounds */
   --glass-bg:         rgba(255,255,255,0.60);
   --glass-bg-heavy:   rgba(255,255,255,0.72);
   --glass-border:     rgba(0,0,0,0.07);
@@ -132,7 +152,7 @@
   --modal-backdrop-blur: blur(4px);
 }
 
-/* â”€â”€ Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Base ───────────────────────────────────────────────────── */
 html, body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -140,7 +160,7 @@ html, body {
   margin: 0;
   padding: 0;
   background-color: var(--bg);
-  /* Ambient depth gradient â€” gives backdrop-filter glass surfaces colour to blur against */
+  /* Ambient depth gradient — gives backdrop-filter glass surfaces colour to blur against */
   background-image:
     radial-gradient(ellipse 80% 60% at 15%  8%,  rgba(61,129,227,0.07)  0%, transparent 55%),
     radial-gradient(ellipse 55% 45% at 85% 85%,  rgba(139,92,246,0.06)  0%, transparent 50%),
@@ -165,13 +185,13 @@ body[data-theme="light"] {
   color: white;
 }
 
-/* â”€â”€ Scrollbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Scrollbar ──────────────────────────────────────────────── */
 ::-webkit-scrollbar         { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track   { background: transparent; }
 ::-webkit-scrollbar-thumb   { background: var(--border-mid); border-radius: 100px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.3); }
 
-/* â”€â”€ Gradient text util â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Gradient text util ─────────────────────────────────────── */
 .gradient-text {
   background: linear-gradient(135deg, #3D81E3, #a78bfa);
   -webkit-background-clip: text;
@@ -191,7 +211,7 @@ body[data-theme="light"] {
   background-clip: text;
 }
 
-/* â”€â”€ Glow animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Glow animations ────────────────────────────────────────── */
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(61,129,227,0); }
   50%       { box-shadow: 0 0 20px 4px rgba(61,129,227,0.2); }
@@ -211,7 +231,7 @@ body[data-theme="light"] {
 
 .animate-in { animation: fade-in 0.3s ease both; }
 
-/* â”€â”€ Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Cards ──────────────────────────────────────────────────── */
 .card {
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -285,7 +305,7 @@ body[data-theme="light"] {
   pointer-events: none;
 }
 
-/* â”€â”€ Stat card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Stat card ──────────────────────────────────────────────── */
 .stat-card {
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -324,7 +344,7 @@ body[data-theme="light"] {
 }
 .stat-card:hover::after { opacity: 1; }
 
-/* â”€â”€ Glass â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Glass ──────────────────────────────────────────────────── */
 .glass {
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -333,7 +353,7 @@ body[data-theme="light"] {
   box-shadow: var(--shadow-glass);
 }
 
-/* â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Inputs ─────────────────────────────────────────────────── */
 .glass-input {
   background: var(--input-bg);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
@@ -356,7 +376,7 @@ body[data-theme="light"] {
 }
 .glass-input option { background: var(--bg-3); color: var(--text-1); }
 
-/* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Buttons ─────────────────────────────────────────────────── */
 .btn-brand {
   background: linear-gradient(135deg, #3D81E3 0%, #5a6cf5 100%);
   color: white;
@@ -419,7 +439,108 @@ body[data-theme="light"] {
 }
 .btn-danger:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
 
-/* â”€â”€ Status badges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.btn-success {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 12px rgba(16,185,129,0.35), 0 1px 0 rgba(255,255,255,0.25) inset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0aab7a 0%, #34d399 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16,185,129,0.45), 0 1px 0 rgba(255,255,255,0.30) inset;
+}
+.btn-success:active:not(:disabled) { transform: translateY(0); }
+.btn-success:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-warning {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 12px rgba(245,158,11,0.35), 0 1px 0 rgba(255,255,255,0.25) inset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e68412 0%, #fbbf24 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245,158,11,0.45), 0 1px 0 rgba(255,255,255,0.30) inset;
+}
+.btn-warning:active:not(:disabled) { transform: translateY(0); }
+.btn-warning:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-violet {
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 12px rgba(139,92,246,0.35), 0 1px 0 rgba(255,255,255,0.25) inset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-violet:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(139,92,246,0.45), 0 1px 0 rgba(255,255,255,0.30) inset;
+}
+.btn-violet:active:not(:disabled) { transform: translateY(0); }
+.btn-violet:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-info {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 12px rgba(59,130,246,0.35), 0 1px 0 rgba(255,255,255,0.25) inset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-info:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59,130,246,0.45), 0 1px 0 rgba(255,255,255,0.30) inset;
+}
+.btn-info:active:not(:disabled) { transform: translateY(0); }
+.btn-info:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+
+/* ── Status badges ───────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -451,7 +572,7 @@ body[data-theme="light"] {
 .badge-won      { background: rgba(16,185,129,0.12);  color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
 .badge-lost     { background: rgba(239,68,68,0.1);    color: #f87171; border: 1px solid rgba(239,68,68,0.15); }
 
-/* â”€â”€ Tables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Tables ──────────────────────────────────────────────────── */
 .dark-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .dark-table thead tr {
   background: rgba(255,255,255,0.025);
@@ -475,7 +596,7 @@ body[data-theme="light"] {
 .dark-table tr:hover td { background: var(--table-row-hover); }
 .dark-table tr:last-child td { border-bottom: none; }
 
-/* â”€â”€ Nav item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Nav item ────────────────────────────────────────────────── */
 .nav-item {
   display: flex;
   align-items: center;
@@ -503,7 +624,7 @@ body[data-theme="light"] {
 .nav-item svg { flex-shrink: 0; opacity: 0.7; }
 .nav-item.active svg { opacity: 1; }
 
-/* â”€â”€ Section label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Section label ───────────────────────────────────────────── */
 .section-label {
   font-size: 0.62rem;
   font-weight: 700;
@@ -514,14 +635,14 @@ body[data-theme="light"] {
   margin: 12px 0 4px;
 }
 
-/* â”€â”€ Divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Divider ─────────────────────────────────────────────────── */
 .divider {
   height: 1px;
   background: var(--border);
   margin: 12px 0;
 }
 
-/* â”€â”€ Progress bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Progress bar ────────────────────────────────────────────── */
 .progress-bar {
   height: 4px;
   background: rgba(255,255,255,0.06);
@@ -535,13 +656,13 @@ body[data-theme="light"] {
   transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
 }
 
-/* â”€â”€ Toast / flash â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Toast / flash ───────────────────────────────────────────── */
 .flash-ok  { padding:12px 16px; border-radius:var(--radius); font-size:0.83rem; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:#34d399; }
 .flash-err { padding:12px 16px; border-radius:var(--radius); font-size:0.83rem; background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.2);  color:#f87171; }
 
-/* â”€â”€ Responsive layout system â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Responsive layout system ────────────────────────────────── */
 
-/* Page-level content padding â€” overridden at mobile breakpoints */
+/* Page-level content padding — overridden at mobile breakpoints */
 .page-content {
   flex: 1;
   overflow-y: auto;
@@ -564,7 +685,7 @@ body[data-theme="light"] {
   align-items: start;
 }
 
-/* Sidebar panel â€” desktop: normal flow; mobile: off-screen slide-in */
+/* Sidebar panel — desktop: normal flow; mobile: off-screen slide-in */
 .sidebar-panel {
   width: 220px;
   flex-shrink: 0;
@@ -578,7 +699,7 @@ body[data-theme="light"] {
   transition: none;
 }
 
-/* Hamburger button â€” hidden on desktop */
+/* Hamburger button — hidden on desktop */
 .hamburger-btn {
   display: none;
   align-items: center;
@@ -657,7 +778,7 @@ body[data-theme="light"] {
   .page-content { padding: 16px 12px; }
 }
 
-/* â”€â”€ Keyboard focus rings (WCAG 2.4.11 â€” visible focus indicator) â”€ */
+/* ── Keyboard focus rings (WCAG 2.4.11 — visible focus indicator) ─ */
 /* Only apply the ring when navigating by keyboard, not on mouse click. */
 .btn-brand:focus-visible,
 .btn-ghost:focus-visible,
@@ -674,17 +795,17 @@ body[data-theme="light"] {
   outline: 2px solid var(--brand);
   outline-offset: -2px;
 }
-/* Remove default :focus outline for mouse users â€” :focus-visible handles keyboard */
+/* Remove default :focus outline for mouse users — :focus-visible handles keyboard */
 .btn-brand:focus:not(:focus-visible),
 .btn-ghost:focus:not(:focus-visible),
 .btn-danger:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* â”€â”€ Skeleton loaders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-/* Drop-in replacement for spinner patterns â€” looks far more enterprise. */
+/* ── Skeleton loaders ───────────────────────────────────────────── */
+/* Drop-in replacement for spinner patterns — looks far more enterprise. */
 /* translateX is GPU-composited (Composite only, no Paint/Layout).
-   background-position would trigger Paint on every frame â€” avoid it. */
+   background-position would trigger Paint on every frame — avoid it. */
 @keyframes skeleton-shimmer {
   from { transform: translateX(-100%); }
   to   { transform: translateX(100%); }
@@ -701,7 +822,7 @@ body[data-theme="light"] {
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg, transparent 25%, var(--surface-hover) 50%, transparent 75%);
-  will-change: transform;   /* promotes to its own GPU layer â€” Composite only, no Paint */
+  will-change: transform;   /* promotes to its own GPU layer — Composite only, no Paint */
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 .skeleton-text  { height: 0.75rem; border-radius: 4px; }
@@ -715,17 +836,17 @@ body[data-theme="light"] {
   .animate-in { animation: none !important; }
 }
 
-/* â”€â”€ Badge consistency â€” ensure all badges have borders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Badge consistency — ensure all badges have borders ─────────── */
 /* badge-matched and badge-exception were missing the border that all other
    status badges have, causing visual inconsistency in the exception queue. */
 .badge-matched   { border: 1px solid rgba(16,185,129,0.2); }
 .badge-exception { border: 1px solid rgba(245,158,11,0.2); }
 
-/* â”€â”€ Light theme input caret â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Light theme input caret ─────────────────────────────────────── */
 /* In light mode the caret is invisible against the light background without this */
 [data-theme="light"] .glass-input { caret-color: var(--text-1); }
 
-/* â”€â”€ Admin dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Admin dashboard ──────────────────────────────────────── */
 .dash-wrap { width: 100%; max-width: 1320px; margin: 0 auto; }
 
 .dash-header { margin-bottom: 32px; }
@@ -809,3 +930,5 @@ body[data-theme="light"] {
   transition: color 0.15s;
 }
 .dash-view-all:hover { color: var(--text-1); }
+
+

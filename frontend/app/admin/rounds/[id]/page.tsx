@@ -116,7 +116,7 @@ function RoundTimeline({ round }: { round: Round }) {
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
                 <div style={{
                   width: "20px", height: "20px", borderRadius: "50%", flexShrink: 0,
-                  background: step.done ? "rgba(16,185,129,0.15)" : step.active ? "rgba(61,129,227,0.15)" : "var(--surface)",
+                  background: step.done ? "var(--success-dim)" : step.active ? "var(--brand-dim)" : "var(--surface)",
                   border: `2px solid ${dotColor}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   marginTop: "2px",
@@ -370,7 +370,7 @@ export default function RoundDetail() {
   if (!round) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -392,7 +392,7 @@ export default function RoundDetail() {
         {/* Page header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "28px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-            <div style={{ width: "48px", height: "48px", borderRadius: "13px", background: "rgba(61,129,227,0.1)", border: "1px solid rgba(61,129,227,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "13px", background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>
               {COMMODITY_ICON[round.commodity] || "📦"}
             </div>
             <div>
@@ -403,7 +403,7 @@ export default function RoundDetail() {
                 <span className={`badge ${STATUS_BADGE[round.status] || "badge-draft"}`}>{round.status}</span>
                 <span style={{ fontSize: "0.75rem", color: "var(--text-4)", textTransform: "capitalize" }}>{round.commodity}</span>
                 {round.customer && <><span style={{ color: "var(--border-mid)" }}>·</span><span style={{ fontSize: "0.75rem", color: "var(--text-4)" }}>{round.customer}</span></>}
-                {round.submission_deadline && <><span style={{ color: "var(--border-mid)" }}>·</span><span style={{ fontSize: "0.75rem", color: "#fbbf24" }}>Due {fmtDatetimeShort(round.submission_deadline)}</span></>}
+                {round.submission_deadline && <><span style={{ color: "var(--border-mid)" }}>·</span><span style={{ fontSize: "0.75rem", color: "var(--warning)" }}>Due {fmtDatetimeShort(round.submission_deadline)}</span></>}
                 <span style={{ fontSize: "0.68rem", color: "var(--text-4)", fontFamily: "monospace" }}>#{round.id}</span>
               </div>
             </div>
@@ -414,9 +414,9 @@ export default function RoundDetail() {
         {msg && (
           <div style={{
             marginBottom: "20px", padding: "12px 16px", borderRadius: "10px", fontSize: "0.83rem",
-            background: msgType === "ok" ? "rgba(52,211,153,0.1)" : "rgba(239,68,68,0.1)",
-            border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: msgType === "ok" ? "#34d399" : "#f87171",
+            background: msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)",
+            border: `1px solid ${msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)"}`,
+            color: msgType === "ok" ? "var(--success)" : "var(--danger)",
           }}>
             {msg}
           </div>
@@ -427,11 +427,11 @@ export default function RoundDetail() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "20px" }}>
             {[
               { label: "Bid Lines",   val: summary.total_bid_lines.toLocaleString(), color: "var(--text-1)",   bg: "var(--surface)" },
-              { label: "Matched",     val: summary.matched.toLocaleString(),          color: "#34d399", bg: "rgba(16,185,129,0.06)" },
-              { label: "Exceptions",  val: summary.exceptions.toLocaleString(),       color: summary.exceptions > 0 ? "#fb923c" : "var(--text-3)", bg: summary.exceptions > 0 ? "rgba(251,146,60,0.06)" : "var(--surface)" },
-              { label: "Winners",     val: summary.winners.toLocaleString(),          color: "#a78bfa", bg: "rgba(139,92,246,0.06)" },
-              { label: "Deals",       val: summary.deals.toLocaleString(),            color: "#60a5fa", bg: "rgba(61,129,227,0.06)" },
-              { label: "Deal Value",  val: `$${summary.total_deal_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "#34d399", bg: "rgba(16,185,129,0.06)" },
+              { label: "Matched",     val: summary.matched.toLocaleString(),          color: "var(--success)", bg: "var(--success-dim)" },
+              { label: "Exceptions",  val: summary.exceptions.toLocaleString(),       color: summary.exceptions > 0 ? "var(--orange)" : "var(--text-3)", bg: summary.exceptions > 0 ? "var(--orange-dim)" : "var(--surface)" },
+              { label: "Winners",     val: summary.winners.toLocaleString(),          color: "var(--violet-bright)", bg: "var(--violet-dim)" },
+              { label: "Deals",       val: summary.deals.toLocaleString(),            color: "var(--info)", bg: "var(--brand-dim)" },
+              { label: "Deal Value",  val: `$${summary.total_deal_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, color: "var(--success)", bg: "var(--success-dim)" },
             ].map(({ label, val, color, bg }) => (
               <div key={label} style={{ padding: "16px 18px", background: bg, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
                 <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 5px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>
@@ -446,7 +446,7 @@ export default function RoundDetail() {
           <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 14px" }}>Round Controls</p>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {round.status === "draft" && (
-              <button onClick={() => changeStatus("open")} className="btn-brand" style={{ background: "linear-gradient(135deg,#059669,#10b981)" }}
+              <button onClick={() => changeStatus("open")} className="btn-brand" style={{ background: "linear-gradient(135deg, var(--success-strong), var(--success))" }}
                 aria-label="Open this round to start accepting bids">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="5 12 12 5 19 12"/><polyline points="5 19 12 12 19 19"/></svg>
                 Open Round
@@ -454,7 +454,7 @@ export default function RoundDetail() {
             )}
             {round.status === "open" && (
               <>
-                <button onClick={() => changeStatus("close")} className="btn-brand" style={{ background: "linear-gradient(135deg,#b45309,#f59e0b)" }}
+                <button onClick={() => changeStatus("close")} className="btn-brand" style={{ background: "linear-gradient(135deg, #b45309, var(--warning))" }}
                   aria-label="Close bidding and prepare for processing">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
                   Close Round
@@ -483,14 +483,14 @@ export default function RoundDetail() {
               </>
             )}
             {round.status === "error" && (
-              <button onClick={reopenRound} disabled={reopening} className="btn-brand" style={{ background: "linear-gradient(135deg,#b45309,#f59e0b)" }}
+              <button onClick={reopenRound} disabled={reopening} className="btn-brand" style={{ background: "linear-gradient(135deg, #b45309, var(--warning))" }}
                 aria-label="Reopen round after processing error">
                 {reopening ? "Reopening…" : "Reopen Round (fix error)"}
               </button>
             )}
             {(round.status === "complete" || round.status === "processing") && summary && summary.exceptions > 0 && (
               <button onClick={runAiMatch} disabled={aiRunning} className="btn-ghost"
-                style={{ borderColor: "rgba(167,139,250,0.4)", color: "#a78bfa" }}
+                style={{ borderColor: "var(--violet-dim)", color: "var(--violet-bright)" }}
                 title="Re-run AI fuzzy matching on unresolved exceptions using Groq">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 {aiRunning ? "Running AI…" : `AI Match (${summary.exceptions} exceptions)`}
@@ -524,7 +524,7 @@ export default function RoundDetail() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                 {/* Show the live stage from the server rather than one fixed sentence, so a long
                     phase (winner selection on a big round) visibly reports what it's doing. */}
-                <span style={{ fontSize: "0.82rem", color: "#60a5fa", fontWeight: 600 }}>
+                <span style={{ fontSize: "0.82rem", color: "var(--info)", fontWeight: 600 }}>
                   {processingStatus?.stage ? `${processingStatus.stage}…` : "Matching bid lines and selecting winners…"}
                 </span>
                 <span style={{ fontSize: "0.82rem", color: "var(--text-3)", fontFamily: "monospace" }}>
@@ -557,11 +557,11 @@ export default function RoundDetail() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
                 Bid Comparison
               </Link>
-              <Link href={`/admin/rounds/${id}/deals`} className="btn-brand" style={{ background: "linear-gradient(135deg,#7c3aed,#8b5cf6)", textDecoration: "none" }}>
+              <Link href={`/admin/rounds/${id}/deals`} className="btn-brand" style={{ background: "linear-gradient(135deg, #7c3aed, var(--violet-bright))", textDecoration: "none" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 Approve Deals
               </Link>
-              <Link href={`/admin/rounds/${id}/exceptions`} className="btn-brand" style={{ background: "linear-gradient(135deg,#dc2626,#ef4444)", textDecoration: "none" }}>
+              <Link href={`/admin/rounds/${id}/exceptions`} className="btn-brand" style={{ background: "linear-gradient(135deg, #dc2626, var(--danger))", textDecoration: "none" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 Exceptions
               </Link>
@@ -577,7 +577,7 @@ export default function RoundDetail() {
                 onClick={sendResultsNotifications}
                 disabled={sendingResults}
                 className="btn-ghost"
-                style={{ borderColor: "rgba(16,185,129,0.4)", color: "#34d399" }}
+                style={{ borderColor: "var(--success-dim)", color: "var(--success)" }}
                 title="Resend win/loss notice emails to all assigned buyers (auto-sent on Approve All)"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -593,11 +593,11 @@ export default function RoundDetail() {
             <div>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>Master File</p>
               {round.master_file_uploaded ? (
-                <p style={{ fontSize: "0.88rem", color: "#34d399", margin: 0, fontWeight: 600 }}>
+                <p style={{ fontSize: "0.88rem", color: "var(--success)", margin: 0, fontWeight: 600 }}>
                   ✓ {round.total_line_items.toLocaleString()} line items loaded
                 </p>
               ) : (
-                <p style={{ fontSize: "0.88rem", color: "#fbbf24", margin: 0 }}>No master file uploaded yet</p>
+                <p style={{ fontSize: "0.88rem", color: "var(--warning)", margin: 0 }}>No master file uploaded yet</p>
               )}
             </div>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -625,7 +625,7 @@ export default function RoundDetail() {
                 <span style={{ fontSize: "0.8rem", color: "var(--text-1)", fontWeight: 600 }}>{assignedBuyers.length} total</span>
                 {assignedBuyers.length > 0 && (
                   <>
-                    <span style={{ fontSize: "0.8rem", color: "#34d399" }}>{uploadedCount} submitted</span>
+                    <span style={{ fontSize: "0.8rem", color: "var(--success)" }}>{uploadedCount} submitted</span>
                     {pendingCount > 0 && <span style={{ fontSize: "0.8rem", color: "var(--text-4)" }}>{pendingCount} pending</span>}
                   </>
                 )}
@@ -655,7 +655,7 @@ export default function RoundDetail() {
           </div>
 
           {showBuyerPicker && (
-            <div style={{ background: "rgba(61,129,227,0.04)", border: "1px solid rgba(61,129,227,0.2)", borderRadius: "var(--radius-lg)", padding: "16px", marginBottom: "16px" }}>
+            <div style={{ background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", borderRadius: "var(--radius-lg)", padding: "16px", marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                 <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: 0 }}>Select buyers to assign:</p>
                 <button
@@ -663,16 +663,16 @@ export default function RoundDetail() {
                     const active = allBuyers.filter(b => b.is_active);
                     setSelectedBuyerIds(selectedBuyerIds.size === active.length ? new Set() : new Set(active.map(b => b.id)));
                   }}
-                  style={{ fontSize: "0.73rem", color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
+                  style={{ fontSize: "0.73rem", color: "var(--info)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
                 >
                   {selectedBuyerIds.size === allBuyers.filter(b => b.is_active).length ? "Deselect All" : "Select All"}
                 </button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", maxHeight: "240px", overflowY: "auto" }}>
                 {allBuyers.filter(b => b.is_active).map(b => (
-                  <label key={b.id} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "9px 10px", borderRadius: "var(--radius-sm)", background: selectedBuyerIds.has(b.id) ? "rgba(61,129,227,0.12)" : "transparent", transition: "background 0.1s" }}>
-                    <input type="checkbox" checked={selectedBuyerIds.has(b.id)} onChange={() => toggleBuyer(b.id)} style={{ accentColor: "#3D81E3" }} />
-                    <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "rgba(61,129,227,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>
+                  <label key={b.id} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "9px 10px", borderRadius: "var(--radius-sm)", background: selectedBuyerIds.has(b.id) ? "var(--brand-dim)" : "transparent", transition: "background 0.1s" }}>
+                    <input type="checkbox" checked={selectedBuyerIds.has(b.id)} onChange={() => toggleBuyer(b.id)} style={{ accentColor: "var(--brand)" }} />
+                    <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--brand-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.68rem", fontWeight: 700, color: "var(--info)", flexShrink: 0 }}>
                       {initials(b.full_name)}
                     </div>
                     <span style={{ fontSize: "0.83rem", color: "var(--text-1)", fontWeight: 500 }}>{b.full_name}</span>
@@ -693,12 +693,12 @@ export default function RoundDetail() {
               {assignedBuyers.map(b => (
                 <div key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "rgba(61,129,227,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "#60a5fa", flexShrink: 0 }}>
+                    <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "var(--brand-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 700, color: "var(--info)", flexShrink: 0 }}>
                       {initials(b.full_name)}
                     </div>
                     <div>
                       <Link href={`/admin/rounds/${id}/buyers/${b.id}`} style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-1)", textDecoration: "none", display: "block" }}
-                        onMouseEnter={e => { e.currentTarget.style.color = "#60a5fa"; }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "var(--info)"; }}
                         onMouseLeave={e => { e.currentTarget.style.color = "var(--text-1)"; }}>
                         {b.full_name}
                       </Link>
@@ -723,7 +723,7 @@ export default function RoundDetail() {
                 <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", padding: "12px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "3px" }}>
-                      <Link href={`/admin/rounds/${id}/buyers/${f.buyer_id}`} style={{ fontSize: "0.85rem", fontWeight: 600, color: "#60a5fa", textDecoration: "none" }}
+                      <Link href={`/admin/rounds/${id}/buyers/${f.buyer_id}`} style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--info)", textDecoration: "none" }}
                         onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
                         onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}>
                         {f.buyer_company || f.buyer_name || `Buyer ${f.buyer_id}`}
@@ -737,8 +737,8 @@ export default function RoundDetail() {
                       {f.uploaded_at && <span style={{ fontSize: "0.73rem", color: "var(--text-4)" }}>{fmtDatetime(f.uploaded_at)}</span>}
                     </div>
                     {f.offer_terms && (
-                      <div style={{ marginTop: "8px", padding: "8px 12px", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: "8px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Offer terms</span>
+                      <div style={{ marginTop: "8px", padding: "8px 12px", background: "var(--warning-dim)", border: "1px solid var(--warning-dim)", borderRadius: "8px" }}>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--warning)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Offer terms</span>
                         <p style={{ margin: "3px 0 0", fontSize: "0.78rem", color: "var(--text-2)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{f.offer_terms}</p>
                       </div>
                     )}
@@ -749,7 +749,7 @@ export default function RoundDetail() {
                         ↓ Download
                       </button>
                     ) : (
-                      <button onClick={() => downloadFile(`/rounds/${id}/bid-files/${f.id}/reconstruct`, f.filename.replace(/\.[^.]+$/, "_reconstructed.xlsx"))} className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px", whiteSpace: "nowrap", borderColor: "rgba(251,191,36,0.3)", color: "#fbbf24" }} title="Original file not on disk — reconstructed from parsed bid line data">
+                      <button onClick={() => downloadFile(`/rounds/${id}/bid-files/${f.id}/reconstruct`, f.filename.replace(/\.[^.]+$/, "_reconstructed.xlsx"))} className="btn-ghost" style={{ fontSize: "0.75rem", padding: "6px 14px", whiteSpace: "nowrap", borderColor: "var(--warning-dim)", color: "var(--warning)" }} title="Original file not on disk — reconstructed from parsed bid line data">
                         ↓ Reconstructed
                       </button>
                     )}
@@ -759,8 +759,8 @@ export default function RoundDetail() {
                       title="Delete this bid file and its bid lines"
                       style={{
                         padding: "6px 12px", fontSize: "0.75rem", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit",
-                        background: "rgba(239,68,68,0.08)", color: "#f87171",
-                        border: "1px solid rgba(239,68,68,0.2)", borderRadius: "8px",
+                        background: "var(--danger-dim)", color: "var(--danger)",
+                        border: "1px solid var(--danger-dim)", borderRadius: "8px",
                       }}
                     >
                       {deletingFile === f.id ? "…" : "Delete"}
@@ -786,8 +786,8 @@ export default function RoundDetail() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
               {[
-                { label: "Invited",  count: assignedBuyers.filter(b => b.invite_status !== "pending").length, color: "#60a5fa", bg: "rgba(61,129,227,0.08)" },
-                { label: "Uploaded", count: uploadedCount,  color: "#34d399", bg: "rgba(16,185,129,0.08)" },
+                { label: "Invited",  count: assignedBuyers.filter(b => b.invite_status !== "pending").length, color: "var(--info)", bg: "var(--brand-dim)" },
+                { label: "Uploaded", count: uploadedCount,  color: "var(--success)", bg: "var(--success-dim)" },
                 { label: "Pending",  count: pendingCount,   color: "var(--text-3)", bg: "var(--surface)" },
               ].map(({ label, count, color, bg }) => (
                 <div key={label} style={{ padding: "14px 16px", background: bg, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
@@ -802,7 +802,7 @@ export default function RoundDetail() {
       {/* Extend Deadline Modal */}
       {extendDeadline !== null && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "var(--modal-backdrop-bg)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div style={{ background: "var(--bg-2)", border: "1px solid rgba(61,129,227,0.3)", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "440px" }}>
+          <div style={{ background: "var(--bg-2)", border: "1px solid var(--brand-dim)", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "440px" }}>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 8px" }}>Extend Submission Deadline</h3>
             <p style={{ fontSize: "0.8rem", color: "var(--text-3)", margin: "0 0 20px" }}>
               Set a new deadline for this round. Buyers will be able to submit until the new date.

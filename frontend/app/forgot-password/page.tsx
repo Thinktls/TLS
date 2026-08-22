@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#0c0c0c",
+      background: "var(--bg)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
             <div style={{
               width: "36px",
               height: "36px",
-              background: "#3D81E3",
+              background: "var(--brand)",
               borderRadius: "10px",
               display: "flex",
               alignItems: "center",
@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
                 If <strong style={{ color: "#ffffff" }}>{email}</strong> is registered, you'll receive a reset link within a few minutes.
               </p>
               <Link href="/login" style={{
-                color: "#3D81E3",
+                color: "var(--brand)",
                 fontSize: "0.875rem",
                 textDecoration: "none",
               }}>← Back to Login</Link>
@@ -96,11 +96,11 @@ export default function ForgotPasswordPage() {
 
               {error && (
                 <div style={{
-                  background: "rgba(239,68,68,0.1)",
+                  background: "var(--danger-dim)",
                   border: "1px solid rgba(239,68,68,0.25)",
                   borderRadius: "8px",
                   padding: "10px 14px",
-                  color: "#f87171",
+                  color: "var(--danger)",
                   fontSize: "0.85rem",
                   marginBottom: "18px",
                 }}>{error}</div>
@@ -133,7 +133,7 @@ export default function ForgotPasswordPage() {
               </form>
 
               <p style={{ textAlign: "center", marginTop: "24px", fontSize: "0.85rem", color: "rgba(255,255,255,0.5)" }}>
-                <Link href="/login" style={{ color: "#3D81E3", textDecoration: "none" }}>← Back to Login</Link>
+                <Link href="/login" style={{ color: "var(--brand)", textDecoration: "none" }}>← Back to Login</Link>
               </p>
             </>
           )}

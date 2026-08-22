@@ -4,7 +4,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
-import { fmtDatetimeShort } from "@/lib/format";
+import { fmtDatetimeShort } from '@/lib/format';
+import { STATUS_COLOR } from '@/lib/status';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ function fmt(n: number) {
 
 function fmtDate(iso: string | null) { return fmtDatetimeShort(iso); }
 
-function Bar({ pct, color = "#3D81E3", height = 6 }: { pct: number; color?: string; height?: number }) {
+function Bar({ pct, color = "var(--info)", height = 6 }: { pct: number; color?: string; height?: number }) {
   return (
     <div style={{ width: "100%", background: "var(--surface)", borderRadius: 100, height, overflow: "hidden" }}>
       <div style={{ width: `${Math.min(pct, 100)}%`, background: color, height: "100%", borderRadius: 100, transition: "width 0.6s ease" }} />
@@ -94,20 +95,9 @@ function KpiCard({ label, value, sub, color = "var(--text-1)" }: { label: string
   );
 }
 
-const METHOD_COLOR: Record<string, string> = {
-  exact: "#34d399",
-  fuzzy: "#60a5fa",
-  ai: "#a78bfa",
-  unknown: "var(--text-4)",
-};
 
-const EXC_COLOR: Record<string, string> = {
-  unmatched: "#f87171",
-  partial_match: "#fbbf24",
-  below_reserve: "#fb923c",
-  duplicate: "#a78bfa",
-  unknown: "var(--text-4)",
-};
+
+
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -134,7 +124,7 @@ export default function RoundAnalyticsPage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "var(--info)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -142,7 +132,7 @@ export default function RoundAnalyticsPage() {
 
   if (error || !data) return (
     <AdminLayout>
-      <div style={{ color: "#f87171", padding: "40px", textAlign: "center" }}>{error || "No data"}</div>
+      <div style={{ color: "var(--danger)", padding: "40px", textAlign: "center" }}>{error || "No data"}</div>
     </AdminLayout>
   );
 
@@ -173,9 +163,9 @@ export default function RoundAnalyticsPage() {
 
         {/* Top KPI row */}
         <div className="mobile-stack" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "28px" }}>
-          <KpiCard label="Awarded Value" value={`$${fmt(overview.total_awarded_value)}`} sub={`${overview.approved_deals} deals`} color="#34d399" />
-          <KpiCard label="Coverage" value={`${overview.coverage_pct}%`} sub={`${overview.items_with_bids}/${overview.total_master_items} items bid`} color="#60a5fa" />
-          <KpiCard label="Exception Rate" value={`${overview.exception_rate_pct}%`} sub={`${overview.exception_lines} lines flagged`} color={overview.exception_rate_pct > 20 ? "#fbbf24" : "var(--text-1)"} />
+          <KpiCard label="Awarded Value" value={`$${fmt(overview.total_awarded_value)}`} sub={`${overview.approved_deals} deals`} color="var(--success)" />
+          <KpiCard label="Coverage" value={`${overview.coverage_pct}%`} sub={`${overview.items_with_bids}/${overview.total_master_items} items bid`} color="var(--info)" />
+          <KpiCard label="Exception Rate" value={`${overview.exception_rate_pct}%`} sub={`${overview.exception_lines} lines flagged`} color={overview.exception_rate_pct > 20 ? "var(--warning)" : "var(--text-1)"} />
           <KpiCard label="Buyers" value={overview.buyers_participated} sub={`${overview.total_bid_lines} lines submitted`} />
         </div>
 
@@ -193,7 +183,7 @@ export default function RoundAnalyticsPage() {
                 fontSize: "0.85rem",
                 fontWeight: activeTab === tab ? 600 : 400,
                 color: activeTab === tab ? "var(--text-1)" : "var(--text-3)",
-                borderBottom: activeTab === tab ? "2px solid #3D81E3" : "2px solid transparent",
+                borderBottom: activeTab === tab ? "2px solid var(--info)" : "2px solid transparent",
                 marginBottom: "-1px",
                 transition: "color 0.15s",
                 fontFamily: "inherit",
@@ -220,10 +210,10 @@ export default function RoundAnalyticsPage() {
                     return (
                       <div key={method}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                          <span style={{ fontSize: "0.82rem", color: METHOD_COLOR[method] || "var(--text-1)", fontWeight: 600, textTransform: "capitalize" }}>{method}</span>
+                          <span style={{ fontSize: "0.82rem", color: (STATUS_COLOR as any)[method] || "var(--text-1)", fontWeight: 600, textTransform: "capitalize" }}>{method}</span>
                           <span style={{ fontSize: "0.82rem", color: "var(--text-2)" }}>{count} lines · {pct.toFixed(1)}%</span>
                         </div>
-                        <Bar pct={pct} color={METHOD_COLOR[method] || "#3D81E3"} height={8} />
+                        <Bar pct={pct} color={(STATUS_COLOR as any)[method] || "var(--info)"} height={8} />
                       </div>
                     );
                   })}
@@ -242,10 +232,10 @@ export default function RoundAnalyticsPage() {
                     {Object.entries(exception_breakdown).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
                       <div key={type} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: EXC_COLOR[type] || "var(--surface-hover)", flexShrink: 0 }} />
+                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: (STATUS_COLOR as any)[type] || "var(--surface-hover)", flexShrink: 0 }} />
                           <span style={{ fontSize: "0.82rem", color: "var(--text-2)", textTransform: "capitalize" }}>{type.replace(/_/g, " ")}</span>
                         </div>
-                        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: EXC_COLOR[type] || "var(--text-1)" }}>{count}</span>
+                        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: (STATUS_COLOR as any)[type] || "var(--text-1)" }}>{count}</span>
                       </div>
                     ))}
                   </div>
@@ -255,9 +245,9 @@ export default function RoundAnalyticsPage() {
               <div className="glass" style={{ borderRadius: "14px", padding: "22px 24px" }}>
                 <h3 style={{ color: "var(--text-1)", fontWeight: 600, fontSize: "0.95rem", margin: "0 0 18px" }}>Round Health</h3>
                 {[
-                  { label: "Items covered", pct: overview.coverage_pct, color: "#34d399" },
-                  { label: "Lines matched", pct: overview.matched_lines / Math.max(overview.total_bid_lines, 1) * 100, color: "#60a5fa" },
-                  { label: "Deals approved", pct: overview.approved_deals / Math.max(overview.total_deals, 1) * 100, color: "#a78bfa" },
+                  { label: "Items covered", pct: overview.coverage_pct, color: "var(--success)" },
+                  { label: "Lines matched", pct: overview.matched_lines / Math.max(overview.total_bid_lines, 1) * 100, color: "var(--info)" },
+                  { label: "Deals approved", pct: overview.approved_deals / Math.max(overview.total_deals, 1) * 100, color: "var(--violet-bright)" },
                 ].map(row => (
                   <div key={row.label} style={{ marginBottom: "14px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
@@ -269,7 +259,7 @@ export default function RoundAnalyticsPage() {
                 ))}
                 <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
                   <span style={{ color: "var(--text-3)" }}>Anomalies detected</span>
-                  <span style={{ color: overview.anomaly_count > 0 ? "#fbbf24" : "#34d399", fontWeight: 700 }}>
+                  <span style={{ color: overview.anomaly_count > 0 ? "var(--warning)" : "var(--success)", fontWeight: 700 }}>
                     {overview.anomaly_count > 0 ? `⚠ ${overview.anomaly_count}` : "✓ None"}
                   </span>
                 </div>
@@ -308,23 +298,23 @@ export default function RoundAnalyticsPage() {
                       </td>
                       <td style={{ color: "var(--text-2)", textAlign: "center" }}>{b.lines_bid}</td>
                       <td style={{ textAlign: "center" }}>
-                        <span style={{ color: "#34d399", fontWeight: 700 }}>{b.lines_won}</span>
+                        <span style={{ color: "var(--success)", fontWeight: 700 }}>{b.lines_won}</span>
                       </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <div style={{ flex: 1, minWidth: "60px" }}>
-                            <Bar pct={b.win_rate_pct} color={b.win_rate_pct >= 50 ? "#34d399" : b.win_rate_pct >= 25 ? "#fbbf24" : "#f87171"} height={5} />
+                            <Bar pct={b.win_rate_pct} color={b.win_rate_pct >= 50 ? "var(--success)" : b.win_rate_pct >= 25 ? "var(--warning)" : "var(--danger)"} height={5} />
                           </div>
                           <span style={{ fontSize: "0.78rem", color: "var(--text-2)", flexShrink: 0 }}>{b.win_rate_pct.toFixed(1)}%</span>
                         </div>
                       </td>
-                      <td style={{ fontWeight: 700, color: b.total_value_awarded > 0 ? "#34d399" : "var(--text-3)" }}>
+                      <td style={{ fontWeight: 700, color: b.total_value_awarded > 0 ? "var(--success)" : "var(--text-3)" }}>
                         {b.total_value_awarded > 0 ? `$${fmt(b.total_value_awarded)}` : "—"}
                       </td>
                       <td style={{ width: "100px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <div style={{ flex: 1 }}>
-                            <Bar pct={b.total_value_awarded / maxBuyerValue * 100} color="#3D81E3" height={5} />
+                            <Bar pct={b.total_value_awarded / maxBuyerValue * 100} color="var(--info)" height={5} />
                           </div>
                           <span style={{ fontSize: "0.72rem", color: "var(--text-3)" }}>
                             {(b.total_value_awarded / Math.max(overview.total_awarded_value, 1) * 100).toFixed(1)}%
@@ -333,7 +323,7 @@ export default function RoundAnalyticsPage() {
                       </td>
                       <td style={{ textAlign: "center" }}>
                         {b.anomalies > 0 ? (
-                          <span style={{ color: "#fbbf24", fontWeight: 700 }}>⚠ {b.anomalies}</span>
+                          <span style={{ color: "var(--warning)", fontWeight: 700 }}>⚠ {b.anomalies}</span>
                         ) : (
                           <span style={{ color: "var(--text-4)" }}>—</span>
                         )}
@@ -388,7 +378,7 @@ export default function RoundAnalyticsPage() {
                                   style={{
                                     display: "inline-block", marginRight: "6px",
                                     fontSize: "0.65rem", fontWeight: 700,
-                                    color: ab.resolved ? "#34d399" : "#fbbf24",
+                                    color: ab.resolved ? "var(--success)" : "var(--warning)",
                                     textDecoration: "none",
                                     borderBottom: "1px dotted currentColor",
                                   }}
@@ -399,30 +389,30 @@ export default function RoundAnalyticsPage() {
                                 </a>
                               ))}
                               {(row.anomaly_buyers ?? []).length === 0 && (
-                                <span title="A bid on this item looks like a price typo. Review it on the Exceptions page." style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: 700, cursor: "help" }}>⚠ ANOMALY</span>
+                                <span title="A bid on this item looks like a price typo. Review it on the Exceptions page." style={{ fontSize: "0.65rem", color: "var(--warning)", fontWeight: 700, cursor: "help" }}>⚠ ANOMALY</span>
                               )}
                             </div>
                           )}
                         </td>
                         <td style={{ textAlign: "center", color: "var(--text-2)" }}>{row.bids}</td>
-                        <td style={{ color: "#f87171", fontWeight: 600 }}>${fmt(row.min_price)}</td>
+                        <td style={{ color: "var(--danger)", fontWeight: 600 }}>${fmt(row.min_price)}</td>
                         <td style={{ color: "var(--text-2)" }}>${fmt(row.median_price)}</td>
-                        <td style={{ color: "#34d399", fontWeight: 600 }}>${fmt(row.max_price)}</td>
+                        <td style={{ color: "var(--success)", fontWeight: 600 }}>${fmt(row.max_price)}</td>
                         <td>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <div style={{ width: "50px" }}>
-                              <Bar pct={Math.min(row.spread_pct, 200) / 2} color={row.spread_pct > 50 ? "#fbbf24" : "#3D81E3"} height={5} />
+                              <Bar pct={Math.min(row.spread_pct, 200) / 2} color={row.spread_pct > 50 ? "var(--warning)" : "var(--info)"} height={5} />
                             </div>
                             <span style={{
                               fontSize: "0.78rem",
                               fontWeight: 700,
-                              color: row.spread_pct > 100 ? "#f87171" : row.spread_pct > 50 ? "#fbbf24" : "#34d399",
+                              color: row.spread_pct > 100 ? "var(--danger)" : row.spread_pct > 50 ? "var(--warning)" : "var(--success)",
                             }}>
                               {row.spread_pct.toFixed(1)}%
                             </span>
                           </div>
                         </td>
-                        <td style={{ color: row.winning_price ? "#34d399" : "var(--text-4)", fontWeight: row.winning_price ? 700 : 400 }}>
+                        <td style={{ color: row.winning_price ? "var(--success)" : "var(--text-4)", fontWeight: row.winning_price ? 700 : 400 }}>
                           {row.winning_price ? `$${fmt(row.winning_price)}` : "—"}
                         </td>
                         <td style={{ color: "var(--text-3)", fontSize: "0.78rem" }}>
@@ -449,8 +439,8 @@ export default function RoundAnalyticsPage() {
                 <div key={i} className="glass" style={{ borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px" }}>
                   <div style={{
                     width: "36px", height: "36px", borderRadius: "50%",
-                    background: row.status === "processed" ? "rgba(52,211,153,0.15)" : "rgba(251,191,36,0.12)",
-                    border: `1px solid ${row.status === "processed" ? "rgba(52,211,153,0.3)" : "rgba(251,191,36,0.3)"}`,
+                    background: row.status === "processed" ? "var(--success-bg)" : "var(--warning-bg)",
+                    border: `1px solid ${row.status === "processed" ? "var(--success-border)" : "var(--warning-border)"}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "0.85rem", flexShrink: 0,
                   }}>
@@ -466,9 +456,9 @@ export default function RoundAnalyticsPage() {
                   </div>
                   <span style={{
                     padding: "3px 10px", borderRadius: "100px", fontSize: "0.7rem", fontWeight: 700,
-                    background: row.status === "processed" ? "rgba(52,211,153,0.1)" : "rgba(251,191,36,0.1)",
-                    color: row.status === "processed" ? "#34d399" : "#fbbf24",
-                    border: `1px solid ${row.status === "processed" ? "rgba(52,211,153,0.25)" : "rgba(251,191,36,0.25)"}`,
+                    background: row.status === "processed" ? "var(--success-bg)" : "var(--warning-bg)",
+                    color: row.status === "processed" ? "var(--success)" : "var(--warning)",
+                    border: `1px solid ${row.status === "processed" ? "var(--success-border)" : "var(--warning-border)"}`,
                     textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0,
                   }}>
                     {row.status}

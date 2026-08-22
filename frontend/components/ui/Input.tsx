@@ -55,7 +55,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         />
       </div>
       {error && (
-        <p id={`${inputId}-error`} role="alert" style={{ margin: "6px 0 0", fontSize: "0.75rem", color: "#f87171" }}>
+        <p id={`${inputId}-error`} role="alert" style={{ margin: "6px 0 0", fontSize: "0.75rem", color: "var(--danger)" }}>
           {error}
         </p>
       )}
@@ -98,7 +98,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         {...rest}
       />
       {error && (
-        <p role="alert" style={{ margin: "6px 0 0", fontSize: "0.75rem", color: "#f87171" }}>{error}</p>
+        <p role="alert" style={{ margin: "6px 0 0", fontSize: "0.75rem", color: "var(--danger)" }}>{error}</p>
       )}
       {!error && hint && (
         <p style={{ margin: "6px 0 0", fontSize: "0.75rem", color: "var(--text-4)" }}>{hint}</p>

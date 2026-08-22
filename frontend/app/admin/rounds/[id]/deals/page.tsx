@@ -70,10 +70,10 @@ interface RollupData {
 }
 
 const statusBadge: Record<string, { background: string; color: string }> = {
-  pending_approval: { background: "rgba(251,191,36,0.15)", color: "#fbbf24" },
-  approved:         { background: "rgba(52,211,153,0.15)", color: "#34d399" },
-  rejected:         { background: "rgba(239,68,68,0.15)",  color: "#f87171" },
-  pushed_to_razor:  { background: "rgba(61,129,227,0.15)", color: "#60a5fa" },
+  pending_approval: { background: "var(--warning-dim)", color: "var(--warning)" },
+  approved:         { background: "var(--success-dim)", color: "var(--success)" },
+  rejected:         { background: "var(--danger-dim)",  color: "var(--danger)" },
+  pushed_to_razor:  { background: "var(--brand-dim)", color: "var(--info)" },
 };
 
 const labelStyle: React.CSSProperties = {
@@ -130,9 +130,9 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
           </thead>
           <tbody>
             {bids.map((b) => (
-              <tr key={b.bid_line_id} style={{ background: b.is_winner ? "rgba(52,211,153,0.06)" : "transparent" }}>
+              <tr key={b.bid_line_id} style={{ background: b.is_winner ? "var(--success-dim)" : "transparent" }}>
                 <td style={{ padding: "6px 8px 6px 0", fontSize: "0.78rem" }}>
-                  <span style={{ color: b.is_winner ? "#34d399" : "var(--text-2)", fontWeight: b.is_winner ? 600 : 400 }}>
+                  <span style={{ color: b.is_winner ? "var(--success)" : "var(--text-2)", fontWeight: b.is_winner ? 600 : 400 }}>
                     {b.is_winner ? "★ " : ""}{b.buyer_company || b.buyer_email || `Buyer ${b.buyer_id}`}
                   </span>
                   {b.is_anomaly && (
@@ -141,7 +141,7 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
                     </span>
                   )}
                 </td>
-                <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.78rem", padding: "6px 8px", color: b.is_winner ? "#34d399" : "var(--text-2)" }}>
+                <td style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.78rem", padding: "6px 8px", color: b.is_winner ? "var(--success)" : "var(--text-2)" }}>
                   {b.unit_price != null ? `$${b.unit_price.toFixed(2)}` : "—"}
                 </td>
                 <td style={{ textAlign: "right", fontSize: "0.78rem", padding: "6px 8px", color: "var(--text-3)" }}>
@@ -149,7 +149,7 @@ function AllBidsPanel({ roundId, masterItemId }: { roundId: string; masterItemId
                 </td>
                 <td style={{ padding: "6px 0 6px 8px", fontSize: "0.72rem" }}>
                   {b.is_winner ? (
-                    <span style={{ color: "#34d399" }}>Winner</span>
+                    <span style={{ color: "var(--success)" }}>Winner</span>
                   ) : b.fluffed_loss_price != null ? (
                     <span style={{ color: "var(--text-4)" }}>
                       Lost · shown ${b.fluffed_loss_price.toFixed(2)}
@@ -301,7 +301,7 @@ export default function DealsPage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -348,7 +348,7 @@ export default function DealsPage() {
                 onClick={approveAll}
                 disabled={approvingAll}
                 className="btn-brand"
-                style={{ background: "#059669", minHeight: "44px", whiteSpace: "nowrap" }}
+                style={{ background: "var(--success-strong)", minHeight: "44px", whiteSpace: "nowrap" }}
                 title="Approve all pending deals and automatically send win/loss notices to buyers"
               >
                 {approvingAll ? "Approving…" : `Approve All (${pendingCount})`}
@@ -368,7 +368,7 @@ export default function DealsPage() {
             padding: "14px 18px",
             marginBottom: "16px",
           }}>
-            <p style={{ margin: "0 0 8px", fontSize: "0.8rem", fontWeight: 700, color: "#34d399" }}>
+            <p style={{ margin: "0 0 8px", fontSize: "0.8rem", fontWeight: 700, color: "var(--success)" }}>
               What happens when you click “Approve All ({pendingCount})”
             </p>
             <ol style={{ margin: 0, paddingLeft: "18px", fontSize: "0.78rem", color: "var(--text-3, rgba(255,255,255,0.6))", lineHeight: 1.7 }}>
@@ -377,7 +377,7 @@ export default function DealsPage() {
               <li>Buyer scores are recalculated from this round’s wins and losses.</li>
               <li>Exports unlock: Razor CSV, deals workbook, and per-buyer award sheets.</li>
             </ol>
-            <p style={{ margin: "8px 0 0", fontSize: "0.72rem", color: "#fbbf24" }}>
+            <p style={{ margin: "8px 0 0", fontSize: "0.72rem", color: "var(--warning)" }}>
               The emails send immediately and cannot be recalled — review the deals below first.
               Need one buyer to take everything? Use “Award Entire Lot” before approving.
             </p>
@@ -387,9 +387,9 @@ export default function DealsPage() {
         {msg && (
           <div style={{
             marginBottom: "16px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
-            background: msgType === "ok" ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
-            border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: msgType === "ok" ? "#34d399" : "#f87171",
+            background: msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)",
+            border: `1px solid ${msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)"}`,
+            color: msgType === "ok" ? "var(--success)" : "var(--danger)",
           }}>
             {msg}
           </div>
@@ -447,7 +447,7 @@ export default function DealsPage() {
                           <div style={{ fontSize: "0.68rem", color: "var(--text-4)" }}>${r.min_price.toFixed(2)}–${r.max_price.toFixed(2)}</div>
                         )}
                       </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "#34d399" }}>${r.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--success)" }}>${r.total_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>
                         {r.buyers.map((b) => `${b.buyer} ×${b.qty}`).join(", ")}
                       </td>
@@ -526,7 +526,7 @@ export default function DealsPage() {
                             {d.status.replace(/_/g, " ")}
                           </span>
                           {d.override_count > 0 && (
-                            <span style={{ fontSize: "0.65rem", color: "#fbbf24" }}>
+                            <span style={{ fontSize: "0.65rem", color: "var(--warning)" }}>
                               {d.override_count} override{d.override_count > 1 ? "s" : ""}
                             </span>
                           )}
@@ -538,13 +538,13 @@ export default function DealsPage() {
                             <>
                               <ActionBtn
                                 label="Approve"
-                                bg="rgba(52,211,153,0.15)" color="#34d399" border="rgba(52,211,153,0.2)"
+                                bg="var(--success-dim)" color="var(--success)" border="var(--success-dim)"
                                 disabled={acting === d.id}
                                 onClick={() => singleAction(d.id, "approve", "approved")}
                               />
                               <ActionBtn
                                 label="Reject"
-                                bg="rgba(239,68,68,0.12)" color="#f87171" border="rgba(239,68,68,0.2)"
+                                bg="var(--danger-dim)" color="var(--danger)" border="var(--danger-dim)"
                                 disabled={acting === d.id}
                                 onClick={() => singleAction(d.id, "reject", "rejected")}
                               />
@@ -552,14 +552,14 @@ export default function DealsPage() {
                           )}
                           <ActionBtn
                             label="Override"
-                            bg="rgba(251,191,36,0.1)" color="#fbbf24" border="rgba(251,191,36,0.2)"
+                            bg="var(--warning-dim)" color="var(--warning)" border="var(--warning-dim)"
                             disabled={false}
                             onClick={() => setOverride({ dealId: d.id, partNumber: d.part_number, field: "", newValue: "", reason: "" })}
                           />
                           {d.status === "approved" && (
                             <ActionBtn
                               label="→ Razor"
-                              bg="rgba(61,129,227,0.15)" color="#60a5fa" border="rgba(61,129,227,0.2)"
+                              bg="var(--brand-dim)" color="var(--info)" border="var(--brand-dim)"
                               disabled={acting === d.id}
                               onClick={() => singleAction(d.id, "push-razor", "pushed to Razor")}
                             />
@@ -589,7 +589,7 @@ export default function DealsPage() {
           }}>
             <div style={{
               background: "var(--bg-2)",
-              border: "1px solid rgba(61,129,227,0.3)",
+              border: "1px solid var(--brand-dim)",
               borderRadius: "20px 20px 0 0",
               padding: "24px",
               width: "100%",
@@ -663,7 +663,7 @@ export default function DealsPage() {
           }}>
             <div style={{
               background: "var(--bg-2)",
-              border: "1px solid rgba(61,129,227,0.3)",
+              border: "1px solid var(--brand-dim)",
               borderRadius: "20px 20px 0 0",
               padding: "24px",
               width: "100%",

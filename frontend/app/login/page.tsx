@@ -99,7 +99,7 @@ export default function LoginPage() {
         .glass-card .glass-input::placeholder { color: rgba(255,255,255,0.45); }
         .glass-card .glass-input:focus {
           background: rgba(255,255,255,0.10);
-          border-color: rgba(61,129,227,0.7);
+          border-color: var(--brand);
         }
         /* Chrome autofill otherwise repaints the field near-white with dark text. */
         .glass-card .glass-input:-webkit-autofill,
@@ -122,14 +122,14 @@ export default function LoginPage() {
           width: 100%;
           padding: 14px;
           border-radius: 14px;
-          background: linear-gradient(135deg, #3D81E3 0%, #5a6cf5 100%);
+          background: var(--brand-gradient);
           color: white;
           font-weight: 700;
           font-size: 0.95rem;
           border: none;
           cursor: pointer;
           letter-spacing: -0.01em;
-          box-shadow: 0 2px 12px rgba(61,129,227,0.2);
+          box-shadow: 0 2px 12px var(--brand-glow);
           transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
           font-family: Inter, system-ui, sans-serif;
           margin-top: 8px;
@@ -137,7 +137,7 @@ export default function LoginPage() {
         .submit-btn:hover:not(:disabled) {
           opacity: 0.92;
           transform: translateY(-1px);
-          box-shadow: 0 4px 20px rgba(61,129,227,0.28);
+          box-shadow: 0 4px 20px var(--brand-glow);
         }
         .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         @keyframes pulse {
@@ -146,7 +146,7 @@ export default function LoginPage() {
         }
       `}</style>
 
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0a0a0f", overflow: "hidden", position: "relative" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)", overflow: "hidden", position: "relative" }}>
 
         {/* Same fullscreen video as landing page */}
         <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
@@ -193,7 +193,7 @@ export default function LoginPage() {
               <div style={{
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
                 width: "56px", height: "56px", borderRadius: "18px",
-                background: "linear-gradient(135deg, #3D81E3, #5a6cf5)",
+                background: "var(--brand-gradient)",
                 marginBottom: "20px",
                 boxShadow: "0 4px 16px rgba(61,129,227,0.2)",
               }}>
@@ -242,11 +242,11 @@ export default function LoginPage() {
                 {error && (
                   <div style={{
                     padding: "10px 14px",
-                    background: "rgba(239,68,68,0.12)",
+                    background: "var(--danger-dim)",
                     border: "1px solid rgba(239,68,68,0.25)",
                     borderRadius: "10px",
                     fontSize: "0.82rem",
-                    color: "#f87171",
+                    color: "var(--danger)",
                   }}>
                     {error}
                   </div>
@@ -263,9 +263,9 @@ export default function LoginPage() {
                     background: "rgba(251,191,36,0.08)",
                     border: "1px solid rgba(251,191,36,0.2)",
                     borderRadius: "10px",
-                    fontSize: "0.75rem", color: "#fbbf24",
+                    fontSize: "0.75rem", color: "var(--warning)",
                   }}>
-                    <span style={{ display: "inline-block", width: "7px", height: "7px", borderRadius: "50%", background: "#fbbf24", animation: "pulse 1.4s infinite" }} />
+                    <span style={{ display: "inline-block", width: "7px", height: "7px", borderRadius: "50%", background: "var(--warning)", animation: "pulse 1.4s infinite" }} />
                     Server is starting up — sign in will work in a few seconds
                   </div>
                 )}
@@ -275,7 +275,7 @@ export default function LoginPage() {
                 <a href={LANDING_URL} className="back-link" style={{ fontSize: "0.78rem" }}>
                   ← Return to ThinkTLS home
                 </a>
-                <a href="/forgot-password" style={{ fontSize: "0.78rem", color: "rgba(61,129,227,0.8)", textDecoration: "none" }}>
+                <a href="/forgot-password" style={{ fontSize: "0.78rem", color: "var(--brand)", textDecoration: "none" }}>
                   Forgot password?
                 </a>
               </div>

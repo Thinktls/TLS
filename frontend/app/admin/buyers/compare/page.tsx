@@ -51,7 +51,7 @@ function fmt(n: number) {
 }
 
 
-function Bar({ pct, color = "#3D81E3", height = 6 }: { pct: number; color?: string; height?: number }) {
+function Bar({ pct, color = "var(--brand)", height = 6 }: { pct: number; color?: string; height?: number }) {
   return (
     <div style={{ width: "100%", background: "var(--surface)", borderRadius: 100, height, overflow: "hidden" }}>
       <div style={{ width: `${Math.min(pct, 100)}%`, background: color, height: "100%", borderRadius: 100, transition: "width 0.5s ease" }} />
@@ -60,7 +60,7 @@ function Bar({ pct, color = "#3D81E3", height = 6 }: { pct: number; color?: stri
 }
 
 function ScoreDot({ score }: { score: number }) {
-  const color = score >= 75 ? "#34d399" : score >= 40 ? "#fbbf24" : "#f87171";
+  const color = score >= 75 ? "var(--success)" : score >= 40 ? "var(--warning)" : "var(--danger)";
   const label = score >= 75 ? "High" : score >= 40 ? "Mid" : "Low";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -108,12 +108,12 @@ export default function BuyerComparePage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
   );
-  if (error || !data) return <AdminLayout><div style={{ color: "#f87171", padding: "40px", textAlign: "center" }}>{error || "No data"}</div></AdminLayout>;
+  if (error || !data) return <AdminLayout><div style={{ color: "var(--danger)", padding: "40px", textAlign: "center" }}>{error || "No data"}</div></AdminLayout>;
 
   const { buyers, rounds } = data;
 
@@ -144,9 +144,9 @@ export default function BuyerComparePage() {
         <div className="mobile-stack" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "24px" }}>
           {[
             { label: "Total Buyers", value: buyers.length, sub: `${buyers.filter(b => b.is_active).length} active` },
-            { label: "Total Awarded", value: fmt(totalValue), sub: "across all rounds", color: "#34d399" },
+            { label: "Total Awarded", value: fmt(totalValue), sub: "across all rounds", color: "var(--success)" },
             { label: "Avg Win Rate", value: `${avgWinRate.toFixed(1)}%`, sub: "all buyers" },
-            { label: "Top Scorer", value: buyers[0]?.company_name || "—", sub: `Score ${buyers[0]?.buyer_score?.toFixed(1) || 0}`, color: "#fbbf24" },
+            { label: "Top Scorer", value: buyers[0]?.company_name || "—", sub: `Score ${buyers[0]?.buyer_score?.toFixed(1) || 0}`, color: "var(--warning)" },
           ].map(k => (
             <div key={k.label} className="glass" style={{ borderRadius: "12px", padding: "16px 18px" }}>
               <div style={{ color: "var(--text-3)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "6px" }}>{k.label}</div>
@@ -172,8 +172,8 @@ export default function BuyerComparePage() {
                 key={v}
                 onClick={() => setView(v)}
                 style={{
-                  background: view === v ? "rgba(61,129,227,0.25)" : "none",
-                  border: view === v ? "1px solid rgba(61,129,227,0.4)" : "1px solid transparent",
+                  background: view === v ? "var(--brand-dim)" : "none",
+                  border: view === v ? "1px solid var(--brand-dim)" : "1px solid transparent",
                   borderRadius: "8px",
                   color: view === v ? "var(--text-1)" : "var(--text-3)",
                   cursor: "pointer",
@@ -192,8 +192,8 @@ export default function BuyerComparePage() {
                 key={opt.key}
                 onClick={() => setSortKey(opt.key)}
                 style={{
-                  background: sortKey === opt.key ? "rgba(61,129,227,0.2)" : "var(--surface)",
-                  border: `1px solid ${sortKey === opt.key ? "rgba(61,129,227,0.4)" : "var(--border)"}`,
+                  background: sortKey === opt.key ? "var(--brand-dim)" : "var(--surface)",
+                  border: `1px solid ${sortKey === opt.key ? "var(--brand-dim)" : "var(--border)"}`,
                   borderRadius: "8px",
                   color: sortKey === opt.key ? "var(--text-1)" : "var(--text-3)",
                   cursor: "pointer",
@@ -206,7 +206,7 @@ export default function BuyerComparePage() {
           </div>
 
           <label style={{ display: "flex", alignItems: "center", gap: "7px", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-3)" }}>
-            <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} style={{ accentColor: "#3D81E3" }} />
+            <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} style={{ accentColor: "var(--brand)" }} />
             Show inactive
           </label>
         </div>
@@ -219,19 +219,19 @@ export default function BuyerComparePage() {
                 borderRadius: "14px",
                 padding: "20px 22px",
                 opacity: b.is_active ? 1 : 0.5,
-                border: idx === 0 ? "1px solid rgba(61,129,227,0.25)" : "1px solid var(--border)",
+                border: idx === 0 ? "1px solid var(--brand-dim)" : "1px solid var(--border)",
               }}>
                 {/* Row header */}
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    {idx === 0 && <span style={{ fontSize: "0.7rem", background: "rgba(251,191,36,0.15)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "6px", padding: "2px 8px", fontWeight: 700, letterSpacing: "0.04em" }}>TOP</span>}
+                    {idx === 0 && <span style={{ fontSize: "0.7rem", background: "var(--warning-dim)", color: "var(--warning)", border: "1px solid var(--warning-dim)", borderRadius: "6px", padding: "2px 8px", fontWeight: 700, letterSpacing: "0.04em" }}>TOP</span>}
                     <div>
                       <Link href={`/admin/buyers/${b.id}`} style={{ textDecoration: "none" }}>
                         <div style={{ fontWeight: 700, color: "var(--text-1)", fontSize: "0.95rem" }}>{b.company_name}</div>
                       </Link>
                       <div style={{ color: "var(--text-3)", fontSize: "0.75rem" }}>{b.email}</div>
                     </div>
-                    {!b.is_active && <span style={{ fontSize: "0.7rem", color: "#f87171", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: "6px", padding: "2px 8px" }}>Inactive</span>}
+                    {!b.is_active && <span style={{ fontSize: "0.7rem", color: "var(--danger)", background: "var(--danger-dim)", border: "1px solid var(--danger-dim)", borderRadius: "6px", padding: "2px 8px" }}>Inactive</span>}
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <ScoreDot score={b.buyer_score} />
@@ -247,11 +247,11 @@ export default function BuyerComparePage() {
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                       <span style={{ fontSize: "0.73rem", color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Value Awarded</span>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: b.total_deal_value > 0 ? "#34d399" : "var(--text-4)" }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: b.total_deal_value > 0 ? "var(--success)" : "var(--text-4)" }}>
                         {b.total_deal_value > 0 ? fmt(b.total_deal_value) : "—"}
                       </span>
                     </div>
-                    <Bar pct={b.total_deal_value / maxValue * 100} color="#34d399" height={6} />
+                    <Bar pct={b.total_deal_value / maxValue * 100} color="var(--success)" height={6} />
                     <div style={{ color: "var(--text-4)", fontSize: "0.7rem", marginTop: "4px" }}>{b.total_deals_won} deals won</div>
                   </div>
 
@@ -259,11 +259,11 @@ export default function BuyerComparePage() {
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                       <span style={{ fontSize: "0.73rem", color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Win Rate</span>
-                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: b.win_rate_pct >= 50 ? "#34d399" : b.win_rate_pct >= 25 ? "#fbbf24" : "#f87171" }}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: b.win_rate_pct >= 50 ? "var(--success)" : b.win_rate_pct >= 25 ? "var(--warning)" : "var(--danger)" }}>
                         {b.win_rate_pct.toFixed(1)}%
                       </span>
                     </div>
-                    <Bar pct={b.win_rate_pct} color={b.win_rate_pct >= 50 ? "#34d399" : b.win_rate_pct >= 25 ? "#fbbf24" : "#f87171"} height={6} />
+                    <Bar pct={b.win_rate_pct} color={b.win_rate_pct >= 50 ? "var(--success)" : b.win_rate_pct >= 25 ? "var(--warning)" : "var(--danger)"} height={6} />
                     <div style={{ color: "var(--text-4)", fontSize: "0.7rem", marginTop: "4px" }}>
                       {b.total_lines_won}/{b.total_lines_bid} lines
                     </div>
@@ -275,7 +275,7 @@ export default function BuyerComparePage() {
                       <span style={{ fontSize: "0.73rem", color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Activity</span>
                       <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-2)" }}>{b.total_lines_bid} lines</span>
                     </div>
-                    <Bar pct={b.total_lines_bid / maxLines * 100} color="#60a5fa" height={6} />
+                    <Bar pct={b.total_lines_bid / maxLines * 100} color="var(--info)" height={6} />
                     <div style={{ color: "var(--text-4)", fontSize: "0.7rem", marginTop: "4px" }}>
                       Last bid: {fmtDate(b.last_bid_at)}
                     </div>
@@ -287,9 +287,9 @@ export default function BuyerComparePage() {
                   <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "12px" }}>
                     <span style={{ fontSize: "0.72rem", color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>Margin Contribution</span>
                     <div style={{ flex: 1 }}>
-                      <Bar pct={b.total_margin_contribution / maxMargin * 100} color="#a78bfa" height={4} />
+                      <Bar pct={b.total_margin_contribution / maxMargin * 100} color="var(--violet-bright)" height={4} />
                     </div>
-                    <span style={{ fontSize: "0.82rem", color: "#a78bfa", fontWeight: 700, flexShrink: 0 }}>{fmt(b.total_margin_contribution)}</span>
+                    <span style={{ fontSize: "0.82rem", color: "var(--violet-bright)", fontWeight: 700, flexShrink: 0 }}>{fmt(b.total_margin_contribution)}</span>
                   </div>
                 )}
               </div>
@@ -340,14 +340,14 @@ export default function BuyerComparePage() {
                               <span style={{ color: "var(--text-4)", fontSize: "0.7rem" }}>—</span>
                             </div>
                           ) : rp.lines_won === 0 ? (
-                            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1px" }}>
-                              <span style={{ fontSize: "0.65rem", color: "#f87171", fontWeight: 700 }}>{rp.lines_bid}</span>
-                              <span style={{ fontSize: "0.55rem", color: "rgba(248,113,113,0.6)" }}>bid</span>
+                            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--danger-dim)", border: "1px solid var(--danger-dim)", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1px" }}>
+                              <span style={{ fontSize: "0.65rem", color: "var(--danger)", fontWeight: 700 }}>{rp.lines_bid}</span>
+                              <span style={{ fontSize: "0.55rem", color: "var(--danger-dim)" }}>bid</span>
                             </div>
                           ) : (
-                            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1px" }}>
-                              <span style={{ fontSize: "0.65rem", color: "#34d399", fontWeight: 700 }}>{rp.lines_won}</span>
-                              <span style={{ fontSize: "0.55rem", color: "rgba(52,211,153,0.6)" }}>won</span>
+                            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--success-dim)", border: "1px solid var(--success-dim)", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1px" }}>
+                              <span style={{ fontSize: "0.65rem", color: "var(--success)", fontWeight: 700 }}>{rp.lines_won}</span>
+                              <span style={{ fontSize: "0.55rem", color: "var(--success-dim)" }}>won</span>
                             </div>
                           )}
                         </td>
@@ -355,7 +355,7 @@ export default function BuyerComparePage() {
                       <td style={{ textAlign: "center" }}>
                         <span style={{
                           padding: "3px 10px", borderRadius: "100px", fontSize: "0.75rem", fontWeight: 700,
-                          background: "rgba(61,129,227,0.1)", color: "#60a5fa",
+                          background: "var(--brand-dim)", color: "var(--info)",
                         }}>
                           {b.rounds_participated}
                         </span>
@@ -369,8 +369,8 @@ export default function BuyerComparePage() {
             {/* Legend */}
             <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border)", display: "flex", gap: "16px", flexWrap: "wrap" }}>
               {[
-                { color: "rgba(52,211,153,0.12)", border: "rgba(52,211,153,0.25)", text: "#34d399", label: "Won lines" },
-                { color: "rgba(248,113,113,0.1)", border: "rgba(248,113,113,0.2)", text: "#f87171", label: "Bid, no wins" },
+                { color: "var(--success-dim)", border: "var(--success-dim)", text: "var(--success)", label: "Won lines" },
+                { color: "var(--danger-dim)", border: "var(--danger-dim)", text: "var(--danger)", label: "Bid, no wins" },
                 { color: "var(--surface)", border: "transparent", text: "var(--text-4)", label: "Not participated" },
               ].map(l => (
                 <div key={l.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>

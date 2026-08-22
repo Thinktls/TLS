@@ -64,8 +64,8 @@ function ResultsInner() {
               {rounds.map(r => (
                 <button key={r.id} onClick={() => pick(r.id)} style={{
                   padding: "7px 18px", borderRadius: "100px", cursor: "pointer",
-                  background: selected === r.id ? "rgba(61,129,227,0.2)" : "var(--bg-2)",
-                  border: `1px solid ${selected === r.id ? "rgba(61,129,227,0.4)" : "var(--border)"}`,
+                  background: selected === r.id ? "var(--brand-dim)" : "var(--bg-2)",
+                  border: `1px solid ${selected === r.id ? "var(--brand-dim)" : "var(--border)"}`,
                   color: selected === r.id ? "var(--text-1)" : "var(--text-3)",
                   fontSize: "0.82rem", fontWeight: selected === r.id ? 700 : 400,
                   transition: "all 0.15s", fontFamily: "inherit",
@@ -77,7 +77,7 @@ function ResultsInner() {
 
             {loading && (
               <div style={{ display: "flex", justifyContent: "center", padding: "48px" }}>
-                <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
             )}
@@ -88,8 +88,8 @@ function ResultsInner() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                     {[
-                      { label: "Won",      val: result.won,  bg: "rgba(16,185,129,0.1)",  border: "rgba(16,185,129,0.2)",  color: "#34d399" },
-                      { label: "Lost",     val: result.lost, bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.15)", color: "#f87171" },
+                      { label: "Won",      val: result.won,  bg: "var(--success-dim)",  border: "var(--success-dim)",  color: "var(--success)" },
+                      { label: "Lost",     val: result.lost, bg: "var(--danger-dim)",  border: "var(--danger-dim)", color: "var(--danger)" },
                       { label: "Win Rate", val: winRate ? `${winRate}%` : "—", bg: "var(--surface)", border: "var(--border)", color: "var(--text-1)" },
                     ].map(({ label, val, bg, border, color }) => (
                       <div key={label} style={{ padding: "12px 20px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius)" }}>
@@ -109,7 +109,7 @@ function ResultsInner() {
                   {(["all","WON","LOST","model"] as const).map(f => (
                     <button key={f} onClick={() => setFilterOutcome(f)} style={{
                       padding: "5px 14px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none",
-                      background: filterOutcome === f ? "rgba(61,129,227,0.18)" : "transparent",
+                      background: filterOutcome === f ? "var(--brand-dim)" : "transparent",
                       color: filterOutcome === f ? "var(--text-1)" : "var(--text-4)",
                       fontWeight: filterOutcome === f ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
                     }}>
@@ -137,10 +137,10 @@ function ResultsInner() {
                           <tr key={i}>
                             <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--text-1)" }}>{r.model}</td>
                             <td style={{ maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-3)" }}>{r.description || "—"}</td>
-                            <td style={{ textAlign: "right", color: r.won > 0 ? "#34d399" : "var(--text-4)", fontWeight: r.won > 0 ? 700 : 400 }}>{r.won}</td>
-                            <td style={{ textAlign: "right", color: r.lost > 0 ? "#60a5fa" : "var(--text-4)" }}>{r.lost}</td>
+                            <td style={{ textAlign: "right", color: r.won > 0 ? "var(--success)" : "var(--text-4)", fontWeight: r.won > 0 ? 700 : 400 }}>{r.won}</td>
+                            <td style={{ textAlign: "right", color: r.lost > 0 ? "var(--info)" : "var(--text-4)" }}>{r.lost}</td>
                             <td style={{ textAlign: "right", fontFamily: "monospace", color: "var(--text-2)" }}>{r.per_item != null ? `$${r.per_item.toFixed(2)}` : "—"}</td>
-                            <td style={{ textAlign: "right", fontFamily: "monospace", color: "#34d399" }}>{r.won_value > 0 ? `$${r.won_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "—"}</td>
+                            <td style={{ textAlign: "right", fontFamily: "monospace", color: "var(--success)" }}>{r.won_value > 0 ? `$${r.won_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "—"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -166,14 +166,14 @@ function ResultsInner() {
                     </thead>
                     <tbody>
                       {filtered.map((line, i) => (
-                        <tr key={i} style={{ background: line.outcome === "WON" ? "rgba(16,185,129,0.03)" : "transparent" }}>
-                          <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: line.outcome === "WON" ? "#34d399" : "#60a5fa" }}>{line.part_number}</td>
+                        <tr key={i} style={{ background: line.outcome === "WON" ? "var(--success-dim)" : "transparent" }}>
+                          <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: line.outcome === "WON" ? "var(--success)" : "var(--info)" }}>{line.part_number}</td>
                           <td style={{ maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{line.description || "—"}</td>
                           <td style={{ textAlign: "right", color: "var(--text-3)" }}>{line.quantity ?? "—"}</td>
                           <td style={{ textAlign: "right", fontFamily: "monospace" }}>
                             {line.your_price != null ? `$${line.your_price.toFixed(2)}` : "—"}
                           </td>
-                          <td style={{ textAlign: "right", fontFamily: "monospace", color: line.outcome === "WON" ? "#34d399" : "var(--text-3)" }}>
+                          <td style={{ textAlign: "right", fontFamily: "monospace", color: line.outcome === "WON" ? "var(--success)" : "var(--text-3)" }}>
                             {line.winning_price != null ? `$${line.winning_price.toFixed(2)}` : "—"}
                           </td>
                           <td style={{ textAlign: "center" }}>
@@ -202,7 +202,7 @@ function ResultsInner() {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={<BuyerLayout><div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}><div style={{ width: "24px", height: "24px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div></BuyerLayout>}>
+    <Suspense fallback={<BuyerLayout><div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}><div style={{ width: "24px", height: "24px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div></BuyerLayout>}>
       <ResultsInner />
     </Suspense>
   );

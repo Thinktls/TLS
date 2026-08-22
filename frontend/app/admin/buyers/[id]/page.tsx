@@ -71,7 +71,7 @@ export default function BuyerProfilePage() {
   if (loading) return (
     <AdminLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </AdminLayout>
@@ -79,16 +79,16 @@ export default function BuyerProfilePage() {
 
   if (!profile) return (
     <AdminLayout>
-      <div style={{ color: "#f87171", paddingTop: "60px", textAlign: "center" }}>Buyer not found.</div>
+      <div style={{ color: "var(--danger)", paddingTop: "60px", textAlign: "center" }}>Buyer not found.</div>
     </AdminLayout>
   );
 
   const stats: [string, string | number, string][] = [
-    stat("Win Rate",         `${profile.win_rate.toFixed(1)}%`,  profile.win_rate > 50 ? "#34d399" : profile.win_rate > 25 ? "#fbbf24" : "#f87171"),
-    stat("Lines Won",        profile.total_lines_won,            "#34d399"),
+    stat("Win Rate",         `${profile.win_rate.toFixed(1)}%`,  profile.win_rate > 50 ? "var(--success)" : profile.win_rate > 25 ? "var(--warning)" : "var(--danger)"),
+    stat("Lines Won",        profile.total_lines_won,            "var(--success)"),
     stat("Lines Bid",        profile.total_lines_bid,            "var(--text-1)"),
-    stat("Deals Awarded",    profile.total_deals_won,            "#a78bfa"),
-    stat("Margin Contrib.",  `$${profile.total_margin_contribution.toLocaleString()}`, "#60a5fa"),
+    stat("Deals Awarded",    profile.total_deals_won,            "var(--violet-bright)"),
+    stat("Margin Contrib.",  `$${profile.total_margin_contribution.toLocaleString()}`, "var(--info)"),
     stat("Deal Value Won",   `$${profile.total_deal_value.toLocaleString()}`, "var(--text-1)"),
   ];
 
@@ -116,8 +116,8 @@ export default function BuyerProfilePage() {
               borderRadius: "100px",
               fontSize: "0.72rem",
               fontWeight: 600,
-              background: profile.is_active ? "rgba(52,211,153,0.15)" : "rgba(239,68,68,0.12)",
-              color: profile.is_active ? "#34d399" : "#f87171",
+              background: profile.is_active ? "var(--success-dim)" : "var(--danger-dim)",
+              color: profile.is_active ? "var(--success)" : "var(--danger)",
             }}>
               {profile.is_active ? "Active" : "Disabled"}
             </span>
@@ -135,9 +135,9 @@ export default function BuyerProfilePage() {
         {msg && (
           <div style={{
             marginBottom: "16px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
-            background: msgType === "ok" ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
-            border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: msgType === "ok" ? "#34d399" : "#f87171",
+            background: msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)",
+            border: `1px solid ${msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)"}`,
+            color: msgType === "ok" ? "var(--success)" : "var(--danger)",
           }}>{msg}</div>
         )}
 
@@ -154,7 +154,7 @@ export default function BuyerProfilePage() {
             <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Buyer Score
             </p>
-            <p style={{ fontSize: "2.4rem", fontWeight: 700, color: "#a78bfa", margin: 0 }}>
+            <p style={{ fontSize: "2.4rem", fontWeight: 700, color: "var(--violet-bright)", margin: 0 }}>
               {profile.buyer_score.toFixed(0)}
             </p>
             <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "6px 0 0" }}>
@@ -170,7 +170,7 @@ export default function BuyerProfilePage() {
             <p style={{ fontSize: "0.7rem", color: "var(--text-3)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Fluff %
             </p>
-            <p style={{ fontSize: "2.4rem", fontWeight: 700, color: "#fbbf24", margin: 0 }}>
+            <p style={{ fontSize: "2.4rem", fontWeight: 700, color: "var(--warning)", margin: 0 }}>
               {profile.fluff_percentage}%
             </p>
             <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "6px 0 0" }}>

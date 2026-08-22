@@ -188,7 +188,7 @@ export default function BuyersPage() {
           <div>
             <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-1)", letterSpacing: "-0.04em", margin: "0 0 4px" }}>Buyers</h1>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>
-              {buyers.length} buyer{buyers.length !== 1 ? "s" : ""} · <span style={{ color: "#34d399" }}>{signedInCount} signed in</span>
+              {buyers.length} buyer{buyers.length !== 1 ? "s" : ""} · <span style={{ color: "var(--success)" }}>{signedInCount} signed in</span>
             </p>
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -238,9 +238,9 @@ export default function BuyersPage() {
             {testResult && (
               <div style={{
                 marginTop: "12px", padding: "10px 14px", borderRadius: "8px", fontSize: "0.82rem",
-                background: testResult.ok ? "rgba(52,211,153,0.1)" : "rgba(239,68,68,0.1)",
-                border: `1px solid ${testResult.ok ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
-                color: testResult.ok ? "#34d399" : "#f87171", wordBreak: "break-word",
+                background: testResult.ok ? "var(--success-bg)" : "var(--danger-bg)",
+                border: `1px solid ${testResult.ok ? "var(--success-border)" : "var(--danger-border)"}`,
+                color: testResult.ok ? "var(--success)" : "var(--danger)", wordBreak: "break-word",
               }}>
                 {testResult.text}
               </div>
@@ -252,9 +252,9 @@ export default function BuyersPage() {
         {msg && (
           <div style={{
             marginBottom: "16px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
-            background: msgType === "ok" ? "rgba(52,211,153,0.1)" : "rgba(239,68,68,0.1)",
-            border: `1px solid ${msgType === "ok" ? "rgba(52,211,153,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: msgType === "ok" ? "#34d399" : "#f87171",
+            background: msgType === "ok" ? "var(--success-bg)" : "var(--danger-bg)",
+            border: `1px solid ${msgType === "ok" ? "var(--success-border)" : "var(--danger-border)"}`,
+            color: msgType === "ok" ? "var(--success)" : "var(--danger)",
           }}>
             {msg}
           </div>
@@ -264,10 +264,10 @@ export default function BuyersPage() {
         {newCredentials && (
           <div style={{
             marginBottom: "20px", padding: "20px 22px", borderRadius: "14px",
-            background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.3)",
+            background: "var(--info-bg)", border: "1px solid var(--info-border)",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-              <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#60a5fa", margin: 0 }}>
+              <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--info)", margin: 0 }}>
                 ✓ Credentials ready — share these with the buyer
               </p>
               <button onClick={() => setNewCredentials(null)} style={{ background: "none", border: "none", color: "var(--text-3)", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>✕</button>
@@ -279,21 +279,21 @@ export default function BuyersPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ color: "var(--text-3)", width: "70px", fontFamily: "inherit", fontSize: "0.75rem" }}>Password</span>
-                <span style={{ color: "#34d399", background: "rgba(52,211,153,0.08)", padding: "4px 10px", borderRadius: "6px", letterSpacing: "0.05em" }}>{newCredentials.password}</span>
+                <span style={{ color: "var(--success)", background: "var(--success-bg)", padding: "4px 10px", borderRadius: "6px", letterSpacing: "0.05em" }}>{newCredentials.password}</span>
                 <button
                   onClick={() => navigator.clipboard.writeText(newCredentials.password).then(() => flash("✓ Password copied"))}
-                  style={{ fontSize: "0.72rem", color: "#60a5fa", background: "none", border: "1px solid rgba(61,129,227,0.3)", borderRadius: "5px", padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
+                  style={{ fontSize: "0.72rem", color: "var(--info)", background: "none", border: "1px solid var(--info-border)", borderRadius: "5px", padding: "2px 8px", cursor: "pointer", fontFamily: "inherit" }}
                 >
                   Copy
                 </button>
               </div>
             </div>
             {newCredentials.emailError ? (
-              <div style={{ marginTop: "12px", padding: "9px 12px", borderRadius: "8px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171", fontSize: "0.75rem", wordBreak: "break-word" }}>
+              <div style={{ marginTop: "12px", padding: "9px 12px", borderRadius: "8px", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", color: "var(--danger)", fontSize: "0.75rem", wordBreak: "break-word" }}>
                 ⚠ The invite email did NOT send: {newCredentials.emailError} — share the credentials above manually, and use “✉ Email check” to diagnose.
               </div>
             ) : (
-              <p style={{ fontSize: "0.72rem", color: "#34d399", margin: "10px 0 0" }}>
+              <p style={{ fontSize: "0.72rem", color: "var(--success)", margin: "10px 0 0" }}>
                 ✓ Login credentials were emailed to the buyer.
               </p>
             )}
@@ -304,14 +304,14 @@ export default function BuyersPage() {
         {showForm && (
           <form onSubmit={createBuyer} style={{
             background: "var(--bg-2)",
-            border: "1px solid rgba(61,129,227,0.25)",
+            border: "1px solid var(--info-border)",
             borderRadius: "var(--radius-xl)",
             padding: "24px",
             marginBottom: "20px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
               <p style={{ fontSize: "0.65rem", fontWeight: 700, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>New Buyer</p>
-              <span style={{ fontSize: "0.72rem", color: "rgba(52,211,153,0.8)", display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--success)", display: "flex", alignItems: "center", gap: "5px" }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 Login credentials emailed automatically on create
               </span>
@@ -370,12 +370,12 @@ export default function BuyersPage() {
         {/* Buyers table */}
         {loading ? (
           <div style={{ display: "flex", justifyContent: "center", paddingTop: "60px" }}>
-            <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+            <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--border)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         ) : loadError ? (
           <div style={{ textAlign: "center", paddingTop: "60px" }}>
-            <p style={{ color: "#f87171", fontSize: "0.9rem", marginBottom: "12px" }}>Failed to load buyers.</p>
+            <p style={{ color: "var(--danger)", fontSize: "0.9rem", marginBottom: "12px" }}>Failed to load buyers.</p>
             <button onClick={load} className="btn-ghost" style={{ fontSize: "0.82rem" }}>Retry</button>
           </div>
         ) : buyers.length === 0 ? (
@@ -424,7 +424,7 @@ export default function BuyersPage() {
                             style={{
                               width: "64px",
                               background: "var(--surface-hover)",
-                              border: "1px solid rgba(61,129,227,0.4)",
+                              border: "1px solid var(--info-border)",
                               borderRadius: "6px",
                               padding: "4px 8px",
                               color: "var(--text-1)",
@@ -432,7 +432,7 @@ export default function BuyersPage() {
                               outline: "none",
                             }}
                           />
-                          <button aria-label="Save fluff percentage" onClick={() => saveFluff(b.id)} style={{ fontSize: "0.72rem", color: "#34d399", background: "none", border: "none", cursor: "pointer" }}>✓</button>
+                          <button aria-label="Save fluff percentage" onClick={() => saveFluff(b.id)} style={{ fontSize: "0.72rem", color: "var(--success)", background: "none", border: "none", cursor: "pointer" }}>✓</button>
                           <button aria-label="Cancel fluff edit" onClick={() => setEditingFluff(null)} style={{ fontSize: "0.72rem", color: "var(--text-3)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
                         </div>
                       ) : (
@@ -458,11 +458,11 @@ export default function BuyersPage() {
                     <td style={{ textAlign: "center" }}>
                       {b.last_login ? (
                         <span title={`Last sign-in ${fmtDate(b.last_login)}`} style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
-                          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#34d399" }}>Signed in</span>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--success)" }}>Signed in</span>
                           <span style={{ fontSize: "0.66rem", color: "var(--text-4)" }}>{fmtDate(b.last_login)}</span>
                         </span>
                       ) : (
-                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#fbbf24" }} title="Invite sent but never signed in">Not yet</span>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--warning)" }} title="Invite sent but never signed in">Not yet</span>
                       )}
                     </td>
 
@@ -482,9 +482,9 @@ export default function BuyersPage() {
                           disabled={toggling === b.id}
                           style={{
                             padding: "4px 12px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
-                            background: b.is_active ? "rgba(239,68,68,0.1)" : "rgba(52,211,153,0.1)",
-                            color: b.is_active ? "#f87171" : "#34d399",
-                            border: `1px solid ${b.is_active ? "rgba(239,68,68,0.2)" : "rgba(52,211,153,0.2)"}`,
+                            background: b.is_active ? "var(--danger-bg)" : "var(--success-bg)",
+                            color: b.is_active ? "var(--danger)" : "var(--success)",
+                            border: `1px solid ${b.is_active ? "var(--danger-border)" : "var(--success-border)"}`,
                           }}
                         >
                           {toggling === b.id ? "…" : b.is_active ? "Disable" : "Enable"}
@@ -496,8 +496,8 @@ export default function BuyersPage() {
                           title="Reset password and resend login credentials"
                           style={{
                             padding: "4px 10px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
-                            background: "rgba(61,129,227,0.1)", color: "#60a5fa",
-                            border: "1px solid rgba(61,129,227,0.2)",
+                            background: "var(--info-bg)", color: "var(--info)",
+                            border: "1px solid var(--info-border)",
                           }}
                         >
                           {resending === b.id ? "…" : "Resend"}
@@ -509,8 +509,8 @@ export default function BuyersPage() {
                           title="Permanently delete this buyer"
                           style={{
                             padding: "4px 10px", borderRadius: "6px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit",
-                            background: "rgba(239,68,68,0.08)", color: "#f87171",
-                            border: "1px solid rgba(239,68,68,0.2)",
+                            background: "var(--danger-bg)", color: "var(--danger)",
+                            border: "1px solid var(--danger-border)",
                           }}
                         >
                           {deleting === b.id ? "…" : "Delete"}

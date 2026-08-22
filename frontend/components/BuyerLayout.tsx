@@ -83,9 +83,9 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{
               width: "32px", height: "32px", borderRadius: "9px",
-              background: "linear-gradient(135deg, #3D81E3, #6366f1)",
+              background: "var(--brand-gradient)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 2px 8px rgba(61,129,227,0.15)",
+              boxShadow: "0 2px 8px var(--brand-dim)",
             }}><LogoMark /></div>
             <div>
               <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em" }}>ThinkTLS</div>
@@ -113,7 +113,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         </nav>
 
         {/* Help callout */}
-        <div style={{ margin: "0 10px 10px", padding: "12px 14px", background: "rgba(61,129,227,0.08)", border: "1px solid rgba(61,129,227,0.15)", borderRadius: "10px" }}>
+        <div style={{ margin: "0 10px 10px", padding: "12px 14px", background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", borderRadius: "10px" }}>
           <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 3px" }}>Need help?</p>
           <p style={{ fontSize: "0.68rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>
             Email <span style={{ color: "var(--text-3)" }}>brokers@thinktls.com</span>
@@ -124,15 +124,15 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         <div style={{ padding: "14px 16px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{
             width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0,
-            background: "linear-gradient(135deg, rgba(61,129,227,0.3), rgba(99,102,241,0.3))",
-            border: "1px solid rgba(61,129,227,0.3)",
+            background: "linear-gradient(135deg, var(--brand-dim), var(--brand-dim))",
+            border: "1px solid var(--brand-dim)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "0.72rem", fontWeight: 700, color: "#a0bfff",
+            fontSize: "0.72rem", fontWeight: 700, color: "var(--info)",
           }}>{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text-2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name || "Buyer"}</p>
             <button onClick={logout} style={{ fontSize: "0.68rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
             >Sign out</button>
           </div>

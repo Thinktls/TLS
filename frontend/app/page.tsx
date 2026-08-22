@@ -141,7 +141,7 @@ export default function LandingPage() {
         body { margin: 0; }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "#0c0c0c", color: "#ffffff", fontFamily: "Inter, system-ui, sans-serif", overflowX: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text-1)", fontFamily: "Inter, system-ui, sans-serif", overflowX: "hidden" }}>
 
         {/* Background video */}
         <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>

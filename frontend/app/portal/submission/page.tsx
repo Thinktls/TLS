@@ -56,7 +56,7 @@ function SubmissionInner() {
   if (loading) return (
     <BuyerLayout>
       <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: "28px", height: "28px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </BuyerLayout>
@@ -124,37 +124,37 @@ function SubmissionInner() {
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
               {[
                 { label: "Total Lines", val: lines.length, color: "var(--text-1)", bg: "var(--surface)", border: "var(--border)" },
-                { label: "Matched",     val: matchedCount, color: "#34d399", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
-                { label: "Exceptions",  val: exceptionCount, color: exceptionCount > 0 ? "#fb923c" : "var(--text-3)", bg: exceptionCount > 0 ? "rgba(251,146,60,0.07)" : "var(--surface)", border: exceptionCount > 0 ? "rgba(251,146,60,0.2)" : "var(--border)" },
-                { label: "Match Rate",  val: matchRate ? `${matchRate}%` : "—", color: matchRate && Number(matchRate) >= 80 ? "#34d399" : "#fbbf24", bg: "var(--surface)", border: "var(--border)" },
+                { label: "Matched",     val: matchedCount, color: "var(--success)", bg: "var(--success-dim)", border: "var(--success-dim)" },
+                { label: "Exceptions",  val: exceptionCount, color: exceptionCount > 0 ? "var(--orange)" : "var(--text-3)", bg: exceptionCount > 0 ? "var(--orange-dim)" : "var(--surface)", border: exceptionCount > 0 ? "var(--orange-dim)" : "var(--border)" },
+                { label: "Match Rate",  val: matchRate ? `${matchRate}%` : "—", color: matchRate && Number(matchRate) >= 80 ? "var(--success)" : "var(--warning)", bg: "var(--surface)", border: "var(--border)" },
               ].map(({ label, val, color, bg, border }) => (
                 <div key={label} style={{ padding: "14px 20px", background: bg, border: `1px solid ${border}`, borderRadius: "var(--radius-lg)" }}>
                   <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 5px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{label}</p>
                   <p style={{ fontSize: "1.45rem", fontWeight: 800, color, margin: 0, letterSpacing: "-0.03em" }}>{val}</p>
                 </div>
               ))}
-              <div style={{ padding: "14px 20px", background: bidFile.status === "processed" ? "rgba(52,211,153,0.07)" : "rgba(239,68,68,0.07)", border: `1px solid ${bidFile.status === "processed" ? "rgba(52,211,153,0.2)" : "rgba(239,68,68,0.2)"}`, borderRadius: "var(--radius-lg)" }}>
+              <div style={{ padding: "14px 20px", background: bidFile.status === "processed" ? "var(--success-dim)" : "var(--danger-dim)", border: `1px solid ${bidFile.status === "processed" ? "var(--success-dim)" : "var(--danger-dim)"}`, borderRadius: "var(--radius-lg)" }}>
                 <p style={{ fontSize: "0.65rem", color: "var(--text-4)", margin: "0 0 5px", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>File Status</p>
-                <p style={{ fontSize: "1rem", fontWeight: 700, color: bidFile.status === "processed" ? "#34d399" : "#f87171", margin: 0, textTransform: "capitalize" }}>{bidFile.status}</p>
+                <p style={{ fontSize: "1rem", fontWeight: 700, color: bidFile.status === "processed" ? "var(--success)" : "var(--danger)", margin: 0, textTransform: "capitalize" }}>{bidFile.status}</p>
               </div>
             </div>
 
             {/* Offer terms the buyer submitted */}
             {bidFile.offer_terms && (
-              <div style={{ marginBottom: "16px", padding: "12px 16px", borderRadius: "10px", background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.22)" }}>
-                <p style={{ margin: "0 0 4px", fontSize: "0.68rem", fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.05em" }}>Your offer terms</p>
+              <div style={{ marginBottom: "16px", padding: "12px 16px", borderRadius: "10px", background: "var(--warning-dim)", border: "1px solid var(--warning-dim)" }}>
+                <p style={{ margin: "0 0 4px", fontSize: "0.68rem", fontWeight: 700, color: "var(--warning)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Your offer terms</p>
                 <p style={{ margin: 0, fontSize: "0.83rem", color: "var(--text-2)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{bidFile.offer_terms}</p>
               </div>
             )}
 
             {/* Alerts */}
             {bidFile.error_message && (
-              <div style={{ marginBottom: "16px", padding: "12px 16px", borderRadius: "10px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", fontSize: "0.83rem" }}>
+              <div style={{ marginBottom: "16px", padding: "12px 16px", borderRadius: "10px", background: "var(--danger-dim)", border: "1px solid var(--danger-dim)", color: "var(--danger)", fontSize: "0.83rem" }}>
                 <strong>Parse error:</strong> {bidFile.error_message}
               </div>
             )}
             {exceptionCount > 0 && (
-              <div style={{ marginBottom: "16px", padding: "12px 16px", borderRadius: "10px", background: "rgba(251,146,60,0.07)", border: "1px solid rgba(251,146,60,0.18)", color: "#fb923c", fontSize: "0.83rem", display: "flex", gap: "10px", alignItems: "center" }}>
+              <div style={{ marginBottom: "16px", padding: "12px 16px", borderRadius: "10px", background: "var(--orange-dim)", border: "1px solid var(--orange-dim)", color: "var(--orange)", fontSize: "0.83rem", display: "flex", gap: "10px", alignItems: "center" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 <span>{exceptionCount} line{exceptionCount > 1 ? "s" : ""} could not be automatically matched to the catalog. The admin will review these — no action needed from you.</span>
               </div>
@@ -165,7 +165,7 @@ function SubmissionInner() {
               {(["all", "matched", "exception"] as const).map(f => (
                 <button key={f} onClick={() => setFilter(f)} style={{
                   padding: "5px 14px", borderRadius: "7px", fontSize: "0.78rem", cursor: "pointer", border: "none",
-                  background: filter === f ? "rgba(61,129,227,0.18)" : "transparent",
+                  background: filter === f ? "var(--brand-dim)" : "transparent",
                   color: filter === f ? "var(--text-1)" : "var(--text-4)",
                   fontWeight: filter === f ? 600 : 400, transition: "all 0.15s", fontFamily: "inherit",
                 }}>
@@ -190,9 +190,9 @@ function SubmissionInner() {
                 </thead>
                 <tbody>
                   {filtered.map(l => (
-                    <tr key={l.id} style={{ background: l.match_status === "matched" ? "rgba(16,185,129,0.02)" : l.match_status === "exception" ? "rgba(251,146,60,0.02)" : "transparent" }}>
+                    <tr key={l.id} style={{ background: l.match_status === "matched" ? "var(--success-dim)" : l.match_status === "exception" ? "var(--orange-dim)" : "transparent" }}>
                       <td style={{ color: "var(--text-4)", fontSize: "0.72rem" }}>{l.row_number ?? "—"}</td>
-                      <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: l.match_status === "matched" ? "#34d399" : "var(--text-1)" }}>{l.raw_part_number}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: l.match_status === "matched" ? "var(--success)" : "var(--text-1)" }}>{l.raw_part_number}</td>
                       <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.78rem", color: "var(--text-3)" }}>
                         {l.description || "—"}
                       </td>
@@ -211,7 +211,7 @@ function SubmissionInner() {
                       <td style={{ fontSize: "0.75rem" }}>
                         {l.matched_part_number ? (
                           <div>
-                            <div style={{ fontFamily: "monospace", color: "#34d399", fontSize: "0.78rem" }}>{l.matched_part_number}</div>
+                            <div style={{ fontFamily: "monospace", color: "var(--success)", fontSize: "0.78rem" }}>{l.matched_part_number}</div>
                             {l.matched_description && <div style={{ color: "var(--text-4)", fontSize: "0.7rem", marginTop: "1px", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.matched_description}</div>}
                           </div>
                         ) : (
@@ -240,7 +240,7 @@ export default function SubmissionPage() {
     <Suspense fallback={
       <BuyerLayout>
         <div style={{ display: "flex", justifyContent: "center", paddingTop: "80px" }}>
-          <div style={{ width: "24px", height: "24px", borderRadius: "50%", border: "2px solid rgba(61,129,227,0.3)", borderTopColor: "#3D81E3", animation: "spin 0.8s linear infinite" }} />
+          <div style={{ width: "24px", height: "24px", borderRadius: "50%", border: "2px solid var(--brand-dim)", borderTopColor: "var(--brand)", animation: "spin 0.8s linear infinite" }} />
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       </BuyerLayout>

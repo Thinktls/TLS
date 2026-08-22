@@ -49,12 +49,12 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "0.75rem", fontWeight: 700,
             background: step < current
-              ? "#059669"
+              ? "var(--success-strong)"
               : step === current
-                ? "#3D81E3"
+                ? "var(--brand)"
                 : "var(--surface)",
             color: step <= current ? "var(--text-1)" : "var(--text-4)",
-            border: step === current ? "2px solid rgba(61,129,227,0.5)" : "2px solid transparent",
+            border: step === current ? "2px solid var(--brand-dim)" : "2px solid transparent",
             transition: "all 0.2s",
           }}>
             {step < current ? "✓" : step}
@@ -62,7 +62,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
           {step < total && (
             <div style={{
               width: "40px", height: "1px",
-              background: step < current ? "#059669" : "var(--surface-hover)",
+              background: step < current ? "var(--success-strong)" : "var(--surface-hover)",
               transition: "background 0.3s",
             }} />
           )}
@@ -262,8 +262,8 @@ export default function NewRound() {
         {error && (
           <div style={{
             padding: "10px 14px", marginBottom: "16px",
-            background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)",
-            borderRadius: "9px", fontSize: "0.83rem", color: "#f87171",
+            background: "var(--danger-dim)", border: "1px solid var(--danger-dim)",
+            borderRadius: "9px", fontSize: "0.83rem", color: "var(--danger)",
           }}>
             {error}
           </div>
@@ -353,7 +353,7 @@ export default function NewRound() {
                 type="checkbox"
                 checked={form.reserve_price_enabled}
                 onChange={(e) => setForm({ ...form, reserve_price_enabled: e.target.checked })}
-                style={{ width: "16px", height: "16px", accentColor: "#3D81E3" }}
+                style={{ width: "16px", height: "16px", accentColor: "var(--brand)" }}
               />
               <span style={{ fontSize: "0.85rem", color: "var(--text-2)" }}>
                 Enable reserve price floor
@@ -368,14 +368,14 @@ export default function NewRound() {
                 type="checkbox"
                 checked={form.auto_approve_enabled}
                 onChange={(e) => setForm({ ...form, auto_approve_enabled: e.target.checked })}
-                style={{ width: "16px", height: "16px", accentColor: "#3D81E3", marginTop: "3px" }}
+                style={{ width: "16px", height: "16px", accentColor: "var(--brand)", marginTop: "3px" }}
               />
               <span style={{ fontSize: "0.85rem", color: "var(--text-2)" }}>
                 Auto-approve results when clean
                 <span style={{ display: "block", fontSize: "0.72rem", color: "var(--text-4)", fontWeight: 400 }}>
                   If processing finishes with <strong>no exceptions</strong>, automatically approve every deal and email buyers their results — no manual approval step. A round with any exception always stops for your review.
                 </span>
-                <span style={{ display: "block", fontSize: "0.72rem", color: "#fbbf24", fontWeight: 400, marginTop: "2px" }}>
+                <span style={{ display: "block", fontSize: "0.72rem", color: "var(--warning)", fontWeight: 400, marginTop: "2px" }}>
                   ⚠ Those buyer emails send automatically and can’t be recalled. Leave off if you want to review first.
                 </span>
               </span>
@@ -397,13 +397,13 @@ export default function NewRound() {
 
             {masterCount != null ? (
               <div style={{
-                background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)",
+                background: "var(--success-dim)", border: "1px solid var(--success-dim)",
                 borderRadius: "12px", padding: "18px 20px",
                 display: "flex", alignItems: "center", gap: "14px",
               }}>
                 <span style={{ fontSize: "1.5rem" }}>✓</span>
                 <div>
-                  <p style={{ fontWeight: 600, color: "#34d399", margin: "0 0 3px" }}>{masterCount.toLocaleString()} line items loaded</p>
+                  <p style={{ fontWeight: 600, color: "var(--success)", margin: "0 0 3px" }}>{masterCount.toLocaleString()} line items loaded</p>
                   <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: 0 }}>{masterFile?.name}</p>
                 </div>
                 <button
@@ -420,12 +420,12 @@ export default function NewRound() {
                 onDrop={handleMasterDrop}
                 onClick={() => masterFileRef.current?.click()}
                 style={{
-                  border: `1px dashed ${dragOver ? "rgba(61,129,227,0.6)" : "var(--border-mid)"}`,
+                  border: `1px dashed ${dragOver ? "var(--brand-dim)" : "var(--border-mid)"}`,
                   borderRadius: "14px",
                   padding: "40px 24px",
                   textAlign: "center",
                   cursor: working ? "default" : "pointer",
-                  background: dragOver ? "rgba(61,129,227,0.05)" : "transparent",
+                  background: dragOver ? "var(--brand-dim)" : "transparent",
                   transition: "all 0.2s",
                 }}
               >
@@ -462,7 +462,7 @@ export default function NewRound() {
                   });
                   a.click();
                 }}
-                style={{ fontSize: "0.72rem", color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                style={{ fontSize: "0.72rem", color: "var(--info)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
               >
                 Download sample CSV template
               </button>
@@ -498,7 +498,7 @@ export default function NewRound() {
                         ? new Set()
                         : new Set(buyers.map((b) => b.id))
                     )}
-                    style={{ fontSize: "0.75rem", color: "#60a5fa", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    style={{ fontSize: "0.75rem", color: "var(--info)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                   >
                     {selectedBuyers.size === buyers.length ? "Deselect All" : "Select All"}
                   </button>
@@ -516,8 +516,8 @@ export default function NewRound() {
                     style={{
                       display: "flex", alignItems: "center", gap: "12px",
                       padding: "10px 14px", borderRadius: "10px", cursor: "pointer",
-                      background: selectedBuyers.has(b.id) ? "rgba(61,129,227,0.1)" : "var(--surface)",
-                      border: `1px solid ${selectedBuyers.has(b.id) ? "rgba(61,129,227,0.25)" : "var(--border)"}`,
+                      background: selectedBuyers.has(b.id) ? "var(--brand-dim)" : "var(--surface)",
+                      border: `1px solid ${selectedBuyers.has(b.id) ? "var(--brand-dim)" : "var(--border)"}`,
                       transition: "all 0.15s",
                     }}
                   >
@@ -525,7 +525,7 @@ export default function NewRound() {
                       type="checkbox"
                       checked={selectedBuyers.has(b.id)}
                       onChange={() => toggleBuyer(b.id)}
-                      style={{ width: "15px", height: "15px", accentColor: "#3D81E3", flexShrink: 0 }}
+                      style={{ width: "15px", height: "15px", accentColor: "var(--brand)", flexShrink: 0 }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 500, color: "var(--text-1)", margin: 0, fontSize: "0.85rem" }}>{b.full_name}</p>
@@ -543,7 +543,7 @@ export default function NewRound() {
                 type="checkbox"
                 checked={sendInvites}
                 onChange={(e) => setSendInvites(e.target.checked)}
-                style={{ width: "15px", height: "15px", accentColor: "#3D81E3" }}
+                style={{ width: "15px", height: "15px", accentColor: "var(--brand)" }}
               />
               <span style={{ fontSize: "0.82rem", color: "var(--text-3)" }}>
                 Send invitation emails to selected buyers when round opens
@@ -592,11 +592,11 @@ export default function NewRound() {
 
             <div style={{
               padding: "12px 16px",
-              background: "rgba(251,146,60,0.08)",
-              border: "1px solid rgba(251,146,60,0.2)",
+              background: "var(--orange-dim)",
+              border: "1px solid var(--orange-dim)",
               borderRadius: "10px",
               fontSize: "0.8rem",
-              color: "rgba(251,191,36,0.8)",
+              color: "var(--warning-dim)",
             }}>
               Opening the round makes it live and visible to assigned buyers. This action cannot be undone — ensure everything is correct before proceeding.
             </div>
@@ -607,7 +607,7 @@ export default function NewRound() {
                 onClick={handleOpen}
                 disabled={working}
                 className="btn-brand"
-                style={{ flex: 1, padding: "10px", background: "#059669" }}
+                style={{ flex: 1, padding: "10px", background: "var(--success-strong)" }}
               >
                 {working ? "Opening..." : "Open Round"}
               </button>

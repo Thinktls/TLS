@@ -1,5 +1,5 @@
 /**
- * Design tokens â€” single source of truth for spacing, radius, typography, motion, and z-index.
+ * Design tokens — single source of truth for spacing, radius, typography, motion, and z-index.
  *
  * Colors are NOT duplicated here: the existing `app/globals.css` already defines a mature,
  * theme-aware color system (--bg, --text-1..4, --brand, --green, --amber, --red, --glass-*,
@@ -10,7 +10,7 @@
  *
  * Spacing/radius/typography ARE defined here (and mirrored as CSS vars in globals.css) because
  * inline components previously scattered raw px values (8,10,12,14,16,18,20,22,24,28,32,40,44...)
- * with no scale â€” that's the actual inconsistency to fix.
+ * with no scale — that'\''s the actual inconsistency to fix.
  */
 
 export const spacing = {
@@ -39,18 +39,18 @@ export const radius = {
 
 export const typography = {
   fontFamily: {
-    sans: "'Inter', system-ui, sans-serif",
-    mono: "'JetBrains Mono', ui-monospace, monospace",
+    sans: "'\''Inter'\'', system-ui, sans-serif",
+    mono: "'\''JetBrains Mono'\'', ui-monospace, monospace",
   },
   fontSize: {
-    xs: "0.75rem", // 12px â€” meta/labels
-    sm: "0.8125rem", // 13px â€” secondary text
-    base: "0.875rem", // 14px â€” body default (matches existing .dark-table, .glass-input)
+    xs: "0.75rem", // 12px — meta/labels
+    sm: "0.8125rem", // 13px — secondary text
+    base: "0.875rem", // 14px — body default (matches existing .dark-table, .glass-input)
     lg: "1rem", // 16px
     xl: "1.125rem", // 18px
-    "2xl": "1.5rem", // 24px â€” section headings
+    "2xl": "1.5rem", // 24px — section headings
     "3xl": "2rem", // 32px
-    "4xl": "2.6rem", // 41.6px â€” page hero (matches existing h1 usage)
+    "4xl": "2.6rem", // 41.6px — page hero (matches existing h1 usage)
   },
   fontWeight: { normal: 400, medium: 500, semibold: 600, bold: 700, extrabold: 800 },
   lineHeight: { tight: 1.25, normal: 1.5, relaxed: 1.75 },
@@ -74,7 +74,7 @@ export const zIndex = {
 
 export const breakpoints = { sm: 640, md: 768, lg: 1024, xl: 1280, "2xl": 1536 } as const;
 
-/** Canonical CSS custom properties already defined in globals.css â€” reference, not redefinition. */
+/** Canonical CSS custom properties already defined in globals.css — reference, not redefinition. */
 export const COLOR_VAR = {
   bg: "var(--bg)",
   bg1: "var(--bg-1)",
@@ -86,6 +86,24 @@ export const COLOR_VAR = {
   borderMid: "var(--border-mid)",
   brand: "var(--brand)",
   brandDim: "var(--brand-dim)",
+  brand2: "var(--brand-2)",
+  brandGradient: "var(--brand-gradient)",
+  success: "var(--success)",
+  successDim: "var(--success-dim)",
+  successStrong: "var(--success-strong)",
+  danger: "var(--danger)",
+  dangerDim: "var(--danger-dim)",
+  dangerStrong: "var(--danger-strong)",
+  warning: "var(--warning)",
+  warningDim: "var(--warning-dim)",
+  info: "var(--info)",
+  infoDim: "var(--info-dim)",
+  violetBright: "var(--violet-bright)",
+  violetDim: "var(--violet-dim)",
+  orange: "var(--orange)",
+  orangeDim: "var(--orange-dim)",
+  magenta: "var(--magenta)",
+  magentaDim: "var(--magenta-dim)",
   green: "var(--green)",
   amber: "var(--amber)",
   red: "var(--red)",

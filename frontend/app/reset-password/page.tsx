@@ -46,7 +46,7 @@ function ResetPasswordForm() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#0c0c0c",
+      background: "var(--bg)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -56,7 +56,7 @@ function ResetPasswordForm() {
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
             <div style={{
-              width: "36px", height: "36px", background: "#3D81E3",
+              width: "36px", height: "36px", background: "var(--brand)",
               borderRadius: "10px", display: "flex", alignItems: "center",
               justifyContent: "center", fontWeight: 800, color: "#ffffff",
             }}>T</div>
@@ -74,7 +74,7 @@ function ResetPasswordForm() {
               <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", marginBottom: "20px" }}>
                 Redirecting you to login…
               </p>
-              <Link href="/login" style={{ color: "#3D81E3", fontSize: "0.875rem", textDecoration: "none" }}>
+              <Link href="/login" style={{ color: "var(--brand)", fontSize: "0.875rem", textDecoration: "none" }}>
                 Go to Login →
               </Link>
             </div>
@@ -89,11 +89,11 @@ function ResetPasswordForm() {
 
               {error && (
                 <div style={{
-                  background: "rgba(239,68,68,0.1)",
+                  background: "var(--danger-dim)",
                   border: "1px solid rgba(239,68,68,0.25)",
                   borderRadius: "8px",
                   padding: "10px 14px",
-                  color: "#f87171",
+                  color: "var(--danger)",
                   fontSize: "0.85rem",
                   marginBottom: "18px",
                 }}>{error}</div>

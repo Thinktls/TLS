@@ -96,7 +96,7 @@ interface NotifItem {
   category: string; link: string | null; read: boolean; created_at: string;
 }
 const CATEGORY_COLOR: Record<string, string> = {
-  info: "#60a5fa", success: "#34d399", warning: "#fbbf24", error: "#f87171",
+  info: "var(--info)", success: "var(--success)", warning: "var(--warning)", error: "var(--danger)",
 };
 
 function NotificationBell() {
@@ -174,11 +174,11 @@ function NotificationBell() {
             {items.length === 0 && <p style={{ textAlign: "center", padding: "32px 0", color: "var(--text-4)", fontSize: "0.82rem" }}>All caught up</p>}
             {items.map(n => (
               <div key={n.id} onClick={() => { if (!n.read) markRead(n.id); if (n.link) window.location.href = n.link; }}
-                style={{ padding: "12px 16px", cursor: n.link ? "pointer" : "default", background: n.read ? "transparent" : "rgba(61,129,227,0.06)", borderBottom: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "flex-start", transition: "background 0.15s" }}
+                style={{ padding: "12px 16px", cursor: n.link ? "pointer" : "default", background: n.read ? "transparent" : "var(--brand-dim)", borderBottom: "1px solid var(--border)", display: "flex", gap: "10px", alignItems: "flex-start", transition: "background 0.15s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-hover)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = n.read ? "transparent" : "rgba(61,129,227,0.06)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = n.read ? "transparent" : "var(--brand-dim)"; }}
               >
-                <div style={{ width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, marginTop: "6px", background: n.read ? "var(--surface-hover)" : (CATEGORY_COLOR[n.category] || "#60a5fa") }} />
+                <div style={{ width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, marginTop: "6px", background: n.read ? "var(--surface-hover)" : (CATEGORY_COLOR[n.category] || "var(--info)") }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: "0.8rem", fontWeight: n.read ? 400 : 600, color: n.read ? "var(--text-3)" : "var(--text-1)", margin: "0 0 2px", lineHeight: 1.35 }}>{n.title}</p>
                   {n.body && <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.body}</p>}
@@ -241,9 +241,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin" onClick={closeSidebar} style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
             <div style={{
               width: "32px", height: "32px", borderRadius: "9px", flexShrink: 0,
-              background: "linear-gradient(135deg, #3D81E3, #6366f1)",
+              background: "var(--brand-gradient)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 2px 8px rgba(61,129,227,0.15)",
+              boxShadow: "0 2px 8px var(--brand-dim)",
             }}>
               <LogoMark />
             </div>
@@ -282,10 +282,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{ padding: "14px 16px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{
             width: "30px", height: "30px", borderRadius: "8px", flexShrink: 0,
-            background: "linear-gradient(135deg, rgba(61,129,227,0.3), rgba(139,92,246,0.3))",
-            border: "1px solid rgba(61,129,227,0.3)",
+            background: "linear-gradient(135deg, var(--brand-dim), var(--violet-dim))",
+            border: "1px solid var(--brand-dim)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "0.72rem", fontWeight: 700, color: "#a0bfff",
+            fontSize: "0.72rem", fontWeight: 700, color: "var(--info)",
           }}>{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text-2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -293,12 +293,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <Link href="/admin/profile" onClick={closeSidebar} style={{ fontSize: "0.68rem", color: "var(--text-4)", textDecoration: "none", transition: "color 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#a0bfff"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--info)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
               >Account</Link>
               <span style={{ fontSize: "0.68rem", color: "var(--border)" }}>·</span>
               <button onClick={logout} style={{ fontSize: "0.68rem", color: "var(--text-4)", background: "none", border: "none", cursor: "pointer", padding: 0, transition: "color 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#f87171"; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--text-4)"; }}
               >Sign out</button>
             </div>

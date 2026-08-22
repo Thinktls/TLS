@@ -91,7 +91,7 @@ function SetupPasswordInner() {
         .setup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
 
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#0c0c0c", overflow: "hidden", position: "relative" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)", overflow: "hidden", position: "relative" }}>
         <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
           <video autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.3 }} src={VIDEO_SRC} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(12,12,12,0.55) 0%, rgba(12,12,12,0.75) 100%)" }} />
@@ -121,20 +121,20 @@ function SetupPasswordInner() {
               <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)" }}>Checking invite...</div>
             ) : tokenInvalid ? (
               <div style={{
-                background: "rgba(239,68,68,0.12)",
+                background: "var(--danger-dim)",
                 border: "1px solid rgba(239,68,68,0.25)",
                 borderRadius: "16px",
                 padding: "28px",
                 textAlign: "center",
               }}>
-                <p style={{ color: "#f87171", fontWeight: 600, margin: "0 0 8px" }}>Invite link is invalid or expired</p>
+                <p style={{ color: "var(--danger)", fontWeight: 600, margin: "0 0 8px" }}>Invite link is invalid or expired</p>
                 <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.83rem", margin: 0 }}>
                   Please ask your ThinkTLS administrator to resend your invite.
                 </p>
               </div>
             ) : (
               <div style={{
-                background: "rgba(10,10,10,0.55)",
+                background: "var(--surface)",
                 border: "1px solid rgba(255,255,255,0.13)",
                 backdropFilter: "blur(24px)",
                 borderRadius: "28px",
@@ -174,11 +174,11 @@ function SetupPasswordInner() {
                   {error && (
                     <div style={{
                       padding: "10px 14px",
-                      background: "rgba(239,68,68,0.12)",
+                      background: "var(--danger-dim)",
                       border: "1px solid rgba(239,68,68,0.25)",
                       borderRadius: "10px",
                       fontSize: "0.82rem",
-                      color: "#f87171",
+                      color: "var(--danger)",
                     }}>
                       {error}
                     </div>

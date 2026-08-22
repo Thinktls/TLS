@@ -98,9 +98,9 @@ export default function NLQueryPage() {
                   }}
                   onMouseEnter={(e) => {
                     if (!loading) {
-                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(61,129,227,0.12)";
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--brand-dim)";
                       (e.currentTarget as HTMLButtonElement).style.color = "var(--text-1)";
-                      (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(61,129,227,0.3)";
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--brand-dim)";
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -119,11 +119,11 @@ export default function NLQueryPage() {
         {error && (
           <div style={{
             padding: "14px 18px",
-            background: "rgba(239,68,68,0.10)",
-            border: "1px solid rgba(239,68,68,0.22)",
+            background: "var(--danger-dim)",
+            border: "1px solid var(--danger-dim)",
             borderRadius: "var(--radius-lg)",
             fontSize: "0.83rem",
-            color: "#f87171",
+            color: "var(--danger)",
             marginBottom: "16px",
             whiteSpace: "pre-wrap",
             fontFamily: error.includes("\n") ? "monospace" : "inherit",
@@ -164,9 +164,9 @@ export default function NLQueryPage() {
                 borderRadius: "100px",
                 fontSize: "0.75rem",
                 fontWeight: 700,
-                background: result.count > 0 ? "rgba(52,211,153,0.12)" : "var(--surface)",
-                color: result.count > 0 ? "#34d399" : "var(--text-3)",
-                border: `1px solid ${result.count > 0 ? "rgba(52,211,153,0.25)" : "var(--border-mid)"}`,
+                background: result.count > 0 ? "var(--success-dim)" : "var(--surface)",
+                color: result.count > 0 ? "var(--success)" : "var(--text-3)",
+                border: `1px solid ${result.count > 0 ? "var(--success-dim)" : "var(--border-mid)"}`,
               }}>
                 {result.count} {result.count === 1 ? "row" : "rows"} returned
               </span>
