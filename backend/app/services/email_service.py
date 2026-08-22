@@ -1,8 +1,8 @@
-"""
+﻿"""
 Email delivery priority:
-  1. Vercel relay  (EMAIL_RELAY_URL + EMAIL_RELAY_SECRET set)  ← Gmail via Vercel
+  1. Vercel relay  (EMAIL_RELAY_URL + EMAIL_RELAY_SECRET set)  â† Gmail via Vercel
   2. SendGrid      (SENDGRID_API_KEY set)
-  3. Console       (dev fallback — logs to stdout)
+  3. Console       (dev fallback â€” logs to stdout)
 """
 import logging
 
@@ -28,7 +28,7 @@ def _resolve_provider() -> str:
 
 
 def email_provider_status() -> dict:
-    """Which provider is active + which config is present (booleans only — never the secret values).
+    """Which provider is active + which config is present (booleans only â€” never the secret values).
     Lets an admin see, without shell/log access, whether email is even wired up."""
     return {
         "active_provider": _resolve_provider(),
@@ -44,7 +44,7 @@ def email_provider_status() -> dict:
 
 
 def _send(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
-    """Send an email. Returns {"ok": bool, "provider": str, "detail": str} — never raises, so it's
+    """Send an email. Returns {"ok": bool, "provider": str, "detail": str} â€” never raises, so it's
     safe as a background task, but callers that care (invites, the email test) can inspect the
     result instead of a silent failure."""
     provider = _resolve_provider()
@@ -70,7 +70,7 @@ def _send(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
 
 
 def _html_to_text(html: str) -> str:
-    """Minimal plain-text alternative from HTML — every email should carry a text/plain part
+    """Minimal plain-text alternative from HTML â€” every email should carry a text/plain part
     (an HTML-only message is a strong spam signal)."""
     import re
     text = re.sub(r"(?is)<(style|script).*?</\1>", " ", html)
@@ -85,7 +85,7 @@ def _html_to_text(html: str) -> str:
 
 
 def _send_brevo_api(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
-    """Send via Brevo's transactional HTTPS API — works even where outbound SMTP is blocked."""
+    """Send via Brevo's transactional HTTPS API â€” works even where outbound SMTP is blocked."""
     try:
         import httpx
         payload = {
@@ -115,7 +115,7 @@ def _send_brevo_api(to_email: str, to_name: str, subject: str, html_body: str) -
 
 
 def _send_smtp(to_email: str, to_name: str, subject: str, html_body: str) -> dict:
-    """Send via a generic SMTP provider (Brevo, Mailgun, Amazon SES, Mailjet, …)."""
+    """Send via a generic SMTP provider (Brevo, Mailgun, Amazon SES, Mailjet, â€¦)."""
     try:
         import smtplib
         from email.mime.multipart import MIMEMultipart
@@ -203,26 +203,26 @@ def _send_sendgrid(to_email: str, to_name: str, subject: str, html_body: str) ->
 def send_bid_invitation(buyer_email: str, buyer_name: str, round_name: str, commodity: str, deadline: str, upload_url: str, notes: str | None = None):
     from app.services.email_templates import bid_invitation_email
     subject, html = bid_invitation_email(buyer_name, round_name, commodity, deadline, upload_url, notes)
-    _send(buyer_email, buyer_name, subject, html)
+    return _send(buyer_email, buyer_name, subject, html)
 
 
 def send_round_results(buyer_email: str, buyer_name: str, round_name: str, won_count: int, lost_count: int, portal_url: str, won_items: list | None = None, lost_items: list | None = None):
     from app.services.email_templates import results_email
     subject, html = results_email(buyer_name, round_name, won_count, lost_count, portal_url, won_items or [], lost_items or [])
-    _send(buyer_email, buyer_name, subject, html)
+    return _send(buyer_email, buyer_name, subject, html)
 
 
 def send_lines_removed(buyer_email: str, buyer_name: str, round_name: str, items: list, portal_url: str):
     """Tell a buyer that specific line(s) of their bid were removed and won't compete."""
     from app.services.email_templates import lines_removed_email
     if not items:
-        return
+        return {"ok": True, "provider": "none", "detail": "no items"}
     subject, html = lines_removed_email(buyer_name, round_name, items, portal_url)
-    _send(buyer_email, buyer_name, subject, html)
+    return _send(buyer_email, buyer_name, subject, html)
 
 
 def send_exception_alert(admin_email: str, round_name: str, exception_count: int, review_url: str):
-    _send(admin_email, "ThinkTLS Admin", f"ThinkTLS: {exception_count} exceptions need review — {round_name}", f"""
+    _send(admin_email, "ThinkTLS Admin", f"ThinkTLS: {exception_count} exceptions need review â€” {round_name}", f"""
     <h2>Exceptions require your attention</h2>
     <p>{exception_count} bid lines have been flagged in <strong>{round_name}</strong> and need manual review.</p>
     <p><a href="{review_url}" style="background:#e74c3c;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;">Review Exceptions</a></p>
@@ -230,14 +230,14 @@ def send_exception_alert(admin_email: str, round_name: str, exception_count: int
 
 
 def send_approval_ready_email(admin_email: str, round_name: str, deal_count: int, round_url: str):
-    _send(admin_email, "ThinkTLS Admin", f"ThinkTLS: Winners selected — {round_name} ready for approval", f"""
+    _send(admin_email, "ThinkTLS Admin", f"ThinkTLS: Winners selected â€” {round_name} ready for approval", f"""
     <h2>Round ready for approval</h2>
     <p>Processing for <strong>{round_name}</strong> is complete.</p>
     <table style="border-collapse:collapse;width:280px;margin:12px 0;">
       <tr><td style="padding:8px;border:1px solid #ddd;"><strong>Deals Ready</strong></td><td style="padding:8px;border:1px solid #ddd;color:green;">{deal_count}</td></tr>
     </table>
     <p><a href="{round_url}" style="background:#0f3460;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">Review &amp; Approve</a></p>
-    <hr/><p style="color:#666;font-size:12px;">ThinkTLS Bid Desk — Confidential</p>
+    <hr/><p style="color:#666;font-size:12px;">ThinkTLS Bid Desk â€” Confidential</p>
     """)
 
 

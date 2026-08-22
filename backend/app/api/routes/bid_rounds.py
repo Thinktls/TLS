@@ -407,6 +407,7 @@ def open_round(
     
     # Auto-send invitations if enabled and this is the first open
     invitations_sent = 0
+    invite_failures: list[str] = []
     if was_draft and r.auto_send_invites:
         # Query buyers with invite_status=pending for this round
         assigned = db.execute(
@@ -430,23 +431,32 @@ def open_round(
                 if not buyer:
                     continue
                 try:
-                    send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
+                    res = send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
                 except Exception as exc:
-                    logger.warning(f"[INVITE] failed to email {buyer.email}: {exc}")
-                db.execute(
-                    text(
-                        "UPDATE round_buyers "
-                        "SET invite_status = 'sent', "
-                        "    invited_at = now() "
-                        "WHERE round_id=:rid AND buyer_id=:bid"
-                    ),
-                    {"rid": round_id, "bid": buyer.id},
-                )
-                buyer.last_invited_date = datetime.now(timezone.utc)
-                invitations_sent += 1
+                    res = {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+                if isinstance(res, dict) and not res.get("ok"):
+                    invite_failures.append(f"{buyer.email}: {res.get('detail', 'unknown error')}")
+                    logger.warning(f"[INVITE] FAILED for {buyer.email}: {res.get('detail')}")
+                else:
+                    db.execute(
+                        text(
+                            "UPDATE round_buyers "
+                            "SET invite_status = 'sent', "
+                            "    invited_at = now() "
+                            "WHERE round_id=:rid AND buyer_id=:bid"
+                        ),
+                        {"rid": round_id, "bid": buyer.id},
+                    )
+                    buyer.last_invited_date = datetime.now(timezone.utc)
+                    invitations_sent += 1
             db.commit()
     
-    return {"status": "open", "invitations_sent": invitations_sent}
+    return {
+        "status": "open",
+        "invitations_sent": invitations_sent,
+        "invitations_failed": len(invite_failures),
+        "failures": invite_failures,
+    }
 
 
 @router.post("/{round_id}/reopen")
@@ -691,15 +701,13 @@ def send_invitations(
         if not buyer:
             continue
         try:
-            send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
+            res = send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
         except Exception as exc:
-            failures.append(f"{buyer.email}: {type(exc).__name__}: {exc}")
-            # still mark attempted so we don't spam on retry, but record failure
-            db.execute(
-                text("UPDATE round_buyers SET invite_status='sent', invited_at=now() WHERE round_id=:rid AND buyer_id=:bid"),
-                {"rid": round_id, "bid": buyer.id},
-            )
-            buyer.last_invited_date = datetime.now(timezone.utc)
+            res = {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+        if isinstance(res, dict) and not res.get("ok"):
+            failures.append(f"{buyer.email}: {res.get('detail', 'unknown error')}")
+            logger.warning(f"[INVITE] FAILED for {buyer.email}: {res.get('detail')}")
+            # leave invite_status pending so the admin can retry via Send Invitations
             continue
         db.execute(
             text(
@@ -752,6 +760,7 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
 
     portal_url = f"{settings.FRONTEND_URL}/portal/results?round={round_id}"
     sent = 0
+    failures = []
     for row in assigned:
         buyer = buyers.get(row.buyer_id)
         if not buyer:
@@ -768,12 +777,18 @@ def send_results_notifications(round_id: int, background_tasks: BackgroundTasks,
             elif line.unit_price is not None and line.fluffed_loss_price is not None:
                 lost_items.append(lost_item_from_line(line, master))
 
-        background_tasks.add_task(
-            send_round_results, buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items, lost_items
-        )
-        sent += 1
+        try:
+            res = send_round_results(buyer.email, buyer.full_name, r.name, won, lost, portal_url, won_items, lost_items)
+        except Exception as exc:
+            res = {"ok": False, "detail": f"{type(exc).__name__}: {exc}"}
+        if isinstance(res, dict) and not res.get("ok"):
+            failures.append(f"{buyer.email}: {res.get('detail', 'unknown error')}")
+            logger.warning(f"[RESULTS] FAILED for {buyer.email}: {res.get('detail')}")
+        else:
+            sent += 1
 
-    return {"sent": sent, "message": f"Results queued for {sent} buyer(s)"}
+    msg = f"Results sent for {sent} buyer(s)" + (f"; {len(failures)} failed" if failures else "")
+    return {"sent": sent, "failed": len(failures), "failures": failures, "message": msg}
 
 
 @router.post("/{round_id}/process")
