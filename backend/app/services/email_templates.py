@@ -128,15 +128,7 @@ def _credential_box(login_url: str, email: str, password: str) -> str:
 def welcome_email(full_name: str, email: str, temp_password: str, login_url: str) -> tuple[str, str]:
     """Returns (subject, html). Sent when admin creates a new buyer account."""
     first = full_name.split()[0]
-    notes_row = ""
-    if notes:
-        notes_row = f"""
-               <tr>
-                 <td style="padding:6px 0;">
-                   <span style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;">Notes</span>
-                 </td>
-                 <td style="padding:6px 0;font-size:14px;color:#1e293b;">{notes}</td>
-               </tr>"""
+
     content = f"""
       <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">Welcome to ThinkTLS Bid Desk</h1>
       <p style="margin:0 0 20px;font-size:13px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Your account is ready</p>
@@ -164,15 +156,7 @@ def welcome_email(full_name: str, email: str, temp_password: str, login_url: str
 def resend_credentials_email(full_name: str, email: str, temp_password: str, login_url: str) -> tuple[str, str]:
     """Returns (subject, html). Sent when admin resets a buyer's password."""
     first = full_name.split()[0]
-    notes_row = ""
-    if notes:
-        notes_row = f"""
-               <tr>
-                 <td style="padding:6px 0;">
-                   <span style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;">Notes</span>
-                 </td>
-                 <td style="padding:6px 0;font-size:14px;color:#1e293b;">{notes}</td>
-               </tr>"""
+
     content = f"""
       <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">Your Login Credentials</h1>
       <p style="margin:0 0 20px;font-size:13px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Updated by ThinkTLS</p>
@@ -203,15 +187,7 @@ def bid_invitation_email(
 ) -> tuple[str, str]:
     """Returns (subject, html). Sent when buyer is invited to a bid round."""
     first = full_name.split()[0]
-    notes_row = ""
-    if notes:
-        notes_row = f"""
-               <tr>
-                 <td style="padding:6px 0;">
-                   <span style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;">Notes</span>
-                 </td>
-                 <td style="padding:6px 0;font-size:14px;color:#1e293b;">{notes}</td>
-               </tr>"""
+
     content = f"""
       <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">You've Been Invited to Bid</h1>
       <p style="margin:0 0 20px;font-size:13px;color:{_BRAND_BLUE};font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">{round_name}</p>
