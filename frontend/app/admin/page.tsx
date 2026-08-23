@@ -77,27 +77,23 @@ function RoundRow({ round }: { round: Round }) {
   );
 }
 
-function StatusRow({
-  label, dot, count, total,
-}: { label: string; dot: string; count: number; total: number }) {
-  const pct = total ? Math.round((count / total) * 100) : 0;
+function StatusChip({
+  label, dot, count,
+}: { label: string; dot: string; count: number }) {
   return (
-    <div className="dash-status-row">
-      <div className="dash-status-head">
-        <div className="dash-status-label"><span className="dash-dot" style={{ background: dot }} />{label}</div>
-        <span className="dash-status-count">{count}</span>
-      </div>
-      <div className="dash-progress"><div className="dash-progress-fill" style={{ width: `${pct}%`, background: dot }} /></div>
+    <div className="dash-status-chip">
+      <span className="dash-dot" style={{ background: dot }} />
+      <span className="dash-status-chip-label">{label}</span>
+      <span className="dash-status-chip-count">{count}</span>
     </div>
   );
 }
 
-function QuickLink({ label, href, icon }: { label: string; href: string; icon: IconName }) {
+function QuickLinkTile({ label, href, icon, accent }: { label: string; href: string; icon: IconName; accent: string }) {
   return (
-    <Link href={href} className="dash-quick-link">
-      <span className="dash-quick-icon"><Icon name={icon} size="sm" strokeWidth={1.75} /></span>
-      <span className="dash-quick-label">{label}</span>
-      <svg className="dash-quick-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+    <Link href={href} className="dash-quicklink-tile" style={{ "--tile-accent": accent } as React.CSSProperties}>
+      <span className="dash-quicklink-icon"><Icon name={icon} size="sm" strokeWidth={1.75} /></span>
+      <span className="dash-quicklink-title">{label}</span>
     </Link>
   );
 }
@@ -172,11 +168,11 @@ export default function AdminDashboard() {
     },
   ];
 
-  const quickLinks: { label: string; href: string; icon: IconName }[] = [
-    { label: "Bid Comparison", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/comparison` : "/admin/rounds", icon: "reports" },
-    { label: "Approve Deals", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/deals` : "/admin/rounds", icon: "success" },
-    { label: "Buyer Scoring", href: "/admin/buyers/compare", icon: "trophy" },
-    { label: "Export Center", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/export` : "/admin/rounds", icon: "download" },
+  const quickLinks: { label: string; href: string; icon: IconName; accent: string }[] = [
+    { label: "Bid Comparison", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/comparison` : "/admin/rounds", icon: "reports", accent: "var(--info)" },
+    { label: "Approve Deals", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/deals` : "/admin/rounds", icon: "success", accent: "var(--success)" },
+    { label: "Buyer Scoring", href: "/admin/buyers/compare", icon: "trophy", accent: "var(--warning)" },
+    { label: "Export Center", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/export` : "/admin/rounds", icon: "download", accent: "var(--brand)" },
   ];
 
   return (
@@ -237,14 +233,39 @@ export default function AdminDashboard() {
           <div className="dash-col-side">
             <div className="dash-panel">
               <p className="dash-panel-label">Round Status</p>
-              {Object.entries(STATUS_META).map(([key, { label, dot }]) => (
-                <StatusRow key={key} label={label} dot={dot} count={rounds.filter(r => r.status === key).length} total={rounds.length} />
-              ))}
+              <div className="dash-status-total">
+                <span className="dash-status-total-num">{rounds.length}</span>
+                <span className="dash-status-total-label">total round{rounds.length === 1 ? "" : "s"}</span>
+              </div>
+              <div className="dash-status-bar">
+                {rounds.length === 0 ? (
+                  <div className="dash-status-bar-empty" />
+                ) : (
+                  Object.entries(STATUS_META).map(([key, { dot }]) => {
+                    const count = rounds.filter(r => r.status === key).length;
+                    if (count === 0) return null;
+                    return (
+                      <div
+                        key={key}
+                        className="dash-status-bar-seg"
+                        style={{ flexBasis: `${(count / rounds.length) * 100}%`, background: dot }}
+                      />
+                    );
+                  })
+                )}
+              </div>
+              <div className="dash-status-chips">
+                {Object.entries(STATUS_META).map(([key, { label, dot }]) => (
+                  <StatusChip key={key} label={label} dot={dot} count={rounds.filter(r => r.status === key).length} />
+                ))}
+              </div>
             </div>
 
             <div className="dash-panel">
               <p className="dash-panel-label">Quick Links</p>
-              {quickLinks.map(q => <QuickLink key={q.label} {...q} />)}
+              <div className="dash-quicklink-grid">
+                {quickLinks.map(q => <QuickLinkTile key={q.label} {...q} />)}
+              </div>
             </div>
           </div>
         </div>
