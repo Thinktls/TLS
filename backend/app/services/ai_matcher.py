@@ -224,26 +224,28 @@ def _batch_ollama(
         prompt, master_by_index = _build_prompt(lines, master_items)
         base = settings.OLLAMA_BASE_URL.rstrip("/")
 
-        # Try OpenAI-compatible /v1/chat/completions endpoint (Ollama supports this)
-        is_groq = "/openai" in base
+        # Any hosted OpenAI-compatible relay (Groq, OpenRouter, Together AI, ...) requires an API
+        # key; a genuine local/self-hosted Ollama instance never does. Ollama's "format": "json"
+        # JSON-mode field isn't part of the OpenAI Chat Completions spec these relays implement, so
+        # only send it to real Ollama — never assume a specific hosted provider by URL pattern.
+        is_hosted_relay = bool(settings.OLLAMA_API_KEY)
 
         payload = {
             "model": settings.OLLAMA_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
         }
-        if not is_groq:
-            payload["format"] = "json"  # Ollama JSON mode — not supported by Groq
+        if not is_hosted_relay:
+            payload["format"] = "json"  # Ollama JSON mode — not part of the OpenAI-compatible spec
 
         headers = {"Content-Type": "application/json"}
         if settings.OLLAMA_API_KEY:
             headers["Authorization"] = f"Bearer {settings.OLLAMA_API_KEY}"
 
-        # Groq base ends with /openai; local Ollama just needs /v1 appended
+        # A base already ending in /v1 (Groq, OpenRouter, ...) just needs /chat/completions
+        # appended; local Ollama's base has no /v1 suffix, so it needs the full /v1/... path.
         if base.endswith("/v1"):
             endpoint = f"{base}/chat/completions"
-        elif is_groq:
-            endpoint = f"{base}/v1/chat/completions"
         else:
             endpoint = f"{base}/v1/chat/completions"
 
