@@ -417,7 +417,14 @@ def award_lot(round_id: int, req: AwardLotRequest, db: Session = Depends(get_db)
         db.add(override)
         overridden += 1
     db.commit()
-    recalculate_buyer_scores(db, round_id)
+    # The award itself is already committed above — a failure past this point must never present
+    # as "Award lot failed" (the deals WERE reassigned; only the buyer-score recalculation, a
+    # secondary side effect, would be stale). Swallow and log instead of 500-ing a successful award.
+    try:
+        recalculate_buyer_scores(db, round_id)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(f"[AWARD-LOT] score recalc failed for round {round_id}: {exc}")
     return {"awarded": len(deals), "overridden": overridden, "buyer": new_buyer.full_name}
 
 

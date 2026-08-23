@@ -166,6 +166,7 @@ export default function RoundDetail() {
   const [bidFiles, setBidFiles] = useState<BidFileEntry[]>([]);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendingBuyerId, setSendingBuyerId] = useState<number | null>(null);
   const [deletingFile, setDeletingFile] = useState<number | null>(null);
   const [sendingResults, setSendingResults] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -353,10 +354,44 @@ export default function RoundDetail() {
     setSending(true);
     try {
       const res = await api.post(`/rounds/${id}/send-invitations${resend ? "?resend=true" : ""}`);
-      flash(`✓ Invitation email ${resend ? "re-sent" : "sent"} to ${res.data.sent} buyer(s)`); load();
+      const { sent, failed, failures } = res.data;
+      const verb = resend ? "re-sent" : "sent";
+      if (failed > 0) {
+        // Some (or all) invitations failed to send — never show a green checkmark for this.
+        const detail = (failures || []).slice(0, 3).join("; ");
+        flash(
+          `⚠ Invitation email ${verb} to ${sent} buyer(s), but ${failed} FAILED to send` +
+          (detail ? `: ${detail}` : "") +
+          (failures?.length > 3 ? ` (+${failures.length - 3} more)` : ""),
+          "err"
+        );
+      } else {
+        flash(`✓ Invitation email ${verb} to ${sent} buyer(s)`);
+      }
+      load();
     } catch (err: any) {
       flash(`Error: ${err.response?.data?.detail || "Failed to send invitations"}`, "err");
     } finally { setSending(false); }
+  }
+
+  // Target one buyer instead of the whole round — for a single buyer who lost the mail or
+  // needs a nudge, without re-emailing everyone else who's already been contacted.
+  async function sendInvitationToBuyer(buyerId: number, buyerName: string, alreadyInvited: boolean) {
+    setSendingBuyerId(buyerId);
+    try {
+      const res = await api.post(
+        `/rounds/${id}/send-invitations?buyer_id=${buyerId}${alreadyInvited ? "&resend=true" : ""}`
+      );
+      const { sent, failed, failures } = res.data;
+      if (failed > 0) {
+        flash(`⚠ Failed to send to ${buyerName}: ${(failures || [])[0] || "unknown error"}`, "err");
+      } else if (sent > 0) {
+        flash(`✓ Invitation ${alreadyInvited ? "re-sent" : "sent"} to ${buyerName}`);
+      }
+      load();
+    } catch (err: any) {
+      flash(`Error: ${err.response?.data?.detail || `Failed to send invitation to ${buyerName}`}`, "err");
+    } finally { setSendingBuyerId(null); }
   }
 
   function toggleBuyer(buyerId: number) {
@@ -708,7 +743,18 @@ export default function RoundDetail() {
                       <p style={{ fontSize: "0.73rem", color: "var(--text-4)", margin: 0 }}>{b.company_name || b.email}</p>
                     </div>
                   </div>
-                  <span className={`badge ${INVITE_BADGE[b.invite_status] || "badge-draft"}`}>{b.invite_status}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span className={`badge ${INVITE_BADGE[b.invite_status] || "badge-draft"}`}>{b.invite_status}</span>
+                    <button
+                      onClick={() => sendInvitationToBuyer(b.id, b.full_name, b.invite_status !== "pending")}
+                      disabled={sendingBuyerId === b.id}
+                      className="btn-ghost"
+                      style={{ fontSize: "0.72rem", padding: "5px 12px", whiteSpace: "nowrap" }}
+                      title={`${b.invite_status !== "pending" ? "Resend" : "Send"} the invitation email to just ${b.full_name}, without emailing anyone else`}
+                    >
+                      {sendingBuyerId === b.id ? "Sending…" : b.invite_status !== "pending" ? "Resend" : "Send"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

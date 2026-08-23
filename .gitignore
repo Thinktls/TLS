@@ -28,3 +28,6 @@ dist/
 
 # Real deploy config with secrets — never commit; use render.yaml.example as the template.
 render.yaml
+
+# Local AI coding-assistant tool state (has its own node_modules/lockfile) — not project source.
+.kilo/

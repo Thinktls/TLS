@@ -71,6 +71,8 @@ export default function ParticipationTracker() {
   const [data, setData] = useState<ParticipationData | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [resendingId, setResendingId] = useState<number | null>(null);
+  const [msg, setMsg] = useState<{ text: string; type: "ok" | "err" } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -79,6 +81,31 @@ export default function ParticipationTracker() {
       setLastRefresh(new Date());
     } catch { /* ignore */ }
   }, [id]);
+
+  function flash(text: string, type: "ok" | "err" = "ok") {
+    setMsg({ text, type });
+    setTimeout(() => setMsg(null), 4000);
+  }
+
+  async function resendToBuyer(buyerId: number, alreadyInvited: boolean) {
+    setResendingId(buyerId);
+    try {
+      const res = await api.post(
+        `/rounds/${id}/send-invitations?buyer_id=${buyerId}${alreadyInvited ? "&resend=true" : ""}`
+      );
+      const failed = res.data?.failed || 0;
+      if (failed > 0) {
+        flash(`⚠ Failed to send: ${(res.data.failures || [])[0] || "unknown error"}`, "err");
+      } else {
+        flash(`✓ Invitation ${alreadyInvited ? "re-sent" : "sent"}`);
+      }
+      load();
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to send invitation", "err");
+    } finally {
+      setResendingId(null);
+    }
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -137,6 +164,17 @@ export default function ParticipationTracker() {
           </div>
         </div>
 
+        {msg && (
+          <div style={{
+            marginBottom: "16px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
+            background: msg.type === "ok" ? "var(--success-dim)" : "var(--danger-dim)",
+            border: `1px solid ${msg.type === "ok" ? "var(--success-dim)" : "var(--danger-dim)"}`,
+            color: msg.type === "ok" ? "var(--success)" : "var(--danger)",
+          }}>
+            {msg.text}
+          </div>
+        )}
+
         {/* Stats row */}
         <div className="kpi-grid" style={{ marginBottom: "24px" }}>
           <StatBox label="Total Buyers" value={stats.total} color="var(--text-1)" />
@@ -169,7 +207,7 @@ export default function ParticipationTracker() {
               Submitted ({uploaded.length})
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {uploaded.map((b) => <BuyerRow key={b.id} b={b} />)}
+              {uploaded.map((b) => <BuyerRow key={b.id} b={b} onResend={resendToBuyer} resending={resendingId === b.id} />)}
             </div>
           </section>
         )}
@@ -181,7 +219,7 @@ export default function ParticipationTracker() {
               Invited — No Response ({noResponse.length})
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {noResponse.map((b) => <BuyerRow key={b.id} b={b} />)}
+              {noResponse.map((b) => <BuyerRow key={b.id} b={b} onResend={resendToBuyer} resending={resendingId === b.id} />)}
             </div>
           </section>
         )}
@@ -193,7 +231,7 @@ export default function ParticipationTracker() {
               Not Yet Invited ({notInvited.length})
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {notInvited.map((b) => <BuyerRow key={b.id} b={b} />)}
+              {notInvited.map((b) => <BuyerRow key={b.id} b={b} onResend={resendToBuyer} resending={resendingId === b.id} />)}
             </div>
           </section>
         )}
@@ -208,8 +246,11 @@ export default function ParticipationTracker() {
   );
 }
 
-function BuyerRow({ b }: { b: BuyerStatus }) {
+function BuyerRow({ b, onResend, resending }: {
+  b: BuyerStatus; onResend: (buyerId: number, alreadyInvited: boolean) => void; resending: boolean;
+}) {
   const cfg = STATUS_CONFIG[b.invite_status] || STATUS_CONFIG.pending;
+  const alreadyInvited = !!b.invited_at;
   return (
     <div style={{
       display: "flex",
@@ -276,6 +317,15 @@ function BuyerRow({ b }: { b: BuyerStatus }) {
         }}>
           {cfg.label}
         </span>
+        <button
+          onClick={() => onResend(b.id, alreadyInvited)}
+          disabled={resending}
+          className="btn-ghost"
+          style={{ fontSize: "0.72rem", padding: "5px 12px", whiteSpace: "nowrap" }}
+          title={`${alreadyInvited ? "Resend" : "Send"} the invitation email to just ${b.full_name}`}
+        >
+          {resending ? "Sending…" : alreadyInvited ? "Resend" : "Send"}
+        </button>
       </div>
     </div>
   );

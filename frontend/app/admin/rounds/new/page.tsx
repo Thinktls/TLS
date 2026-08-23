@@ -204,7 +204,13 @@ export default function NewRound() {
     try {
       const ids = Array.from(selectedBuyers);
       if (ids.length > 0) {
-        await api.post(`/rounds/${roundId}/buyers`, { buyer_ids: ids, send_invites: sendInvites });
+        await api.post(`/rounds/${roundId}/buyers`, { buyer_ids: ids });
+      }
+      // The "send invites when round opens" checkbox lives on THIS step, so it must take effect
+      // from what the admin sees/toggles here — not the default value already sent at Step 1
+      // (before the admin had even seen this control). Patch the round with the current choice.
+      await api.patch(`/rounds/${roundId}`, { auto_send_invites: sendInvites });
+      if (ids.length > 0) {
         setAssignedBuyerIds(ids);
       }
       setStep(4);
@@ -221,7 +227,18 @@ export default function NewRound() {
     setWorking(true);
     clearError();
     try {
-      await api.post(`/rounds/${roundId}/open`);
+      const res = await api.post(`/rounds/${roundId}/open`);
+      const failed = res.data?.invitations_failed || 0;
+      if (failed > 0) {
+        // The round DID open — don't block navigation — but invite emails failing must never
+        // be silent. Surface it before leaving the page.
+        const detail = (res.data?.failures || []).slice(0, 3).join("\n");
+        window.alert(
+          `Round opened, but ${failed} invitation email(s) FAILED to send:\n\n${detail}` +
+          (res.data.failures?.length > 3 ? `\n(+${res.data.failures.length - 3} more)` : "") +
+          `\n\nUse "Resend Invitations" on the round page to retry.`
+        );
+      }
       router.push(`/admin/rounds/${roundId}`);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to open round");

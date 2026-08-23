@@ -439,6 +439,9 @@ def open_round(
             for row in assigned:
                 buyer = buyers.get(row.buyer_id)
                 if not buyer:
+                    # Assigned buyer_id has no matching User row — record it so a partial-missing
+                    # case (as opposed to all-missing, caught above) is never silently dropped.
+                    invite_failures.append(f"buyer_id {row.buyer_id}: no matching User row")
                     continue
                 try:
                     res = send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)
@@ -660,6 +663,10 @@ def send_invitations(
         False,
         description="Send to every assigned buyer again, including ones already invited.",
     ),
+    buyer_id: Optional[int] = Query(
+        None,
+        description="Target a single assigned buyer instead of everyone (send or resend to just them).",
+    ),
     db: Session = Depends(get_db),
     admin=Depends(require_admin),
 ):
@@ -669,6 +676,8 @@ def send_invitations(
     spam anyone. That also meant the second click failed with an error and sent nothing —
     which read as "invitations don't work" whenever a buyer needed the mail again (lost it,
     it went to spam, or the deadline moved). `resend=true` re-sends to every assigned buyer.
+    `buyer_id` narrows either mode to a single buyer, so a one-off resend doesn't have to
+    re-email everyone else who's already been contacted.
     """
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
@@ -676,7 +685,14 @@ def send_invitations(
     if not r.master_file_uploaded:
         raise HTTPException(400, "Upload master file before sending invitations")
 
-    if resend:
+    if buyer_id is not None:
+        assigned = db.execute(
+            text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid AND buyer_id = :bid"),
+            {"rid": round_id, "bid": buyer_id},
+        ).fetchall()
+        if not assigned:
+            raise HTTPException(400, "That buyer is not assigned to this round.")
+    elif resend:
         assigned = db.execute(
             text("SELECT buyer_id FROM round_buyers WHERE round_id = :rid"), {"rid": round_id}
         ).fetchall()
@@ -719,6 +735,9 @@ def send_invitations(
     for row in assigned:
         buyer = buyers.get(row.buyer_id)
         if not buyer:
+            # Assigned buyer_id has no matching User row — record it so a partial-missing case
+            # (as opposed to all-missing, caught above) is never silently dropped.
+            failures.append(f"buyer_id {row.buyer_id}: no matching User row")
             continue
         try:
             res = send_bid_invitation(buyer.email, buyer.full_name, r.name, r.commodity or "", deadline_str, upload_url, r.notes)

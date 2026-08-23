@@ -4,7 +4,8 @@ Uses an in-memory SQLite database — no Postgres required for unit tests.
 Each test gets a fresh isolated session via nested transactions.
 """
 import pytest
-from sqlalchemy import create_engine
+from datetime import datetime, timezone
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
@@ -22,6 +23,14 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@event.listens_for(engine, "connect")
+def _register_sqlite_now(dbapi_conn, _record):
+    # Raw SQL across the app calls Postgres's now() (e.g. "invited_at = now()"); SQLite has no
+    # such function. Register a stand-in so those statements are testable under SQLite too,
+    # instead of every code path that touches them being silently uncovered.
+    dbapi_conn.create_function("now", 0, lambda: datetime.now(timezone.utc).isoformat())
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -262,15 +262,26 @@ export default function DealsPage() {
     if (!awardLot.reason.trim()) { flash("Reason is required", "err"); return; }
     setAwardingLot(true);
     try {
+      // Reassigning every deal + recalculating buyer scores can take a while on a large round —
+      // give it the same headroom as other heavy admin operations instead of the 35s default.
       const res = await api.post(`/deals/rounds/${id}/award-lot`, {
         buyer_id: awardLot.buyerId,
         reason_note: awardLot.reason,
-      });
+      }, { timeout: 90000 });
       flash(`✓ All ${res.data.awarded} deals awarded to ${res.data.buyer}`);
       setAwardLot(null);
       load();
     } catch (err: any) {
-      flash(err.response?.data?.detail || "Award lot failed", "err");
+      // A timeout returns no response body — don't show a vague "failed" for what may just be a
+      // slow recalculation on a large round; the award itself may already have gone through.
+      const detail = err.response?.data?.detail;
+      if (detail) {
+        flash(detail, "err");
+      } else if (err.code === "ECONNABORTED") {
+        flash("Award is taking longer than expected on this large round. Refresh the page to check whether it went through before retrying.", "err");
+      } else {
+        flash("Award lot failed — cannot reach the server.", "err");
+      }
     } finally {
       setAwardingLot(false);
     }

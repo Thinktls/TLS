@@ -187,6 +187,15 @@ def bid_invitation_email(
 ) -> tuple[str, str]:
     """Returns (subject, html). Sent when buyer is invited to a bid round."""
     first = full_name.split()[0]
+    notes_row = ""
+    if notes:
+        notes_row = f"""
+               <tr>
+                 <td style="padding:6px 0;">
+                   <span style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;">Notes</span>
+                 </td>
+                 <td style="padding:6px 0;font-size:14px;color:#1e293b;">{notes}</td>
+               </tr>"""
 
     content = f"""
       <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">You've Been Invited to Bid</h1>
