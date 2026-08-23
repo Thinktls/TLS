@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
+import { Icon } from "@/components/icons";
 
 interface ResultLine {
   part_number: string; description: string | null; quantity: number | null;
@@ -56,7 +57,7 @@ function ResultsInner() {
 
         {rounds.length === 0 ? (
           <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "72px", textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>📊</div>
+            <div style={{ display: "inline-flex", color: "var(--text-4)", marginBottom: "14px" }}><Icon name="reports" size={40} strokeWidth={1.5} /></div>
             <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No results yet</p>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Results appear here once a round you participated in has been processed.</p>
           </div>

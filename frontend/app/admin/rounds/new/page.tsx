@@ -5,6 +5,7 @@ import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
 import { fmtDatetime } from "@/lib/format";
+import { Icon } from "@/components/icons";
 
 const COMMODITIES = [
   "laptops",
@@ -421,7 +422,7 @@ export default function NewRound() {
                 borderRadius: "12px", padding: "18px 20px",
                 display: "flex", alignItems: "center", gap: "14px",
               }}>
-                <span style={{ fontSize: "1.5rem" }}>✓</span>
+                <span style={{ color: "var(--success)", display: "inline-flex" }}><Icon name="success" size="lg" strokeWidth={1.75} /></span>
                 <div>
                   <p style={{ fontWeight: 600, color: "var(--success)", margin: "0 0 3px" }}>{masterCount.toLocaleString()} line items loaded</p>
                   <p style={{ fontSize: "0.78rem", color: "var(--text-4)", margin: 0 }}>{masterFile?.name}</p>
@@ -449,7 +450,9 @@ export default function NewRound() {
                   transition: "all 0.2s",
                 }}
               >
-                <div style={{ fontSize: "2rem", marginBottom: "10px" }}>{working ? "⏳" : "📋"}</div>
+                <div style={{ display: "flex", justifyContent: "center", color: "var(--text-3)", marginBottom: "10px" }}>
+                  {working ? <Icon name="spinner" size={28} spin /> : <Icon name="upload" size={28} strokeWidth={1.5} />}
+                </div>
                 <p style={{ color: "var(--text-2)", fontSize: "0.88rem", margin: "0 0 6px", fontWeight: 500 }}>
                   {working ? "Parsing file..." : "Drop master file here"}
                 </p>

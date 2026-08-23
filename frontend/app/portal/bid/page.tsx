@@ -5,6 +5,7 @@ import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import { fmtDatetime } from "@/lib/format";
+import { Icon } from "@/components/icons";
 
 interface Round {
   id: number; name: string; commodity: string;
@@ -185,7 +186,7 @@ function SubmitBidInner() {
 
         {rounds.length === 0 ? (
           <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "72px", textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📭</div>
+            <div style={{ display: "inline-flex", color: "var(--text-4)", marginBottom: "16px" }}><Icon name="inbox" size={40} strokeWidth={1.5} /></div>
             <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No open rounds</p>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Check back after receiving an invitation from ThinkTLS.</p>
           </div>
@@ -256,7 +257,9 @@ function SubmitBidInner() {
                       color: mode === m ? "var(--brand)" : "var(--text-3)",
                       cursor: "pointer", transition: "all 0.15s",
                     }}>
-                    {m === "upload" ? "📎 Upload File" : "✏️ Enter Prices Online"}
+                    {m === "upload"
+                      ? <><Icon name="upload" size="xs" strokeWidth={1.75} style={{ verticalAlign: "-2px", marginRight: "5px" }} />Upload File</>
+                      : <><Icon name="edit" size="xs" strokeWidth={1.75} style={{ verticalAlign: "-2px", marginRight: "5px" }} />Enter Prices Online</>}
                   </button>
                 ))}
               </div>
@@ -279,8 +282,8 @@ function SubmitBidInner() {
                       transition: "all 0.2s", position: "relative", overflow: "hidden",
                     }}
                   >
-                    <div style={{ fontSize: "2.8rem", marginBottom: "14px", filter: uploading ? "grayscale(1)" : "none" }}>
-                      {uploading ? "⏳" : dragOver ? "📂" : "📎"}
+                    <div style={{ display: "flex", justifyContent: "center", color: uploading ? "var(--text-4)" : "var(--text-3)", marginBottom: "14px" }}>
+                      {uploading ? <Icon name="spinner" size={36} spin /> : <Icon name="upload" size={36} strokeWidth={1.5} />}
                     </div>
                     <p style={{ fontSize: "0.95rem", color: uploading ? "var(--text-4)" : "var(--text-1)", margin: "0 0 6px", fontWeight: 600 }}>
                       {uploading ? "Parsing your file…" : dragOver ? "Drop to upload" : "Drop your pricing file here"}

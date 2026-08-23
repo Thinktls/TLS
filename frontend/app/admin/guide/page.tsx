@@ -1,16 +1,17 @@
 "use client";
 import AdminLayout from "@/components/AdminLayout";
+import { Icon, type IconName } from "@/components/icons";
 
 interface Section {
   title: string;
-  icon: string;
+  icon: IconName;
   items: { label: string; detail: string }[];
 }
 
 const sections: Section[] = [
   {
     title: "Daily Operations",
-    icon: "📋",
+    icon: "file",
     items: [
       { label: "Open a new bid round", detail: "Go to Bid Rounds → New Round. Complete the 4-step wizard: (1) name/commodity/deadline, (2) upload master file (Excel/CSV), (3) assign buyers, (4) open round." },
       { label: "Monitor submissions", detail: "On the round detail page, the Submissions tab shows each buyer's file, line count, and parse status in real time." },
@@ -22,7 +23,7 @@ const sections: Section[] = [
   },
   {
     title: "Buyer Management",
-    icon: "👥",
+    icon: "buyers",
     items: [
       { label: "Create a buyer account", detail: "Buyers → New Buyer. Fill in name, company, email. They receive an invite email with a one-time setup link (72hr expiry)." },
       { label: "Resend invite", detail: "On the buyer detail page, click 'Resend Invite'. A new token is generated (old one invalidated)." },
@@ -33,7 +34,7 @@ const sections: Section[] = [
   },
   {
     title: "Exports & Reports",
-    icon: "📊",
+    icon: "reports",
     items: [
       { label: "Deal results Excel", detail: "Round → Exports → deals.xlsx — all approved deals with winner details." },
       { label: "Bid comparison Excel", detail: "Round → Exports → comparison.xlsx — all matched lines from all buyers side by side." },
@@ -45,7 +46,7 @@ const sections: Section[] = [
   },
   {
     title: "Razor ERP Integration",
-    icon: "🔌",
+    icon: "plug",
     items: [
       { label: "Manual push", detail: "Deal → Push to Razor button on any approved deal. Or use the bulk Push All button on the round Deals tab." },
       { label: "Auto-push on approval", detail: "Set AUTO_PUSH_RAZOR=true in backend .env to push automatically when each deal is approved." },
@@ -55,9 +56,9 @@ const sections: Section[] = [
   },
   {
     title: "Email Bid Ingestion",
-    icon: "📧",
+    icon: "mail",
     items: [
-      { label: "Setup", detail: "Configure SendGrid Inbound Parse to forward emails sent to bids@thinktls.com to https://yourhost/api/inbound-email." },
+      { label: "Setup", detail: "Configure SendGrid Inbound Parse to forward emails sent to brokers@thinktls.com to https://yourhost/api/inbound-email." },
       { label: "How buyers submit", detail: "Buyer emails their pricing file as an Excel/CSV attachment. Subject must contain round ID: e.g. 'Bid Round 5' or '[RID:5]'." },
       { label: "Signature validation", detail: "Set SENDGRID_WEBHOOK_KEY in backend/.env to enable signature verification and prevent spoofed webhooks." },
       { label: "Auto-acknowledgement", detail: "Buyers automatically receive a confirmation email on success or a helpful error if the file couldn't be parsed." },
@@ -65,7 +66,7 @@ const sections: Section[] = [
   },
   {
     title: "System Administration",
-    icon: "⚙️",
+    icon: "settings",
     items: [
       { label: "Environment variables", detail: "See backend/.env.example for all required keys: DATABASE_URL, SECRET_KEY, SENDGRID_API_KEY, RAZOR_API_URL, RAZOR_API_KEY, AUTO_PUSH_RAZOR, SENDGRID_WEBHOOK_KEY." },
       { label: "Database migrations", detail: "Run: cd backend && alembic upgrade head — applies all pending schema migrations." },
@@ -77,7 +78,7 @@ const sections: Section[] = [
   },
   {
     title: "Troubleshooting",
-    icon: "🔧",
+    icon: "wrench",
     items: [
       { label: "Buyer can't log in", detail: "Check: is_active flag, is_approved flag, password set via invite link. Resend invite if needed." },
       { label: "Master file parse errors", detail: "Ensure the file has columns: part_number, description, quantity. Download the template from the round page for the exact format." },
@@ -114,7 +115,7 @@ export default function AdminGuidePage() {
                 alignItems: "center",
                 gap: "10px",
               }}>
-                <span style={{ fontSize: "1.2rem" }}>{sec.icon}</span>
+                <span style={{ color: "var(--brand)", display: "inline-flex" }}><Icon name={sec.icon} size="sm" strokeWidth={1.75} /></span>
                 <h2 style={{ color: "var(--text-1)", fontWeight: 700, fontSize: "1rem", margin: 0 }}>{sec.title}</h2>
               </div>
               <div style={{ padding: "8px 0" }}>

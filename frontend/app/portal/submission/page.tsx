@@ -5,6 +5,7 @@ import BuyerLayout from "@/components/BuyerLayout";
 import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import Link from "next/link";
+import { Icon } from "@/components/icons";
 import { fmtDatetime } from "@/lib/format";
 
 interface BidFileMeta {
@@ -94,7 +95,7 @@ function SubmissionInner() {
 
         {rounds.length === 0 && (
           <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "72px", textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>📭</div>
+            <div style={{ display: "inline-flex", color: "var(--text-4)", marginBottom: "14px" }}><Icon name="inbox" size={40} strokeWidth={1.5} /></div>
             <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No submissions yet</p>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: "0 0 20px" }}>Submit a bid file to see your parsed lines here.</p>
             <Link href="/portal/bid" className="btn-brand" style={{ textDecoration: "none" }}>Submit a Bid</Link>
@@ -109,7 +110,7 @@ function SubmissionInner() {
 
         {selectedRound && !bidFile && !loading && (
           <div style={{ textAlign: "center", paddingTop: "40px" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>📭</div>
+            <div style={{ display: "inline-flex", color: "var(--text-4)", marginBottom: "14px" }}><Icon name="inbox" size={40} strokeWidth={1.5} /></div>
             <p style={{ color: "var(--text-4)", marginBottom: "20px", fontSize: "0.9rem" }}>No submission found for this round.</p>
             <Link href={`/portal/bid?round=${selectedRound}`} className="btn-brand" style={{ textDecoration: "none" }}>Submit a Bid</Link>
           </div>
