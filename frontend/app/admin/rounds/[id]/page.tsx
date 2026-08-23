@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import Link from "next/link";
 import { fmtDatetime, fmtDatetimeShort } from "@/lib/format";
+import { Icon, type IconName } from "@/components/icons";
 
 interface Round {
   id: number; name: string; commodity: string; customer: string | null;
@@ -47,9 +48,9 @@ const STATUS_BADGE: Record<string, string> = {
   draft: "badge-draft", open: "badge-open", closed: "badge-closed",
   processing: "badge-processing", complete: "badge-complete", error: "badge-error",
 };
-const COMMODITY_ICON: Record<string, string> = {
-  laptops: "💻", desktops: "🖥", servers: "🖧", networking: "🌐",
-  storage: "💾", peripherals: "🖱", other: "📦",
+const COMMODITY_ICON: Record<string, IconName> = {
+  laptops: "laptop", desktops: "monitor", servers: "server", networking: "globe",
+  storage: "database", peripherals: "mouse", other: "package",
 };
 
 function initials(name: string) {
@@ -429,8 +430,8 @@ export default function RoundDetail() {
           <div className="page-header-text">
             <p className="page-eyebrow">Rounds</p>
           <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-            <div style={{ width: "48px", height: "48px", borderRadius: "13px", background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>
-              {COMMODITY_ICON[round.commodity] || "📦"}
+            <div style={{ width: "48px", height: "48px", borderRadius: "13px", background: "var(--brand-dim)", border: "1px solid var(--brand-dim)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brand)", flexShrink: 0 }}>
+              <Icon name={COMMODITY_ICON[round.commodity] || "package"} size="lg" strokeWidth={1.75} />
             </div>
             <div>
               <h1 className="page-title" style={{ margin: "0 0 6px", lineHeight: 1.3 }}>

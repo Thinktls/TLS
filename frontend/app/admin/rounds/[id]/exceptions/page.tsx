@@ -5,6 +5,7 @@ import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
 import Link from "next/link";
 import { STATUS_COLOR } from "@/lib/status";
+import { Icon, type IconName } from "@/components/icons";
 
 interface SuggestedMatch {
   id: number;
@@ -336,7 +337,7 @@ export default function ExceptionsPage() {
                 className="btn-violet"
                 title="Accept all AI-suggested matches at once — only applies to lines where the AI found a match"
               >
-                {bulkWorking ? "Accepting…" : `⚡ Accept All ${stats.ai_suggestions_available} AI Matches`}
+                {bulkWorking ? "Accepting…" : <><Icon name="zap" size="sm" strokeWidth={1.75} style={{ verticalAlign: "-3px", marginRight: "4px" }} />Accept All {stats.ai_suggestions_available} AI Matches</>}
               </button>
             )}
             <button
@@ -346,7 +347,7 @@ export default function ExceptionsPage() {
               style={{ fontSize: "0.82rem", padding: "8px 16px" }}
               title="Use AI to automatically suggest matches for unmatched bid lines"
             >
-              {aiRunning ? "AI running…" : "🤖 Run AI Matching"}
+              {aiRunning ? "AI running…" : <><Icon name="ai" size="sm" strokeWidth={1.75} style={{ verticalAlign: "-3px", marginRight: "4px" }} />Run AI Matching</>}
             </button>
           </div>
         </div>
@@ -355,14 +356,14 @@ export default function ExceptionsPage() {
         <div style={{ padding: "12px 16px", background: "var(--info-bg)", border: "1px solid var(--info-border)", borderRadius: "10px", marginBottom: "20px" }}>
           <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 10px" }}>How to handle each flag</p>
           <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-            {[
-              { icon: "🤖", title: "Accept AI Match", body: "The AI found a matching catalog item. Click Accept to remap this bid to that item so it can compete." },
-              { icon: "✓", title: "Approve Price / Reserve", body: "For price anomalies or below-reserve bids — click Approve to override and let the bid enter competition." },
-              { icon: "🔍", title: "Find in Catalog", body: "Search your master item list and manually link this bid line to the correct catalog entry." },
-              { icon: "✕", title: "Remove from Round", body: "Reject lines that can't be fulfilled or are clearly invalid — they won't appear in winner selection." },
-            ].map(({ icon, title, body }) => (
+            {([
+              { icon: "ai", title: "Accept AI Match", body: "The AI found a matching catalog item. Click Accept to remap this bid to that item so it can compete." },
+              { icon: "success", title: "Approve Price / Reserve", body: "For price anomalies or below-reserve bids — click Approve to override and let the bid enter competition." },
+              { icon: "search", title: "Find in Catalog", body: "Search your master item list and manually link this bid line to the correct catalog entry." },
+              { icon: "close", title: "Remove from Round", body: "Reject lines that can't be fulfilled or are clearly invalid — they won't appear in winner selection." },
+            ] as { icon: IconName; title: string; body: string }[]).map(({ icon, title, body }) => (
               <div key={title} style={{ display: "flex", gap: "8px", alignItems: "flex-start", flex: "1 1 160px" }}>
-                <span style={{ fontSize: "1rem", lineHeight: 1 }}>{icon}</span>
+                <span style={{ color: "var(--text-3)", flexShrink: 0, marginTop: "1px" }}><Icon name={icon} size="sm" strokeWidth={1.75} /></span>
                 <div>
                   <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-2)", margin: "0 0 2px" }}>{title}</p>
                   <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, lineHeight: 1.4 }}>{body}</p>
@@ -407,7 +408,7 @@ export default function ExceptionsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {filtered.length === 0 && (
             <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "60px", textAlign: "center" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "12px" }}>✓</div>
+              <div style={{ display: "inline-flex", color: "var(--success)", marginBottom: "12px" }}><Icon name="success" size={32} strokeWidth={1.5} /></div>
               <p style={{ color: "var(--text-4)", fontSize: "0.9rem", margin: 0 }}>
                 {activeFilter === "unresolved" ? "All exceptions resolved." : "No exceptions match this filter."}
               </p>
@@ -467,8 +468,8 @@ export default function ExceptionsPage() {
                   <div style={{ background: "var(--violet-bright-bg)", border: "1px solid var(--violet-bright-border)", borderRadius: "10px", padding: "12px 16px", marginBottom: "12px" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: "0.72rem", color: "var(--violet-bright)", fontWeight: 700, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                          🤖 AI Found a Match <ConfidenceBadge score={ex.ai_match_confidence} />
+                        <p style={{ fontSize: "0.72rem", color: "var(--violet-bright)", fontWeight: 700, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "5px" }}>
+                          <Icon name="ai" size="xs" strokeWidth={1.75} /> AI Found a Match <ConfidenceBadge score={ex.ai_match_confidence} />
                         </p>
                         <p style={{ fontSize: "0.7rem", color: "var(--violet-bright-transparent)", margin: "0 0 3px" }}>Catalog item to remap to:</p>
                         <p style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "var(--violet-bright)", margin: "0 0 4px", fontWeight: 600 }}>
@@ -489,7 +490,7 @@ export default function ExceptionsPage() {
                           disabled={isWorking}
                           className="btn-violet"
                         >
-                          ✓ Accept AI Match
+                          <Icon name="success" size="xs" strokeWidth={1.75} style={{ verticalAlign: "-2px", marginRight: "4px" }} />Accept AI Match
                         </button>
                       )}
                     </div>

@@ -613,11 +613,14 @@ body[data-theme="light"] {
 }
 .nav-item:hover {
   color: var(--text-2);
-  background: rgba(255,255,255,0.04);
+  background: var(--surface-hover);
 }
 .nav-item.active {
   font-weight: 600;
-  color: white;
+  /* --brand-dim is a light, low-opacity wash in BOTH themes — white text on it is invisible in
+     light mode. Use the solid brand color for the text instead, which reads clearly on the wash
+     in either theme (and matches the active left-border color). */
+  color: var(--brand);
   background: var(--brand-dim);
   border-left-color: var(--brand);
 }

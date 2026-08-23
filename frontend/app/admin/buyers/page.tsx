@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import api from "@/lib/api";
+import { Icon } from "@/components/icons";
 
 interface Buyer {
   id: number;
@@ -193,8 +194,8 @@ export default function BuyersPage() {
             </p>
           </div>
           <div className="page-actions">
-            <button onClick={() => setShowDiag(!showDiag)} className="btn-ghost" title="Diagnose email delivery">
-              ✉ Email check
+            <button onClick={() => setShowDiag(!showDiag)} className="btn-ghost" title="Diagnose email delivery" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <Icon name="mail" size="sm" strokeWidth={1.75} /> Email check
             </button>
             <button onClick={() => setShowForm(!showForm)} className={showForm ? "btn-ghost" : "btn-brand"}>
               {showForm ? "Cancel" : (
@@ -370,7 +371,7 @@ export default function BuyersPage() {
           </div>
         ) : buyers.length === 0 ? (
           <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "64px", textAlign: "center" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>👤</div>
+            <div style={{ display: "inline-flex", color: "var(--text-4)", marginBottom: "14px" }}><Icon name="buyers" size={40} strokeWidth={1.5} /></div>
             <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No buyers yet</p>
             <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Add your first buyer using the button above.</p>
           </div>
