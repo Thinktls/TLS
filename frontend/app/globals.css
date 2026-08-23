@@ -916,7 +916,7 @@ body[data-theme="light"] {
 }
 .dash-quick-link:hover { color: var(--text-1); }
 .dash-quick-link:last-child { border-bottom: none; }
-.dash-quick-icon { font-size: 0.85rem; }
+.dash-quick-icon { display: flex; align-items: center; color: var(--text-3); flex-shrink: 0; }
 .dash-quick-label { font-size: 0.78rem; color: inherit; }
 .dash-quick-arrow { margin-left: auto; color: var(--text-4); flex-shrink: 0; }
 

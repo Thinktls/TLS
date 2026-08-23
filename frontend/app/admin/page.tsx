@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import Link from "next/link";
 import { getFullName } from "@/lib/auth";
 import { fmtDatetimeShort } from "@/lib/format";
+import { Icon, type IconName } from "@/components/icons";
 
 interface Round {
   id: number; name: string; commodity: string; status: string;
@@ -91,10 +92,10 @@ function StatusRow({
   );
 }
 
-function QuickLink({ label, href, icon }: { label: string; href: string; icon: string }) {
+function QuickLink({ label, href, icon }: { label: string; href: string; icon: IconName }) {
   return (
     <Link href={href} className="dash-quick-link">
-      <span className="dash-quick-icon">{icon}</span>
+      <span className="dash-quick-icon"><Icon name={icon} size="sm" strokeWidth={1.75} /></span>
       <span className="dash-quick-label">{label}</span>
       <svg className="dash-quick-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
     </Link>
@@ -171,11 +172,11 @@ export default function AdminDashboard() {
     },
   ];
 
-  const quickLinks = [
-    { label: "Bid Comparison", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/comparison` : "/admin/rounds", icon: "📊" },
-    { label: "Approve Deals", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/deals` : "/admin/rounds", icon: "✅" },
-    { label: "Buyer Scoring", href: "/admin/buyers/compare", icon: "🏆" },
-    { label: "Export Center", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/export` : "/admin/rounds", icon: "📥" },
+  const quickLinks: { label: string; href: string; icon: IconName }[] = [
+    { label: "Bid Comparison", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/comparison` : "/admin/rounds", icon: "reports" },
+    { label: "Approve Deals", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/deals` : "/admin/rounds", icon: "success" },
+    { label: "Buyer Scoring", href: "/admin/buyers/compare", icon: "trophy" },
+    { label: "Export Center", href: completeRounds[0] ? `/admin/rounds/${completeRounds[0].id}/export` : "/admin/rounds", icon: "download" },
   ];
 
   return (

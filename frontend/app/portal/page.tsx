@@ -6,6 +6,7 @@ import { downloadFile } from "@/lib/download";
 import { getFullName } from "@/lib/auth";
 import { fmtDatetime } from "@/lib/format";
 import Link from "next/link";
+import { Icon, type IconName } from "@/components/icons";
 
 interface Deal {
   id: number; part_number: string; description: string;
@@ -16,9 +17,9 @@ interface RoundRow {
   deadline: string | null; invite_status: string; lines_submitted: number; lines_won: number;
 }
 
-const COMMODITY_ICON: Record<string, string> = {
-  laptops: "💻", desktops: "🖥", servers: "🖧", networking: "🌐",
-  storage: "💾", peripherals: "🖱", other: "📦",
+const COMMODITY_ICON: Record<string, IconName> = {
+  laptops: "laptop", desktops: "monitor", servers: "server", networking: "globe",
+  storage: "database", peripherals: "mouse", other: "package",
 };
 const ROUND_STATUS_COLOR: Record<string, { color: string; badge: string }> = {
   draft:      { color: "var(--text-4)",  badge: "badge-draft" },
@@ -76,7 +77,7 @@ export default function MyDeals() {
         <div className="page-header">
           <div className="page-header-text">
             <p className="page-eyebrow">{greeting()}, Bid Portal</p>
-            <h1 className="page-title">{name} <span style={{ fontSize: "1rem" }}>👋</span></h1>
+            <h1 className="page-title">{name}</h1>
             <p className="page-subtitle">{rounds.length} round{rounds.length !== 1 ? "s" : ""} invited · {openRounds.length} open</p>
           </div>
         </div>
@@ -94,13 +95,15 @@ export default function MyDeals() {
 
         {/* Stats */}
         <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", marginBottom: "28px" }}>
-          {[
-            { label: "Rounds Invited",  value: rounds.length,  icon: "🗂", color: "var(--info)", gradient: "linear-gradient(135deg,var(--brand-dim),transparent)" },
-            { label: "Deals Won",       value: deals.length,   icon: "🏆", color: "var(--success)", gradient: "linear-gradient(135deg,var(--success-dim),transparent)" },
-            { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: "💰", color: "var(--violet-bright)", gradient: "linear-gradient(135deg,var(--violet-dim),transparent)" },
-          ].map(({ label, value, icon, color, gradient }) => (
+          {([
+            { label: "Rounds Invited",  value: rounds.length,  icon: "rounds", color: "var(--info)", gradient: "linear-gradient(135deg,var(--brand-dim),transparent)" },
+            { label: "Deals Won",       value: deals.length,   icon: "trophy", color: "var(--success)", gradient: "linear-gradient(135deg,var(--success-dim),transparent)" },
+            { label: "Total Value Won", value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: "dollarSign", color: "var(--violet-bright)", gradient: "linear-gradient(135deg,var(--violet-dim),transparent)" },
+          ] as { label: string; value: string | number; icon: IconName; color: string; gradient: string }[]).map(({ label, value, icon, color, gradient }) => (
             <div key={label} style={{ background: gradient, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 22px", boxShadow: "var(--shadow-glass)" }}>
-              <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>{icon}</div>
+              <div style={{ width: "34px", height: "34px", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px", background: "var(--surface)", border: "1px solid var(--border)", color }}>
+                <Icon name={icon} size="sm" strokeWidth={1.75} />
+              </div>
               <p style={{ fontSize: "1.8rem", fontWeight: 800, color, margin: "0 0 3px", letterSpacing: "-0.04em" }}>{value}</p>
               <p style={{ fontSize: "0.72rem", color: "var(--text-4)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>{label}</p>
             </div>
@@ -121,7 +124,7 @@ export default function MyDeals() {
         {tab === "rounds" && (
           rounds.length === 0 ? (
             <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "64px", textAlign: "center" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>📭</div>
+              <div style={{ display: "inline-flex", color: "var(--text-4)", marginBottom: "14px" }}><Icon name="inbox" size={40} strokeWidth={1.5} /></div>
               <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No rounds yet</p>
               <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>You'll see rounds here once you're invited.</p>
             </div>
@@ -140,8 +143,10 @@ export default function MyDeals() {
                     <div style={{
                       width: "40px", height: "40px", borderRadius: "10px", flexShrink: 0,
                       background: "var(--surface)", border: "1px solid var(--border)",
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem",
-                    }}>{COMMODITY_ICON[r.commodity] || "📦"}</div>
+                      display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-3)",
+                    }}>
+                      <Icon name={COMMODITY_ICON[r.commodity] || "package"} size="sm" strokeWidth={1.75} />
+                    </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 700, color: "var(--text-1)", margin: "0 0 3px", fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</p>
@@ -180,7 +185,7 @@ export default function MyDeals() {
         {tab === "deals" && (
           deals.length === 0 ? (
             <div style={{ border: "1px dashed var(--border)", borderRadius: "var(--radius-xl)", padding: "64px", textAlign: "center" }}>
-              <div style={{ fontSize: "2.5rem", marginBottom: "14px" }}>🏆</div>
+              <div style={{ display: "inline-flex", color: "var(--text-4)", marginBottom: "14px" }}><Icon name="trophy" size={40} strokeWidth={1.5} /></div>
               <p style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-2)", margin: "0 0 6px" }}>No deals yet</p>
               <p style={{ fontSize: "0.82rem", color: "var(--text-4)", margin: 0 }}>Submit competitive bids to start winning.</p>
             </div>

@@ -11,7 +11,7 @@ import {
   // Actions / chrome
   Plus, X, ChevronDown, ChevronRight, ChevronLeft, Search, Upload, Download,
   Pencil, Trash2, Copy, LogOut, Bell, Sun, Moon, Menu, Mail, Send, Eye, EyeOff,
-  ArrowRight, ArrowLeft, RefreshCw, Loader2, ExternalLink,
+  ArrowRight, ArrowLeft, RefreshCw, Loader2, ExternalLink, Trophy, DollarSign, Inbox,
   type LucideIcon, type LucideProps,
 } from "lucide-react";
 
@@ -70,6 +70,9 @@ export const ICONS = {
   refresh: RefreshCw,
   spinner: Loader2,
   externalLink: ExternalLink,
+  trophy: Trophy,
+  dollarSign: DollarSign,
+  inbox: Inbox,
 } as const;
 
 export type IconName = keyof typeof ICONS;
