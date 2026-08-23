@@ -424,7 +424,7 @@ def open_round(
             upload_url = f"{settings.FRONTEND_URL}/portal/bid?round={round_id}"
             
             buyer_ids = [row.buyer_id for row in assigned]
-            buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids), User.is_active == True).all()}
+            buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
             
             for row in assigned:
                 buyer = buyers.get(row.buyer_id)
@@ -692,7 +692,7 @@ def send_invitations(
     upload_url = f"{settings.FRONTEND_URL}/portal/bid?round={round_id}"
 
     buyer_ids = [row.buyer_id for row in assigned]
-    buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids), User.is_active == True).all()}
+    buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
 
     sent = 0
     failures = []
