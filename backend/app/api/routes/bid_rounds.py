@@ -425,7 +425,17 @@ def open_round(
             
             buyer_ids = [row.buyer_id for row in assigned]
             buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
-            
+
+            # ---- FAIL-FAST: catch missing users immediately ----
+            if not buyers:
+                missing = [str(bid) for bid in buyer_ids]
+                raise HTTPException(
+                    400,
+                    f"Round {round_id} has {len(assigned)} assigned buyer(s), but none of the buyer IDs "
+                    f"({', '.join(missing)}) exist in the User table. "
+                    f"Assign valid buyers or clean up orphaned round_buyers entries."
+                )
+
             for row in assigned:
                 buyer = buyers.get(row.buyer_id)
                 if not buyer:
@@ -693,6 +703,16 @@ def send_invitations(
 
     buyer_ids = [row.buyer_id for row in assigned]
     buyers = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
+
+    # ---- FAIL-FAST: catch missing users immediately ----
+    if not buyers:
+        missing = [str(bid) for bid in buyer_ids]
+        raise HTTPException(
+            400,
+            f"Round {round_id} has {len(assigned)} assigned buyer(s), but none of the buyer IDs "
+            f"({', '.join(missing)}) exist in the User table. "
+            f"Assign valid buyers or clean up orphaned round_buyers entries."
+        )
 
     sent = 0
     failures = []
