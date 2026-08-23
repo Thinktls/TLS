@@ -38,42 +38,35 @@ function greeting() {
   return "Good evening";
 }
 
-function StatCard({
-  label, value, sub, gradient, icon,
-}: { label: string; value: number; sub: string; gradient: string; icon: React.ReactNode }) {
+function Metric({
+  label, value, sub, accent, icon,
+}: { label: string; value: number; sub: string; accent: string; icon: React.ReactNode }) {
   return (
-    <div className="stat-card">
-      <div style={{ marginBottom: "18px" }}>
-        <div style={{
-          width: "42px", height: "42px", borderRadius: "12px",
-          background: gradient,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          color: "var(--text-on-brand)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.22)",
-          border: "1px solid var(--border-mid)",
-        }}>{icon}</div>
+    <div className="dash-metric" style={{ "--metric-accent": accent } as React.CSSProperties}>
+      <div className="dash-metric-top">
+        <span className="dash-metric-icon">{icon}</span>
+        <span className="dash-metric-label">{label}</span>
       </div>
-      <p style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--text-1)", margin: "0 0 4px", letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</p>
-      <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-3)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
-      <p style={{ fontSize: "0.7rem", color: "var(--text-4)", margin: 0 }}>{sub}</p>
+      <p className="dash-metric-value">{value}</p>
+      <p className="dash-metric-sub">{sub}</p>
     </div>
   );
 }
 
-function RoundRow({ round }: { round: Round }) {
+function RoundTableRow({ round }: { round: Round }) {
   const meta = STATUS_META[round.status] || STATUS_META.draft;
   return (
-    <Link href={`/admin/rounds/${round.id}`} className="dash-round-row">
-      <div className="dash-commodity-icon">{COMMODITY_ICON[round.commodity] || COMMODITY_ICON.other}</div>
-      <div className="dash-round-info">
-        <p className="dash-round-name">{round.name}</p>
-        <p className="dash-round-sub">
-          {round.total_line_items.toLocaleString()} items
-          {round.submission_deadline && ` · Due ${fmtDatetimeShort(round.submission_deadline)}`}
-        </p>
-      </div>
-      <span className={`badge ${meta.badge}`}>{round.status}</span>
-    </Link>
+    <tr onClick={() => { window.location.href = `/admin/rounds/${round.id}`; }} style={{ cursor: "pointer" }}>
+      <td>
+        <div className="dash-round-table-name">
+          <div className="dash-commodity-icon">{COMMODITY_ICON[round.commodity] || COMMODITY_ICON.other}</div>
+          <span style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.85rem" }}>{round.name}</span>
+        </div>
+      </td>
+      <td style={{ color: "var(--text-3)" }}>{round.total_line_items.toLocaleString()}</td>
+      <td style={{ color: "var(--text-3)" }}>{round.submission_deadline ? fmtDatetimeShort(round.submission_deadline) : "—"}</td>
+      <td style={{ textAlign: "right" }}><span className={`badge ${meta.badge}`}>{round.status}</span></td>
+    </tr>
   );
 }
 
@@ -114,18 +107,19 @@ export default function AdminDashboard() {
   if (loading) return (
     <AdminLayout>
       <div className="dash-wrap animate-in">
-        <div className="dash-header">
-          <div className="skeleton skeleton-text" style={{ width: "80px", marginBottom: "8px" }} />
-          <div className="skeleton skeleton-title" style={{ width: "200px", height: "1.6rem", marginBottom: "8px" }} />
-          <div className="skeleton skeleton-text" style={{ width: "140px" }} />
+        <div className="dash-topbar">
+          <div>
+            <div className="skeleton skeleton-text" style={{ width: "70px", marginBottom: "8px" }} />
+            <div className="skeleton skeleton-title" style={{ width: "200px", height: "1.5rem", marginBottom: "6px" }} />
+            <div className="skeleton skeleton-text" style={{ width: "140px" }} />
+          </div>
         </div>
-        <div className="stat-grid">
+        <div className="dash-metric-strip">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="stat-card">
-              <div className="skeleton skeleton-circle" style={{ width: "42px", height: "42px", marginBottom: "18px" }} />
-              <div className="skeleton" style={{ width: "60px", height: "2rem", marginBottom: "8px" }} />
-              <div className="skeleton skeleton-text" style={{ width: "80px", marginBottom: "4px" }} />
-              <div className="skeleton skeleton-text" style={{ width: "50px" }} />
+            <div key={i} className="dash-metric">
+              <div className="skeleton skeleton-circle" style={{ width: "26px", height: "26px", marginBottom: "12px" }} />
+              <div className="skeleton" style={{ width: "60px", height: "1.7rem", marginBottom: "6px" }} />
+              <div className="skeleton skeleton-text" style={{ width: "70px" }} />
             </div>
           ))}
         </div>
@@ -145,26 +139,26 @@ export default function AdminDashboard() {
   const activeB        = buyers.filter(b => b.is_active);
   const recent         = rounds.slice(0, 6);
 
-  const stats: { label: string; value: number; sub: string; gradient: string; icon: React.ReactNode }[] = [
+  const stats: { label: string; value: number; sub: string; accent: string; icon: React.ReactNode }[] = [
     {
       label: "Total Rounds", value: rounds.length, sub: "all time",
-      gradient: "var(--brand-gradient)",
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      accent: "var(--brand)",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
     },
     {
       label: "Open Now", value: openRounds.length, sub: "accepting bids",
-      gradient: "linear-gradient(135deg, var(--success-strong), var(--success))",
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+      accent: "var(--success)",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
     },
     {
       label: "Processing", value: processing.length, sub: "running matches",
-      gradient: "linear-gradient(135deg, #d97706, var(--warning))",
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+      accent: "var(--warning)",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
     },
     {
       label: "Active Buyers", value: activeB.length, sub: "registered buyers",
-      gradient: "linear-gradient(135deg, #7c3aed, var(--violet-bright))",
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+      accent: "var(--violet-bright)",
+      icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
     },
   ];
 
@@ -179,30 +173,30 @@ export default function AdminDashboard() {
     <AdminLayout>
       <div className="dash-wrap animate-in">
 
-        {/* Header */}
-        <div className="dash-header">
-          <p className="dash-greeting">{greeting()},</p>
-          <h1 className="dash-title">{name}</h1>
-          <p className="dash-date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+        {/* Top bar — title + toolbar */}
+        <div className="dash-topbar">
+          <div>
+            <p className="dash-eyebrow">Dashboard</p>
+            <h1 className="dash-title">{greeting()}, {name}</h1>
+            <p className="dash-date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
+          </div>
+          <div className="dash-actions">
+            <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Bid Round
+            </Link>
+            <Link href="/admin/buyers" className="btn-ghost" style={{ textDecoration: "none" }}>Manage Buyers</Link>
+            <Link href="/admin/query" className="btn-ghost" style={{ textDecoration: "none" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              AI Query
+            </Link>
+            <Link href="/admin/reports" className="btn-ghost" style={{ textDecoration: "none" }}>Reports</Link>
+          </div>
         </div>
 
-        {/* KPI cards */}
-        <div className="stat-grid">
-          {stats.map(s => <StatCard key={s.label} {...s} />)}
-        </div>
-
-        {/* Quick actions */}
-        <div className="dash-actions">
-          <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Bid Round
-          </Link>
-          <Link href="/admin/buyers" className="btn-ghost" style={{ textDecoration: "none" }}>Manage Buyers</Link>
-          <Link href="/admin/query" className="btn-ghost" style={{ textDecoration: "none" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            AI Query
-          </Link>
-          <Link href="/admin/reports" className="btn-ghost" style={{ textDecoration: "none" }}>Reports</Link>
+        {/* KPI metric strip */}
+        <div className="dash-metric-strip">
+          {stats.map(s => <Metric key={s.label} {...s} />)}
         </div>
 
         {/* Two-column lower section */}
@@ -223,8 +217,20 @@ export default function AdminDashboard() {
                 <Link href="/admin/rounds/new" className="btn-brand" style={{ textDecoration: "none", fontSize: "0.82rem" }}>Create first round →</Link>
               </div>
             ) : (
-              <div className="dash-rounds">
-                {recent.map(r => <RoundRow key={r.id} round={r} />)}
+              <div className="panel">
+                <table className="dark-table">
+                  <thead>
+                    <tr>
+                      <th>Round</th>
+                      <th>Items</th>
+                      <th>Deadline</th>
+                      <th style={{ textAlign: "right" }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recent.map(r => <RoundTableRow key={r.id} round={r} />)}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
