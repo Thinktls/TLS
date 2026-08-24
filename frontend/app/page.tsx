@@ -23,7 +23,7 @@ const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   {
     icon: "ai",
     title: "AI Powered Matching",
-    desc: "Three tier engine: exact match, then fuzzy (RapidFuzz), then Claude AI — automatically resolves part number variants.",
+    desc: "Three tier engine: exact match, then fuzzy (RapidFuzz), then Claude AI, automatically resolving part number variants.",
   },
   {
     icon: "success",
@@ -217,7 +217,7 @@ export default function LandingPage() {
 
           <p style={{ fontSize: "clamp(1rem, 2vw, 1.25rem)", color: "rgba(255,255,255,0.5)", maxWidth: "600px", margin: "0 auto 48px", lineHeight: 1.7, fontWeight: 400 }}>
             Automate buyer bid collection, AI powered part matching, winner selection,
-            and deal approval — all in one cinematic platform.
+            and deal approval, all in one cinematic platform.
           </p>
 
           <div style={{ display: "flex", justifyContent: "center", gap: "16px", flexWrap: "wrap" }}>
@@ -255,7 +255,7 @@ export default function LandingPage() {
             Everything You Need
           </h2>
           <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", marginBottom: "56px", fontSize: "1rem" }}>
-            From bid creation to ERP push — fully automated.
+            From bid creation to ERP push, fully automated.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
             {FEATURES.map((f) => (
