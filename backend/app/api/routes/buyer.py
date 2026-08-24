@@ -123,6 +123,12 @@ def my_rounds(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
     return result
 
 
+def _preview_cache_path(round_id: int, buyer_id: int) -> str:
+    cache_dir = "/app/uploads/_preview_cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    return f"{cache_dir}/{round_id}_{buyer_id}"
+
+
 @router.post("/rounds/{round_id}/parse-preview")
 async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), buyer=Depends(require_buyer)):
     """Parse a bid file without saving — returns preview rows so buyer can review before confirming."""
@@ -153,6 +159,11 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
         else:
             raise HTTPException(400, str(e))
     total_qty = sum(r["quantity"] or 0 for r in rows)
+    # Cache the exact bytes we just parsed so the confirm step (POST .../bid) doesn't make the
+    # buyer upload the same file a second time — on a large workbook (e.g. a memory pivot file)
+    # that second upload+reparse was doubling the time the buyer sat waiting.
+    with open(_preview_cache_path(round_id, buyer.id), "wb") as fh:
+        fh.write(content)
     return {
         "filename": file.filename,
         "total_lines": len(rows),
@@ -162,7 +173,14 @@ async def parse_preview(round_id: int, file: UploadFile = File(...), db: Session
 
 
 @router.post("/rounds/{round_id}/bid")
-async def submit_bid(round_id: int, file: UploadFile = File(...), offer_terms: str = Form(""), db: Session = Depends(get_db), buyer=Depends(require_buyer)):
+async def submit_bid(
+    round_id: int,
+    file: Optional[UploadFile] = File(None),
+    filename: Optional[str] = Form(None),
+    offer_terms: str = Form(""),
+    db: Session = Depends(get_db),
+    buyer=Depends(require_buyer),
+):
     r = db.query(BidRound).filter(BidRound.id == round_id).first()
     if not r:
         raise HTTPException(404, "Round not found")
@@ -181,8 +199,21 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), offer_terms: s
     if r.submission_deadline and datetime.now(timezone.utc) > r.submission_deadline:
         raise HTTPException(400, "Submission deadline has passed")
 
-    content = await file.read()
-    validate_upload(content, file.filename)
+    # Confirming a previewed file re-sends only its filename, not the bytes again — reuse the
+    # bytes parse-preview already cached instead of forcing a second full upload of the same file.
+    if file is not None:
+        content = await file.read()
+        upload_filename = file.filename
+    elif filename:
+        cache_path = _preview_cache_path(round_id, buyer.id)
+        if not os.path.exists(cache_path):
+            raise HTTPException(400, "Your file preview expired. Please choose the file again.")
+        with open(cache_path, "rb") as fh:
+            content = fh.read()
+        upload_filename = filename
+    else:
+        raise HTTPException(400, "No file provided")
+    validate_upload(content, upload_filename)
     file_size = len(content)
 
     # Resubmission: clear every previous bid line for this buyer in this round — pending,
@@ -210,7 +241,7 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), offer_terms: s
     import os as _os
     upload_dir = f"/app/uploads/rounds/{round_id}"
     _os.makedirs(upload_dir, exist_ok=True)
-    safe_name = f"{buyer.id}_{file.filename}".replace(" ", "_")
+    safe_name = f"{buyer.id}_{upload_filename}".replace(" ", "_")
     disk_path = f"{upload_dir}/{safe_name}"
     with open(disk_path, "wb") as fh:
         fh.write(content)
@@ -218,7 +249,7 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), offer_terms: s
     bid_file = BidFile(
         bid_round_id=round_id,
         buyer_id=buyer.id,
-        filename=file.filename,
+        filename=upload_filename,
         file_path=disk_path,
         file_size_bytes=file_size,
         status="processing",
@@ -229,12 +260,12 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), offer_terms: s
 
     loop = asyncio.get_running_loop()
     try:
-        rows = await loop.run_in_executor(file_parsing_executor, parse_buyer_file, content, file.filename)
+        rows = await loop.run_in_executor(file_parsing_executor, parse_buyer_file, content, upload_filename)
     except ValueError as e:
         if settings.ANTHROPIC_API_KEY or settings.OLLAMA_BASE_URL:
             try:
                 from app.services.ai_file_parser import ai_parse_buyer_file
-                rows = await loop.run_in_executor(file_parsing_executor, ai_parse_buyer_file, content, file.filename)
+                rows = await loop.run_in_executor(file_parsing_executor, ai_parse_buyer_file, content, upload_filename)
             except ValueError as ai_e:
                 bid_file.status = "error"
                 bid_file.error_message = str(ai_e)
@@ -278,6 +309,10 @@ async def submit_bid(round_id: int, file: UploadFile = File(...), offer_terms: s
     )
 
     db.commit()
+    try:
+        os.remove(_preview_cache_path(round_id, buyer.id))
+    except OSError:
+        pass
     create_notification(
         db,
         title=f"New bid received from {buyer.company_name or buyer.full_name}",

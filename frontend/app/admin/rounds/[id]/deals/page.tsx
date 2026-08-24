@@ -389,9 +389,16 @@ export default function DealsPage() {
           </div>
         )}
 
+        {/* Fixed + above the modal overlays (zIndex 100) below — otherwise an error raised while
+            the Award Entire Lot or Override modal is open (validation, a failed request) sets
+            this message but it renders behind the modal's opaque backdrop, invisible to the
+            admin. That read as "the button doesn't do anything." */}
         {msg && (
           <div style={{
-            marginBottom: "16px", padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
+            position: "fixed", top: "20px", left: "50%", transform: "translateX(-50%)",
+            zIndex: 200, maxWidth: "90vw",
+            padding: "11px 16px", borderRadius: "10px", fontSize: "0.83rem",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
             background: msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)",
             border: `1px solid ${msgType === "ok" ? "var(--success-dim)" : "var(--danger-dim)"}`,
             color: msgType === "ok" ? "var(--success)" : "var(--danger)",

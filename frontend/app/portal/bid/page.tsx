@@ -108,8 +108,10 @@ function SubmitBidInner() {
   async function confirmSubmit() {
     if (!selectedRound || !selectedFile) return;
     setSubmitting(true); setError("");
+    // The file was already uploaded once for the preview — the server cached those bytes, so
+    // confirming only needs to send the filename, not upload the same (possibly large) file again.
     const fd = new FormData();
-    fd.append("file", selectedFile);
+    fd.append("filename", selectedFile.name);
     fd.append("offer_terms", offerTerms);
     try {
       const res = await api.post(`/buyer/rounds/${selectedRound}/bid`, fd, { timeout: 180000 });
