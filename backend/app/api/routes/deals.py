@@ -327,6 +327,16 @@ def override_deal(deal_id: int, req: OverrideRequest, db: Session = Depends(get_
     else:
         raise HTTPException(400, f"Unknown field_changed: {req.field_changed}")
 
+    # An override changes what the buyer actually gets — if this deal was already approved
+    # (and possibly already emailed to the buyer or pushed to Razor), leaving it marked
+    # "approved" with the new value would silently disagree with what was already sent out.
+    # Force a conscious re-approval so the corrected data actually reaches the buyer/Razor.
+    was_approved = deal.status == "approved"
+    if was_approved:
+        deal.status = "pending_approval"
+        deal.approved_by = None
+        deal.approved_at = None
+
     override = ApprovalOverride(
         deal_id=deal_id,
         bid_round_id=deal.bid_round_id,
@@ -338,7 +348,13 @@ def override_deal(deal_id: int, req: OverrideRequest, db: Session = Depends(get_
     )
     db.add(override)
     db.commit()
-    return {"status": "overridden", "field": req.field_changed, "old": old_value, "new": req.new_value}
+    return {
+        "status": "overridden",
+        "field": req.field_changed,
+        "old": old_value,
+        "new": req.new_value,
+        "reset_to_pending": was_approved,
+    }
 
 
 @router.get("/{deal_id}/overrides")

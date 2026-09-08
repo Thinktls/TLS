@@ -94,6 +94,17 @@ def _select_winners_loop(db, bid_round_id, by_item, master_map, buyer_map, deals
             for line in lines:
                 if line.unit_price is None:
                     continue
+                # An admin who already resolved this exception (accepted the price, remapped it,
+                # etc.) made a conscious decision — re-flagging it here on every subsequent
+                # round-wide reprocess would silently overturn that decision with no way for the
+                # admin to ever make it stick. The reserve-price check below already respects this;
+                # anomaly detection previously did not, which is why "Accept" on a flagged price
+                # looked like it had no effect.
+                if line.exception_resolved:
+                    # Reflect the admin's decision, not whatever this field happened to hold
+                    # from the last time detection ran — a resolved line is no longer flagged.
+                    line.is_anomaly = False
+                    continue
                 z = abs(line.unit_price - mean_price) / stdev if stdev and stdev > 0 else 0
                 line.z_score = round(z, 4)
                 # Extreme ratio check works with 2 bids: flag the high bid when it's ≥10x the low bid
@@ -155,43 +166,128 @@ def _select_winners_loop(db, bid_round_id, by_item, master_map, buyer_map, deals
                 if l.unit_price >= master.reserve_price or l.exception_resolved
             ]
 
-        if not valid_lines:
-            continue
-
-        # Sort: highest price first, tiebreak = earliest upload
-        valid_lines.sort(key=lambda l: (-l.unit_price, l.bid_file.uploaded_at))
-        winner = valid_lines[0]
-        winner.is_winner = True
-        winner.real_winning_price = winner.unit_price
-
-        # Fluff engine: losing buyers told real_price * (1 + buyer_fluff%) only when enabled
-        for loser in valid_lines[1:]:
-            buyer = buyer_map.get(loser.buyer_id)
-            if buyer and buyer.fluff_enabled:
-                fluff_pct = buyer.fluff_percentage
-            elif not buyer:
-                fluff_pct = settings.FLUFF_PERCENTAGE
-            else:
-                fluff_pct = 0.0
-            loser.fluffed_loss_price = round(winner.unit_price * (1 + fluff_pct / 100), 4)
-
-        # Create deal
-        qty = master.quantity or winner.quantity or 1
-        deal = Deal(
-            bid_round_id=bid_round_id,
-            master_item_id=item_id,
-            winning_buyer_id=winner.buyer_id,
-            winning_bid_line_id=winner.id,
-            part_number=master.part_number,
-            description=master.description,
-            quantity=qty,
-            winning_price=winner.unit_price,
-            total_value=round(winner.unit_price * qty, 4),
-        )
-        db.add(deal)
-        deals.append(deal)
+        deal = _pick_winner_and_upsert_deal(db, bid_round_id, item_id, master, valid_lines, buyer_map, existing_deal=None)
+        if deal:
+            deals.append(deal)
 
         # Publish progress periodically so the admin's progress bar advances during this phase
         # rather than sitting still until every deal exists.
         if len(deals) % commit_batch == 0:
             db.commit()
+
+
+def _pick_winner_and_upsert_deal(db, bid_round_id, item_id, master, valid_lines, buyer_map, existing_deal) -> Deal | None:
+    """Pick the highest valid bid for one item and create/update its Deal to match.
+    Shared by the full-round pass (existing_deal is always None there — deals were already
+    wiped up front) and the single-item recompute path (existing_deal may be a real row to
+    update in place, or None if this item never had one)."""
+    if not valid_lines:
+        return None
+
+    # Sort: highest price first, tiebreak = earliest upload
+    valid_lines.sort(key=lambda l: (-l.unit_price, l.bid_file.uploaded_at))
+    winner = valid_lines[0]
+    winner.is_winner = True
+    winner.real_winning_price = winner.unit_price
+
+    # Fluff engine: losing buyers told real_price * (1 + buyer_fluff%) only when enabled
+    for loser in valid_lines[1:]:
+        buyer = buyer_map.get(loser.buyer_id)
+        if buyer and buyer.fluff_enabled:
+            fluff_pct = buyer.fluff_percentage
+        elif not buyer:
+            fluff_pct = settings.FLUFF_PERCENTAGE
+        else:
+            fluff_pct = 0.0
+        loser.fluffed_loss_price = round(winner.unit_price * (1 + fluff_pct / 100), 4)
+
+    qty = master.quantity or winner.quantity or 1
+    total_value = round(winner.unit_price * qty, 4)
+
+    if existing_deal:
+        was_approved = existing_deal.status == "approved"
+        existing_deal.winning_buyer_id = winner.buyer_id
+        existing_deal.winning_bid_line_id = winner.id
+        existing_deal.part_number = master.part_number
+        existing_deal.description = master.description
+        existing_deal.quantity = qty
+        existing_deal.winning_price = winner.unit_price
+        existing_deal.total_value = total_value
+        if was_approved:
+            # The previous winner/price on this deal was already approved — and possibly
+            # emailed to the buyer and pushed to Razor. Silently swapping in a new winner
+            # while it still reads "approved" would leave the customer, Razor, and the deal
+            # record all disagreeing with each other. Force a conscious re-approval instead.
+            existing_deal.status = "pending_approval"
+            existing_deal.approved_by = None
+            existing_deal.approved_at = None
+        return existing_deal
+
+    deal = Deal(
+        bid_round_id=bid_round_id,
+        master_item_id=item_id,
+        winning_buyer_id=winner.buyer_id,
+        winning_bid_line_id=winner.id,
+        part_number=master.part_number,
+        description=master.description,
+        quantity=qty,
+        winning_price=winner.unit_price,
+        total_value=total_value,
+    )
+    db.add(deal)
+    return deal
+
+
+def recompute_deal_for_item(db: Session, bid_round_id: int, item_id: int) -> Deal | None:
+    """Re-select the winner for ONE master item from its CURRENT bid-line state and
+    upsert (or remove) that item's Deal to match.
+
+    Called right after an admin resolves an exception (accept/reject/remap) so the Deal a
+    buyer is emailed and pushed to Razor from never goes stale relative to what the admin
+    actually decided. Deliberately does NOT re-run anomaly/reserve detection — those already
+    ran once during round processing, and a line's current match_status already reflects
+    every decision made about it since (a still-flagged line is still "exception" and is
+    correctly excluded here just by not matching the query below).
+    """
+    master = db.query(MasterItem).filter(MasterItem.id == item_id).first()
+    if not master:
+        return None
+
+    lines = (
+        db.query(BidLine)
+        .options(selectinload(BidLine.bid_file))
+        .filter(
+            BidLine.bid_round_id == bid_round_id,
+            BidLine.master_item_id == item_id,
+            BidLine.match_status == "matched",
+            BidLine.unit_price.isnot(None),
+        )
+        .all()
+    )
+
+    # Reset is_winner only for this item's lines — a round-wide reset would clobber every
+    # other item's already-correct winner flag.
+    db.query(BidLine).filter(
+        BidLine.bid_round_id == bid_round_id, BidLine.master_item_id == item_id
+    ).update({"is_winner": False}, synchronize_session=False)
+
+    existing_deal = (
+        db.query(Deal)
+        .filter(Deal.bid_round_id == bid_round_id, Deal.master_item_id == item_id)
+        .first()
+    )
+
+    if not lines:
+        # No valid bid left for this item at all — remove any stale deal so nobody is ever
+        # emailed a win, or has a deal pushed to Razor, for a line that no longer competes.
+        if existing_deal:
+            db.delete(existing_deal)
+            db.commit()
+        return None
+
+    buyer_ids = {l.buyer_id for l in lines}
+    buyer_map = {b.id: b for b in db.query(User).filter(User.id.in_(buyer_ids)).all()}
+
+    deal = _pick_winner_and_upsert_deal(db, bid_round_id, item_id, master, lines, buyer_map, existing_deal)
+    db.commit()
+    return deal

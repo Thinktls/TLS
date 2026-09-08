@@ -294,12 +294,16 @@ export default function DealsPage() {
     if (!override.reason.trim()) { flash("Reason note is required for overrides", "err"); return; }
     setSubmittingOverride(true);
     try {
-      await api.post(`/deals/${override.dealId}/override`, {
+      const res = await api.post(`/deals/${override.dealId}/override`, {
         field_changed: override.field,
         new_value: override.newValue,
         reason_note: override.reason,
       });
-      flash(`✓ Override saved for ${override.partNumber}`);
+      flash(
+        res.data.reset_to_pending
+          ? `✓ Override saved for ${override.partNumber}. This deal was already approved, so it's back to Pending Approval — approve it again to send the corrected result.`
+          : `✓ Override saved for ${override.partNumber}`
+      );
       setOverride(null);
       load();
     } catch (err: any) {
@@ -693,25 +697,41 @@ export default function DealsPage() {
               <label style={labelStyle}>Field to Override</label>
               <select
                 value={override.field}
-                onChange={(e) => setOverride({ ...override, field: e.target.value as OverrideModal["field"] })}
+                onChange={(e) => setOverride({ ...override, field: e.target.value as OverrideModal["field"], newValue: "" })}
                 className="glass-input"
                 style={{ marginBottom: 14 }}
               >
                 <option value="">Select field...</option>
                 <option value="unit_price">Unit Price</option>
                 <option value="quantity">Quantity</option>
-                <option value="winning_buyer">Winning Buyer ID</option>
+                <option value="winning_buyer">Winning Buyer</option>
               </select>
 
               <label style={labelStyle}>New Value</label>
-              <input
-                type="text"
-                value={override.newValue}
-                onChange={(e) => setOverride({ ...override, newValue: e.target.value })}
-                placeholder={override.field === "unit_price" ? "e.g. 1250.00" : override.field === "quantity" ? "e.g. 5" : "Buyer ID"}
-                className="glass-input"
-                style={{ marginBottom: 14 }}
-              />
+              {override.field === "winning_buyer" ? (
+                <select
+                  value={override.newValue}
+                  onChange={(e) => setOverride({ ...override, newValue: e.target.value })}
+                  className="glass-input"
+                  style={{ marginBottom: 14 }}
+                >
+                  <option value="">Choose buyer...</option>
+                  {roundBuyers.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.company_name || b.full_name} ({b.email})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={override.newValue}
+                  onChange={(e) => setOverride({ ...override, newValue: e.target.value })}
+                  placeholder={override.field === "unit_price" ? "e.g. 1250.00" : "e.g. 5"}
+                  className="glass-input"
+                  style={{ marginBottom: 14 }}
+                />
+              )}
 
               <label style={labelStyle}>Reason Note (required)</label>
               <textarea

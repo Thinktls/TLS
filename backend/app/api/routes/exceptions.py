@@ -15,6 +15,7 @@ from app.models.bid_round import BidRound
 from app.models.master_item import MasterItem
 from app.models.user import User
 from app.services.email_service import send_lines_removed
+from app.services.winner_selector import recompute_deal_for_item
 
 
 def _notify_lines_removed(background_tasks: BackgroundTasks, db: Session, round_id: int, lines: list[BidLine]) -> None:
@@ -223,6 +224,11 @@ def resolve_exception(
         line.exception_notes = req.notes
 
     db.commit()
+    # Resolving an exception (accept, reject, or remap) changes whether this line can win —
+    # recompute the real Deal for its item now, instead of leaving whatever Deal was created
+    # at round-close silently out of sync with what the admin just decided.
+    if line.master_item_id:
+        recompute_deal_for_item(db, line.bid_round_id, line.master_item_id)
     # Tell the buyer once the removal is actually persisted, never before.
     if req.action == "reject":
         _notify_lines_removed(background_tasks, db, line.bid_round_id, [line])
@@ -256,6 +262,7 @@ def bulk_resolve(
     lines = q.all()
     resolved_count = 0
     rejected: list[BidLine] = []   # buyers of these get one grouped "line removed" email
+    affected_item_ids: set[int] = set()
 
     for line in lines:
         if req.action == "approve_suggested":
@@ -277,6 +284,8 @@ def bulk_resolve(
             line.exception_resolved = True
             line.exception_resolved_by = admin.email
             resolved_count += 1
+            if line.master_item_id:
+                affected_item_ids.add(line.master_item_id)
 
         elif req.action == "reject_all":
             line.exception_type = "rejected"
@@ -284,8 +293,15 @@ def bulk_resolve(
             line.exception_resolved_by = admin.email
             rejected.append(line)
             resolved_count += 1
+            if line.master_item_id:
+                affected_item_ids.add(line.master_item_id)
 
     db.commit()
+    # Same reasoning as the single-line resolve path: a bulk accept/reject changes who's
+    # actually winning each affected item, so the Deal for each one needs to be brought back
+    # in sync now rather than staying frozen at whatever round-close originally picked.
+    for item_id in affected_item_ids:
+        recompute_deal_for_item(db, round_id, item_id)
     # One grouped email per affected buyer, sent only after the rejections are persisted.
     if rejected:
         _notify_lines_removed(background_tasks, db, round_id, rejected)
