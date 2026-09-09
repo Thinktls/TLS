@@ -254,3 +254,78 @@ def test_override_on_an_approved_deal_resets_it_to_pending_approval(client, admi
     assert deal.approved_by is None
     assert deal.approved_at is None
     assert deal.winning_buyer_id == other.id
+
+
+# ── Deal-level Reject (POST /deals/{id}/reject) — a DIFFERENT endpoint from the Exceptions
+# screen's per-line reject above. It marked the deal status="rejected" but never cleared
+# winning_buyer_id, and every buyer-facing "did I win" query read winning_buyer_id with no
+# status filter — so a rejected deal still showed as WON in the buyer's own portal and in the
+# result emails sent from approve-all. Fixed by filtering those queries to status=="approved",
+# matching what the Razor export already correctly did.
+
+def _buyer_headers(client, email, password="pass"):
+    resp = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert resp.status_code == 200, resp.text
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+def test_rejected_deal_not_shown_as_won_in_buyer_portal(client, admin_token, db):
+    """A deal the admin actually approves must count as won; a deal the admin rejects
+    (instead of approving) must not — even though both still carry winning_buyer_id."""
+    r = _make_round(db)
+    buyer = _make_buyer(db, "rejwin@test.com")
+    master_won = _make_master(db, r.id, pn="PART-WON")
+    master_rejected = _make_master(db, r.id, pn="PART-REJ")
+    _make_line(db, _make_bid_file(db, r.id, buyer.id), r.id, buyer.id, master_won.id, 100.0)
+    _make_line(db, _make_bid_file(db, r.id, buyer.id), r.id, buyer.id, master_rejected.id, 50.0)
+    db.commit()
+    select_winners(db, r.id)
+    deal_won = db.query(Deal).filter(Deal.master_item_id == master_won.id).first()
+    deal_rejected = db.query(Deal).filter(Deal.master_item_id == master_rejected.id).first()
+
+    approve_resp = client.post(f"/api/deals/{deal_won.id}/approve", headers=admin_token)
+    assert approve_resp.status_code == 200, approve_resp.text
+    reject_resp = client.post(f"/api/deals/{deal_rejected.id}/reject", headers=admin_token)
+    assert reject_resp.status_code == 200, reject_resp.text
+
+    buyer_headers = _buyer_headers(client, "rejwin@test.com")
+    result = client.get(f"/api/buyer/my-results/{r.id}", headers=buyer_headers)
+    assert result.status_code == 200, result.text
+    body = result.json()
+    assert body["won"] == 1, "the legitimately-approved deal must still count as a win"
+    won_parts = {res["part_number"] for res in body["results"] if res["outcome"] == "WON"}
+    assert won_parts == {"PART-WON"}, (
+        f"A rejected deal must not still show as WON in the buyer's own results page, got: {won_parts}"
+    )
+
+    aggregate = client.get("/api/buyer/my-results", headers=buyer_headers)
+    assert aggregate.status_code == 200, aggregate.text
+    agg_won_parts = {res["part_number"] for res in aggregate.json()["results"] if res["outcome"] == "WON"}
+    assert agg_won_parts == {"PART-WON"}, (
+        f"A rejected deal must not appear as WON in the buyer's all-rounds results either, got: {agg_won_parts}"
+    )
+
+
+def test_rejecting_a_deal_does_not_award_it_to_the_next_bidder_either(client, admin_token, db):
+    """The admin's stated intent: Reject pulls the item from the round entirely — it must
+    NOT fall through to the next-highest bidder the way an Exceptions-screen reject does."""
+    r = _make_round(db)
+    top = _make_buyer(db, "rejtop@test.com")
+    runner_up = _make_buyer(db, "rejrunner@test.com")
+    master = _make_master(db, r.id)
+    _make_line(db, _make_bid_file(db, r.id, top.id), r.id, top.id, master.id, 100.0)
+    _make_line(db, _make_bid_file(db, r.id, runner_up.id), r.id, runner_up.id, master.id, 90.0)
+    db.commit()
+    select_winners(db, r.id)
+    deal = db.query(Deal).filter(Deal.master_item_id == master.id).first()
+    assert deal.winning_buyer_id == top.id
+
+    reject_resp = client.post(f"/api/deals/{deal.id}/reject", headers=admin_token)
+    assert reject_resp.status_code == 200, reject_resp.text
+
+    runner_up_headers = _buyer_headers(client, "rejrunner@test.com")
+    runner_result = client.get(f"/api/buyer/my-results/{r.id}", headers=runner_up_headers)
+    assert runner_result.status_code == 200, runner_result.text
+    assert runner_result.json()["won"] == 0, (
+        "Rejecting the deal must not silently award the item to the runner-up either"
+    )

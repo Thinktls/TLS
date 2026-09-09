@@ -197,8 +197,11 @@ def _send_results_to_all_buyers(round_id: int):
         # Which master items each buyer actually won — read from the deals themselves so the
         # counts stay correct after any award-lot / winning-buyer override. Keep the deal so we
         # can show the winning price and quantity in the results email.
+        # status == "approved" only — a rejected deal still has winning_buyer_id set (kept as a
+        # historical record of who would have won), and including it here is exactly what sent
+        # buyers a "you won" email for a line the admin had just rejected.
         won_deals_by_buyer: dict[int, list] = defaultdict(list)
-        for d in db.query(Deal).filter(Deal.bid_round_id == round_id).all():
+        for d in db.query(Deal).filter(Deal.bid_round_id == round_id, Deal.status == "approved").all():
             if d.winning_buyer_id:
                 won_deals_by_buyer[d.winning_buyer_id].append(d)
         # All matched bid lines grouped by buyer (for the lost count only).

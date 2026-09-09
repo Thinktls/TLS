@@ -425,8 +425,10 @@ def download_my_submission(round_id: int, db: Session = Depends(get_db), buyer=D
 
 @router.get("/my-results")
 def my_results(db: Session = Depends(get_db), buyer=Depends(require_buyer)):
-    # Wins from deals table — correct after award-lot and single-deal overrides
-    won_deals = db.query(Deal).filter(Deal.winning_buyer_id == buyer.id).all()
+    # Wins from deals table — correct after award-lot and single-deal overrides.
+    # status == "approved" only: a rejected deal keeps winning_buyer_id as a historical
+    # record of who would have won, and must not still show as WON in the buyer's portal.
+    won_deals = db.query(Deal).filter(Deal.winning_buyer_id == buyer.id, Deal.status == "approved").all()
     won_keys = {(d.bid_round_id, d.master_item_id) for d in won_deals}
 
     lines = (
@@ -514,10 +516,11 @@ async def download_template(round_id: int, db: Session = Depends(get_db), buyer=
 
 @router.get("/my-results/{round_id}")
 def my_results_for_round(round_id: int, db: Session = Depends(get_db), buyer=Depends(require_buyer)):
-    # Wins come from the deals table — authoritative even after admin award-lot overrides
+    # Wins come from the deals table — authoritative even after admin award-lot overrides.
+    # status == "approved" only — see my_results() above for why.
     won_deals = (
         db.query(Deal)
-        .filter(Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id)
+        .filter(Deal.bid_round_id == round_id, Deal.winning_buyer_id == buyer.id, Deal.status == "approved")
         .all()
     )
     won_master_ids = {d.master_item_id for d in won_deals}
