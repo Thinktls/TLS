@@ -389,6 +389,8 @@ export default function DealsPage() {
             <p style={{ margin: "8px 0 0", fontSize: "0.72rem", color: "var(--warning)" }}>
               The emails send immediately and cannot be recalled — review the deals below first.
               Need one buyer to take everything? Use “Award Entire Lot” before approving.
+              Wrong price, quantity, or winner on one specific deal? Use its “Override” button instead —
+              overriding an already-approved deal resets it to Pending so nothing goes out until you re-approve it.
             </p>
           </div>
         )}
@@ -690,9 +692,26 @@ export default function DealsPage() {
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text-1)", margin: "0 0 6px" }}>
                 Override Deal
               </h3>
-              <p style={{ fontSize: "0.8rem", color: "var(--text-3)", margin: "0 0 24px" }}>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-3)", margin: "0 0 16px" }}>
                 {override.partNumber} · All overrides are logged with your account.
               </p>
+
+              <div style={{
+                background: "rgba(217,119,6,0.06)",
+                border: "1px solid rgba(217,119,6,0.2)",
+                borderRadius: "var(--radius-lg, 12px)",
+                padding: "12px 16px",
+                marginBottom: "20px",
+              }}>
+                <p style={{ margin: "0 0 6px", fontSize: "0.78rem", fontWeight: 700, color: "var(--warning)" }}>
+                  How Override works
+                </p>
+                <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "0.75rem", color: "var(--text-3)", lineHeight: 1.65 }}>
+                  <li><strong style={{ color: "var(--text-2)" }}>Unit Price / Quantity</strong> — corrects this deal's price or quantity; the total value recalculates automatically.</li>
+                  <li><strong style={{ color: "var(--text-2)" }}>Winning Buyer</strong> — reassigns this specific item to a different buyer, chosen from everyone assigned to this round.</li>
+                  <li>If this deal was <strong style={{ color: "var(--text-2)" }}>already approved</strong>, it resets to <em>Pending Approval</em> — nothing is re-sent to the buyer or Razor until you approve it again with the corrected data.</li>
+                </ul>
+              </div>
 
               <label style={labelStyle}>Field to Override</label>
               <select

@@ -220,9 +220,16 @@ body[data-theme="light"] {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
+/* Opacity-only on purpose — a `transform` here (even a harmless-looking `translateY(0)` end
+   state) makes .animate-in a CSS "containing block" for every position:fixed descendant for
+   as long as this animation's fill-mode holds, which is forever (animation-fill-mode: both).
+   Every full-screen modal in the app (Override, Award Entire Lot, ...) is a position:fixed
+   descendant of a `.page-shell animate-in` wrapper, so it silently stopped covering the real
+   viewport and rendered confined to that page's centered ~1280px column instead — invisible
+   or badly offset on any screen wider than that column. */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes slide-in-left {
   from { opacity: 0; transform: translateX(-12px); }
