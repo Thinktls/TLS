@@ -329,3 +329,54 @@ def test_rejecting_a_deal_does_not_award_it_to_the_next_bidder_either(client, ad
     assert runner_result.json()["won"] == 0, (
         "Rejecting the deal must not silently award the item to the runner-up either"
     )
+
+
+def test_award_sheet_excel_agrees_with_the_buyers_results_page(client, admin_token, db):
+    """The downloaded award sheet read its wins from the deals table with no status filter,
+    so a rejected deal still printed "WON" there — and its "Total Won" disagreed with the
+    count the same buyer saw on screen. Both must report the same wins."""
+    import io
+    import openpyxl
+    from app.services.export_service import export_buyer_award_sheet
+
+    r = _make_round(db)
+    buyer = _make_buyer(db, "sheet@test.com")
+    master_won = _make_master(db, r.id, pn="SHEET-WON")
+    master_rejected = _make_master(db, r.id, pn="SHEET-REJ")
+    _make_line(db, _make_bid_file(db, r.id, buyer.id), r.id, buyer.id, master_won.id, 100.0)
+    _make_line(db, _make_bid_file(db, r.id, buyer.id), r.id, buyer.id, master_rejected.id, 50.0)
+    db.commit()
+    select_winners(db, r.id)
+    deal_won = db.query(Deal).filter(Deal.master_item_id == master_won.id).first()
+    deal_rejected = db.query(Deal).filter(Deal.master_item_id == master_rejected.id).first()
+
+    assert client.post(f"/api/deals/{deal_won.id}/approve", headers=admin_token).status_code == 200
+    assert client.post(f"/api/deals/{deal_rejected.id}/reject", headers=admin_token).status_code == 200
+
+    # What the buyer sees on screen
+    buyer_headers = _buyer_headers(client, "sheet@test.com")
+    screen = client.get(f"/api/buyer/my-results/{r.id}", headers=buyer_headers).json()
+    screen_won_parts = {res["part_number"] for res in screen["results"] if res["outcome"] == "WON"}
+
+    # What the downloaded award sheet says
+    wb = openpyxl.load_workbook(io.BytesIO(export_buyer_award_sheet(db, r.id, buyer.id)))
+    ws = wb.active
+    sheet_rows = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if row[0] and row[4] in ("WON", "LOST"):
+            sheet_rows[row[0]] = row[4]
+    sheet_won_parts = {pn for pn, result in sheet_rows.items() if result == "WON"}
+
+    assert sheet_rows.get("SHEET-REJ") != "WON", (
+        "The award sheet still printed WON for a deal the admin rejected"
+    )
+    assert sheet_won_parts == screen_won_parts == {"SHEET-WON"}, (
+        f"Award sheet and results page disagree — sheet: {sheet_won_parts}, screen: {screen_won_parts}"
+    )
+
+    # And the sheet's own "Total Won" summary must match that same count.
+    summary = [
+        row[0] for row in ws.iter_rows(min_row=2, values_only=True)
+        if row[0] and str(row[0]).startswith("Total Won:")
+    ]
+    assert summary and "Total Won: 1" in summary[0], f"Unexpected summary line: {summary}"

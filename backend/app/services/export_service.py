@@ -240,12 +240,18 @@ def export_buyer_award_sheet(db: Session, bid_round_id: int, buyer_id: int) -> b
         .order_by(BidLine.master_item_id)
         .all()
     )
-    # Use deals table as authoritative win source (covers award-lot and single-deal overrides)
+    # Use deals table as authoritative win source (covers award-lot and single-deal overrides).
+    # status == "approved" only, and it must stay identical to the filter the buyer's on-screen
+    # results page uses (buyer.my_results / my_results_for_round): a rejected deal keeps its
+    # winning_buyer_id as a historical record, so without this the award sheet still printed
+    # "WON" for a line the admin had rejected — and its "Total Won" disagreed with the count
+    # the same buyer saw in the portal.
     won_master_ids = {
         d.master_item_id
         for d in db.query(Deal).filter(
             Deal.bid_round_id == bid_round_id,
             Deal.winning_buyer_id == buyer_id,
+            Deal.status == "approved",
         ).all()
     }
 
